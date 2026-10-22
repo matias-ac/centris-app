@@ -111,8 +111,8 @@ _Avoid_: Ventana de reserva, horizonte
 ## Reservas y asistencia
 
 **Reserva**:
-Cupo de una Clase tomado por un Atleta, que consume un Crédito de su Membresía al momento de reservar (salvo en Membresías ilimitadas). Un Atleta no puede tener Reservas en Clases que se superpongan en el tiempo.
-_Avoid_: Turno, inscripción, booking
+Cupo de una Clase tomado por un Atleta o asignado por Recepción o Administración, que consume un Crédito de su Membresía al momento de crearse (salvo en Membresías ilimitadas). Un Atleta no puede tener Reservas en Clases que se superpongan en el tiempo.
+_Avoid_: Turno, inscripción, booking, walk-in, lista de espera
 
 **Ventana de Cancelación**:
 Tiempo mínimo antes del inicio de una Clase hasta el cual un Atleta puede cancelar su Reserva y recuperar el Crédito. La configura cada Box.
@@ -125,6 +125,10 @@ Cancelación de una Reserva dentro de la Ventana de Cancelación: libera el Cupo
 Registro, hecho por un Coach, Recepcionista o Administrador, de que un Atleta con Reserva se presentó a la Clase.
 _Avoid_: Check-in, presente
 
+**Ventana de Corrección de Asistencia**:
+Plazo de 24 horas posterior a la finalización de una Clase durante el cual el staff puede registrar o rectificar la Asistencia. Al vencer, las Reservas sin Asistencia se consolidan como Ausencia.
+_Avoid_: Período de gracia, tolerancia, cierre de clase
+
 **Ausencia**:
-Reserva no cancelada cuyo Atleta no tiene Asistencia registrada en la Clase. El Crédito se pierde.
+Reserva confirmada que no registra Asistencia una vez vencida la Ventana de Corrección de Asistencia. El Crédito se pierde definitivamente.
 _Avoid_: No-show, falta, inasistencia

@@ -10,3 +10,4 @@ Las reservas, la asistencia y los cambios puntuales (coach suplente, feriado, ca
 
 - Hace falta un proceso periódico que genere las Clases hasta el horizonte de generación, que debe ser al menos tan largo como la Anticipación de Reserva máxima configurada.
 - Las Clases que ya tienen reservas no se modifican automáticamente cuando cambia su Horario. Si hace falta, un Administrador las ajusta o cancela a mano.
+- La cancelación de una Clase por parte del Box cancela automáticamente todas sus Reservas activas y devuelve los Créditos a los Atletas, incluso si la clase se cancela dentro de la Ventana de Cancelación (la inasistencia es atribuible al Box).
