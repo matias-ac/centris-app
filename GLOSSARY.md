@@ -17,15 +17,23 @@ Relación entre un Usuario y un Box que le da acceso a ese box con uno o más ro
 _Avoid_: Membresía (reservado para lo comercial), miembro, suscripción
 
 **Rol**:
-Función que un Usuario cumple dentro de un Box a través de su Afiliación: Atleta, Coach o Administrador. Una misma Afiliación puede combinar varios roles.
+Función que un Usuario cumple dentro de un Box a través de su Afiliación: Atleta, Coach, Recepcionista o Administrador. Una misma Afiliación puede combinar varios roles.
 
 **Atleta**:
-Usuario con rol de atleta en un Box; reserva y asiste a clases.
+Usuario con rol de atleta en un Box; reserva y cancela sus clases.
 _Avoid_: Alumno, socio, cliente
 
 **Coach**:
-Usuario con rol de coach en un Box; dicta clases y registra asistencia.
+Usuario con rol de coach en un Box; consulta la lista de inscriptos a sus Clases y registra Asistencia.
 _Avoid_: Profesor, entrenador, instructor
+
+**Recepcionista**:
+Usuario con rol de atención y administración operativa en un Box; gestiona perfiles de Atletas, asigna Membresías, asienta Pagos y registra Asistencia. No gestiona el catálogo de Planes ni la configuración del Box.
+_Avoid_: Staff, secretario, empleado, administrativo
+
+**Administrador**:
+Usuario con control total sobre un Box; gestiona su configuración, Horarios, catálogo de Planes y audita Pagos y Anulaciones.
+_Avoid_: Dueño, owner, admin
 
 ## Planes
 
@@ -63,7 +71,7 @@ Monto que un Atleta debe por una Membresía, en la moneda del Box. Se copia del 
 _Avoid_: Cuota, tarifa, importe
 
 **Pago**:
-Registro manual e inmutable, hecho por un Administrador, de dinero efectivamente recibido por una Membresía, con su monto, medio (efectivo, transferencia, etc.) y fecha. Una Membresía puede tener varios Pagos. Es solo contable: no habilita ni bloquea reservas.
+Registro manual e inmutable, asentado por un Administrador o Recepcionista, de dinero efectivamente recibido por una Membresía, con su monto, medio (efectivo, transferencia, etc.) y fecha. Una Membresía puede tener varios Pagos. Es solo contable: no habilita ni bloquea reservas.
 _Avoid_: Transacción, cobro, pago pendiente
 
 **Anulación**:
@@ -114,7 +122,7 @@ _Avoid_: Límite de cancelación, plazo
 Cancelación de una Reserva dentro de la Ventana de Cancelación: libera el Cupo pero el Crédito no se devuelve.
 
 **Asistencia**:
-Registro, hecho por un Coach, de que un Atleta con Reserva se presentó a la Clase.
+Registro, hecho por un Coach, Recepcionista o Administrador, de que un Atleta con Reserva se presentó a la Clase.
 _Avoid_: Check-in, presente
 
 **Ausencia**:
