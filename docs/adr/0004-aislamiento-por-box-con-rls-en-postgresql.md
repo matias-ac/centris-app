@@ -1,6 +1,6 @@
 # Aislamiento entre Boxes con esquema compartido y Row Level Security en PostgreSQL
 
-El peor error posible de la plataforma es que un Box vea datos de otro. Decidimos usar un **esquema compartido** en PostgreSQL, donde toda tabla que pertenece a un Box lleva `box_id` y está protegida con **Row Level Security forzado**. El Box activo se fija por transacción con `SET LOCAL app.box_id`, y las políticas rechazan cualquier fila de otro Box, aunque la consulta se olvide el filtro. El stack es **NestJS** (backend), **Next.js** (frontend) y **PostgreSQL**. El ORM todavía está por definir (TypeORM o Drizzle), pero tiene una condición excluyente: debe permitir ejecutar `SET LOCAL app.box_id` dentro de cada transacción, de forma nativa y segura.
+El peor error posible de la plataforma es que un Box vea datos de otro. Decidimos usar un **esquema compartido** en PostgreSQL, donde toda tabla que pertenece a un Box lleva `box_id` y está protegida con **Row Level Security forzado**. El Box activo se fija por transacción con `SET LOCAL app.box_id`, y las políticas rechazan cualquier fila de otro Box, aunque la consulta se olvide el filtro. El stack es **NestJS** (backend), **Next.js** (frontend), **PostgreSQL** y **Drizzle ORM** (`drizzle-orm` + `drizzle-kit`), elegido por ser SQL-first y permitir ejecutar `SET LOCAL` de forma nativa y segura al inicio de cada transacción sobre la misma conexión física.
 
 ## Considered Options
 
@@ -11,7 +11,7 @@ El peor error posible de la plataforma es que un Box vea datos de otro. Decidimo
 
 - La aplicación se conecta con un rol que **no** es dueño de las tablas y no tiene `BYPASSRLS`. Las tablas usan `FORCE ROW LEVEL SECURITY`.
 - Toda operación sobre datos de un Box corre dentro de una transacción que primero ejecuta `SET LOCAL app.box_id`. Fuera de una transacción no hay contexto, y las políticas no devuelven filas. Al ser `SET LOCAL`, el contexto no queda en la conexión cuando vuelve al pool (sirve también con PgBouncer en modo transacción).
-- Las tablas globales (`Usuario`) quedan fuera de RLS. Las consultas entre Boxes se limitan a las Afiliaciones del propio Usuario autenticado (inicio de sesión y selector de Box).
+- Las tablas globales (`Usuario` y `Box`) quedan fuera de RLS. En `Afiliación`, la política RLS de lectura (`SELECT`) permite consultar filas cuando coincide `app.box_id` (operación dentro de un Box) o cuando coincide `usuario_id = current_setting('app.usuario_id', true)::uuid` (inicio de sesión y selector de Box antes de tener Box activo), mientras que toda escritura (`INSERT`, `UPDATE`, `DELETE`) exige estrictamente `app.box_id`.
 - Las claves foráneas entre tablas de un Box incluyen `box_id` (por ejemplo, `(box_id, clase_id)`), para que sea imposible relacionar filas de Boxes distintos.
 - Los procesos en background iteran Box por Box, fijando el contexto en cada transacción. No existe un rol de aplicación que saltee RLS.
 - El MVP no tiene panel de super-administrador de la plataforma.

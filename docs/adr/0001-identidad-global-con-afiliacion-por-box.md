@@ -10,4 +10,4 @@ Una misma persona puede entrenar en varios boxes y, a la vez, ser coach en otro 
 
 - Un Box solo ve de un Usuario los datos de identidad (nombre, email) y su propia Afiliación. Nunca ve afiliaciones, reservas ni pagos en otros boxes.
 - La autorización siempre se evalúa con el par (Usuario, Box activo), nunca solo con el Usuario.
-- Las credenciales y la recuperación de contraseña son globales: un Box no puede resetear ni administrar las credenciales de un Usuario.
+- Las credenciales y la recuperación de contraseña son globales: un Box no puede resetear ni administrar las credenciales de un Usuario. Cuando un Box da de alta en mostrador a una persona cuyo email aún no existe en la plataforma, el Usuario se crea sin contraseña inicial y el propio Usuario define su contraseña en su primer ingreso.

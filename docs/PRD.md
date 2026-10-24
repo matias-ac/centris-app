@@ -58,16 +58,20 @@ Todo el diseño funcional, técnico, nombres de módulos y pruebas se rigen estr
 - **Base de Datos**: **PostgreSQL mediante Docker desde el día 1** (desarrollo local y CI/CD).
   - **Prohibición explícita de SQLite o bases en memoria**: Dado que la seguridad multi-tenant depende de *Row Level Security* (`FORCE ROW LEVEL SECURITY`), variables de sesión (`SET LOCAL app.box_id`), bloqueos `SELECT ... FOR UPDATE`, tipos `timestamptz` y constraints `EXCLUDE USING gist`, queda prohibido usar SQLite o mocks en memoria para pruebas de integración.
   - Ver el modelo relacional detallado en [`docs/DER.md`](./DER.md).
-- **ORM / Query Builder**: **A definir entre TypeORM o Drizzle ORM**.
-  - **Condición excluyente de arquitectura**: La herramienta seleccionada debe permitir abrir una transacción explícita y ejecutar de manera nativa, ergonómica y segura la sentencia `SET LOCAL app.box_id = '<box_uuid>'` sobre la misma conexión física antes de despachar las consultas del caso de uso.
-  - **Herramientas descartadas**: Se descarta explícitamente **Prisma** y cualquier abstracción que oculte el manejo del pool de conexiones por transacción o dificulte la ejecución garantizada de `SET LOCAL` previo a cada operación con RLS.
+- **ORM / Query Builder**: **Drizzle ORM (`drizzle-orm` + `drizzle-kit` + driver `pg`)**.
+  - **Justificación de arquitectura**: Es SQL-first, tiene tipado estático directo en TypeScript sin decoradores experimentales, permite abrir una transacción explícita y ejecutar `await tx.execute(sql`SET LOCAL app.box_id = ${boxId}`)` sobre la misma conexión física antes de despachar las consultas del caso de uso, y genera archivos de migración `.sql` planos donde se declaran las políticas `FORCE ROW LEVEL SECURITY` y constraints `EXCLUDE USING gist`.
+  - **Herramientas descartadas**: Se descartan explícitamente **Prisma** y **TypeORM**.
+- **Convención de Idioma Ubicuo en Código, Base de Datos, API y Tests**:
+  - **Español de Dominio Ubicuo**: Nombres de tablas y columnas de negocio en `snake_case` en español tal como en [`docs/DER.md`](./DER.md) (`membresias`, `afiliaciones`, `creditos_por_periodo`), rutas REST en español (`/api/planes`, `/api/membresias`, `/api/reservas`), identificadores de dominio en código y esquemas Zod en español sin tildes (`MembresiasService`, `CrearReservaSchema`, `CupoAgotadoError`), y escenarios `.feature` en español (`# language: es`).
+  - **Inglés Técnico**: Reservado exclusivamente para sufijos del framework/infraestructura (`Controller`, `Service`, `Guard`, `Module`) y columnas técnicas de auditoría (`id`, `created_at`, `updated_at`, `deleted_at`).
 - **Autenticación Portable (Mitigación de *Vendor Lock-in*)**:
   - Se utilizará **Auth.js (NextAuth)** en el Frontend (`apps/web`) con **sesión basada en JWT**, enviando el token en las peticiones hacia la API REST de **NestJS** (`apps/api`), donde es validado criptográficamente mediante *Guards* de NestJS.
   - Esta decisión evita el acoplamiento a proveedores de identidad propietarios (como Supabase Auth, Clerk o Auth0), manteniendo las credenciales en nuestra propia tabla global `USUARIO` en PostgreSQL y garantizando un despliegue libre en cualquier infraestructura.
-- **Seguridad, Calidad y Metodología**:
+- **Seguridad, Calidad, Testing y CI/CD**:
   - **Validaciones con Zod**: Validación estricta de contratos de entrada/salida tanto en formularios de `apps/web` como en DTOs/pipes de `apps/api`.
   - **Soft Deletes**: Borrado lógico (`deleted_at`) en todas las entidades maestras y operativas críticas (`Usuario`, `Box`, `Afiliación`, `Plan`, `Membresía`, `Tipo de Clase`, `Horario`, `Clase`), excepto en `Pago`, que es estrictamente inmutable y solo admite **Anulación** ([ADR 0006](./adr/0006-acceso-desacoplado-del-pago.md)).
-  - **TDD / BDD como metodología de aceptación**: Cada funcionalidad (*Vertical Slice*) se valida mediante criterios de aceptación ejecutables (Given/When/Then) y pruebas automatizadas contra PostgreSQL en Docker antes de darse por completada.
+  - **TDD / BDD con `Vitest` + `playwright-bdd`**: Cada funcionalidad (*Vertical Slice*) se desarrolla bajo el ciclo **Red $\rightarrow$ Green** utilizando **Vitest** (`.spec.ts`) para pruebas unitarias/concurrencia y **Playwright + `playwright-bdd`** (`.feature` + `.steps.ts` en español) para los criterios de aceptación E2E y de integración contra PostgreSQL real en Docker.
+  - **Integración Continua en GitHub Actions (`.github/workflows/ci.yml`)**: Desde el Ticket `01`, cada Pull Request y push a `main` levanta un servicio de PostgreSQL en CI, aplica las migraciones con los roles diferenciados y ejecuta `pnpm lint`, `pnpm typecheck` y la suite automatizada de pruebas.
 
 ### 2.2. Requerimientos No Funcionales (NFRs): Despliegue, Portabilidad y *Zero Vendor Lock-in*
 Toda decisión de implementación dentro de los tickets de **Centris (`centris-app`)** debe respetar estrictamente las siguientes directrices de portabilidad y compatibilidad con capas gratuitas (*free tiers*):
@@ -94,13 +98,14 @@ El peor fallo admisible en la plataforma es una fuga de datos entre Boxes. Para 
 5. **Contexto por transacción (`SET LOCAL`)**:
    - Cada petición autenticada que opera sobre un Box abre una transacción de base de datos cuya primera instrucción es `SET LOCAL app.box_id = '<uuid>'`.
    - Al utilizar `SET LOCAL`, la variable vive únicamente durante la transacción actual y se limpia automáticamente al hacer `COMMIT` o `ROLLBACK`, evitando contaminación de contexto en el pool de conexiones y garantizando compatibilidad con *PgBouncer* en modo transacción.
-6. **Tablas globales y procesos en background**:
-   - La tabla `usuarios` es global y queda fuera de RLS; las consultas previas a elegir un Box se limitan estrictamente a recuperar las `afiliaciones` del `Usuario` autenticado para construir el selector de Box.
+6. **Tablas globales, consulta pre-Box de `Afiliación` y procesos en background**:
+   - Las tablas `usuarios` y `boxes` son globales y quedan fuera de RLS.
+   - En la tabla `afiliaciones`, la política RLS de lectura (`SELECT`) habilita el acceso cuando `box_id = current_setting('app.box_id', true)::uuid OR usuario_id = current_setting('app.usuario_id', true)::uuid` (mientras que toda operación de escritura exige `app.box_id`). De este modo, al iniciar sesión (antes de elegir un Box), la transacción fija `SET LOCAL app.usuario_id = '<uuid>'` para recuperar únicamente las `Afiliaciones` del `Usuario` autenticado y construir el selector de Box sin usar `SECURITY DEFINER` ni `BYPASSRLS`.
    - Los trabajos programados en background (como la materialización periódica de `Clases` a partir de `Horarios`) nunca usan un rol con `BYPASSRLS`: iteran los Boxes activos y abren una transacción con `SET LOCAL app.box_id` por cada Box.
    - El MVP **no** incluye un panel de super-administrador global de la plataforma.
 
 ### 2.4. Identidad Global y Modelo de Autorización ([ADR 0001](./adr/0001-identidad-global-con-afiliacion-por-box.md), [ADR 0007](./adr/0007-cuatro-roles-atomicos-componibles.md))
-- **Separación `Usuario` vs. `Afiliación`**: Las credenciales, el nombre y el email viven en la entidad global `Usuario`. Ningún Box puede alterar las credenciales ni resetear la contraseña de un Usuario, ni saber en qué otros Boxes participa.
+- **Separación `Usuario` vs. `Afiliación` y Alta en Mostrador**: Las credenciales, el nombre y el email viven en la entidad global `Usuario`. Ningún Box puede alterar las credenciales ni resetear la contraseña de un Usuario, ni saber en qué otros Boxes participa. Cuando un `Recepcionista` o `Administrador` da de alta un Atleta por mostrador ingresando un email que no existía en la plataforma, el `Usuario` se crea con `password_hash = NULL` (pendiente de activación); en su primer ingreso desde el navegador/celular, el Usuario define su contraseña global por única vez a través de la pantalla de activación de cuenta.
 - **Evaluación de permisos contextual**: Tras autenticarse, el Usuario selecciona el Box activo (o entra directamente si solo tiene una Afiliación). Todo token o sesión operativa transporta el par `(usuario_id, box_id)`.
 - **Composición de Roles Atómicos**: La `Afiliación` contiene un conjunto de roles independientes (`['administrador', 'recepcionista', 'coach', 'atleta']`). Los permisos efectivos del Usuario en ese Box son la **unión** de las capacidades de los roles presentes en su Afiliación.
 
@@ -215,9 +220,12 @@ Las validaciones en el frontend o en memoria de aplicación sirven únicamente p
 2. **Invariante de Cupos**:
    - Con la `Clase` bloqueada, se cuenta la cantidad de `Reservas` en estado confirmado para esa Clase. Si `reservas_confirmadas >= clase.cupos`, la transacción aborta con error de dominio (`CupoAgotado`).
    - Al editar manualmente los `Cupos` de una Clase, una restricción/validación transaccional impide fijar `clase.cupos < reservas_confirmadas`.
-3. **Invariante de Créditos por Período**:
+3. **Invariante de Créditos por Período y Bolsa de `creditos_extra`**:
    - Con la `Membresía` bloqueada, si la Membresía no es ilimitada, se calcula el total de Créditos consumidos en el **Período** al que pertenece la fecha de la Clase (sumando Reservas confirmadas, Asistencias, Ausencias y Cancelaciones Tardías de ese Período).
-   - Si `creditos_consumidos >= membresia.creditos_por_periodo`, la transacción aborta con error de dominio (`SinCreditosDisponibles`). No existe deuda ni adelanto de Créditos.
+   - El campo `creditos_extra` de la `Membresía` actúa como una **bolsa de ajuste para toda la `Vigencia`** (no se multiplica ni se renueva cada lunes):
+     - En modalidad `VIGENCIA_TOTAL`: el tope disponible durante la Vigencia es `creditos_por_periodo + creditos_extra`.
+     - En modalidad `SEMANAL`: en cada Período semanal el Atleta consume primero sus `creditos_por_periodo` semanales; solo cuando alcanza ese límite semanal, una Reserva adicional puede respaldarse consumiendo del remanente de `creditos_extra` de la Membresía (calculando cuántas reservas en toda la Vigencia superaron el cupo semanal respectivo).
+   - Si no quedan Créditos del Período ni remanente en `creditos_extra`, la transacción aborta con error de dominio (`SinCreditosDisponibles`). No existe deuda ni adelanto de Créditos.
 4. **Unicidad y No Superposición Horaria**:
    - Un índice único parcial en PostgreSQL sobre `(box_id, clase_id, atleta_id)` para Reservas activas impide la doble inscripción en la misma Clase.
    - Con la `Membresía` bloqueada, se verifica en la misma transacción que el Atleta no posea otra Reserva confirmada en una Clase cuyo intervalo `[inicio, fin)` se solape con `[clase.inicio, clase.fin)`.
@@ -260,10 +268,13 @@ Las validaciones en el frontend o en memoria de aplicación sirven únicamente p
 
 ---
 
-### 4.6. Decisiones de Testing y Costuras de Verificación (*Testing Seams*)
+### 4.6. Decisiones de Testing, BDD/TDD y Costuras de Verificación (*Testing Seams*)
 Siguiendo el principio de probar comportamiento externo observable y no detalles internos de implementación:
 
-1. **Costura Principal (*Primary Seam*)**: Casos de uso de aplicación / Controladores HTTP de NestJS ejecutados en pruebas de integración contra una base de datos **PostgreSQL real** (por ejemplo, vía contenedores efímeros o base de test con migraciones y políticas RLS aplicadas).
+1. **Stack Oficial de Testing y Costuras (*Seams*)**:
+   - **BDD / Aceptación e Integración E2E (`Playwright` + `playwright-bdd`)**: Archivos `.feature` (escritos en español `# language: es` respetando el [`GLOSSARY.md`](../GLOSSARY.md)) vinculados a sus `.steps.ts`. Cubren los criterios *Given / When / Then* de los 12 tickets tanto a nivel API REST + PostgreSQL en Docker (sin abrir navegador cuando el escenario no requiere UI) como a nivel E2E de interfaz en Next.js.
+   - **Pruebas Focalizadas y de Concurrencia (`Vitest`)**: Archivos `.spec.ts` para esquemas Zod en `packages/shared`, funciones puras de calendario/zona horaria y pruebas de estrés de concurrencia (`Promise.all` contra PostgreSQL real).
+   - **CI en GitHub Actions (`.github/workflows/ci.yml`)**: Ejecución automática en cada Pull Request y push a `main` contra un contenedor de servicio PostgreSQL real con RLS activo.
 2. **Invariantes Críticas a Verificar en Tests**:
    - **Aislamiento RLS**: Dos Boxes creados en el mismo test; verificar que cualquier consulta o mutación ejecutada bajo el contexto `SET LOCAL app.box_id = BoxA` jamás retorna ni modifica Membresías, Clases, Reservas ni Pagos de `BoxB`, y que intentar referenciar un `clase_id` de `BoxB` desde `BoxA` falla por integridad referencial/RLS.
    - **Concurrencia de Cupos y Créditos**: Lanzar $N$ promesas simultáneas (`Promise.all`) reservando el último Cupo disponible de una Clase o el último Crédito de una Membresía, verificando que exactamente una transacción confirma y las $N-1$ restantes son rechazadas limpiamente sin producir sobrecupo ni saldo negativo de Créditos.

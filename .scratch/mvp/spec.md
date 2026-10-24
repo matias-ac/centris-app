@@ -16,14 +16,15 @@
    - `packages/shared`: Esquemas **Zod**, tipos y constantes compartidas de dominio.
 2. **Base de Datos, Portabilidad y Aislamiento**:
    - **PostgreSQL estándar**: Ejecución mediante **Docker desde el día 1** para desarrollo local y tests (prohibido usar SQLite o bases en memoria), y compatible sin *vendor lock-in* con proveedores gestionados estándar como **Neon** o **Render** en producción.
-   - **ORM**: TypeORM o Drizzle ORM con soporte nativo para abrir transacción y ejecutar `SET LOCAL app.box_id = '<uuid>'` antes de cada operación (descartado Prisma).
-   - **RLS Forzado**: `ENABLE` y `FORCE ROW LEVEL SECURITY` en todas las tablas operativas del Box; rol de conexión de aplicación sin `BYPASSRLS`.
+   - **ORM**: **Drizzle ORM (`drizzle-orm` + `drizzle-kit` + driver `pg`)** con soporte nativo para abrir transacción y ejecutar `SET LOCAL app.box_id = '<uuid>'` (o `SET LOCAL app.usuario_id = '<uuid>'` en la consulta pre-Box de `Afiliaciones`) antes de cada operación (descartados Prisma y TypeORM).
+   - **RLS Forzado**: `ENABLE` y `FORCE ROW LEVEL SECURITY` en todas las tablas operativas del Box; rol de conexión de aplicación sin `BYPASSRLS`. En `afiliaciones`, la política RLS de `SELECT` permite lectura por `app.box_id` o `app.usuario_id`, manteniendo escritura estricta por `app.box_id`.
 3. **Autenticación Portable (Mitigación de *Vendor Lock-in*)**:
-   - **Auth.js (NextAuth)** con sesión basada en **JWT** en el Frontend (`apps/web`), enviando el token a la API REST de **NestJS** (`apps/api`) donde es validado criptográficamente, evitando el acoplamiento a servicios de identidad propietarios y resolviendo el par `(usuario_id, box_id)` y el array de roles atómicos componibles (`['administrador', 'recepcionista', 'coach', 'atleta']`).
-4. **Calidad, Seguridad y Metodología**:
+   - **Auth.js (NextAuth)** con sesión basada en **JWT** en el Frontend (`apps/web`), enviando el token a la API REST de **NestJS** (`apps/api`) donde es validado criptográficamente, evitando el acoplamiento a servicios de identidad propietarios y resolviendo el par `(usuario_id, box_id)` y el array de roles atómicos componibles (`['administrador', 'recepcionista', 'coach', 'atleta']`). Los Usuarios dados de alta por mostrador sin cuenta previa se crean con `password_hash = NULL` y activan su contraseña personal en su primer ingreso.
+4. **Calidad, Seguridad, Idioma Ubicuo y Metodología**:
+   - **Español de Dominio Ubicuo**: Tablas, columnas de negocio, rutas REST (`/api/planes`, `/api/membresias`), esquemas Zod, clases de dominio y escenarios `.feature` en español respetando el [`GLOSSARY.md`](../../GLOSSARY.md); sufijos técnicos de framework y columnas de auditoría (`id`, `created_at`, `updated_at`, `deleted_at`) en inglés.
    - **Validaciones con Zod** en ambos extremos (`apps/web` y `apps/api`).
    - **Soft Deletes (`deleted_at`)** en todas las entidades maestras y operativas críticas, excepto en `PAGO` (que es inmutable y solo admite `Anulación`).
-   - **TDD / BDD**: Cada *Vertical Slice* incluye criterios de aceptación en formato Given/When/Then verificados con pruebas automatizadas contra PostgreSQL real en Docker.
+   - **TDD / BDD y CI en GitHub Actions**: Cada *Vertical Slice* se desarrolla en ciclo *Red $\rightarrow$ Green* usando **`Playwright` + `playwright-bdd`** (`.feature` + `.steps.ts` en español) y **`Vitest`** (`.spec.ts`) contra PostgreSQL real en Docker, validado automáticamente en cada PR mediante `.github/workflows/ci.yml`.
 
 ---
 

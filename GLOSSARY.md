@@ -42,7 +42,7 @@ Oferta del catálogo de un Box, creada por un Administrador, que define cuántas
 _Avoid_: Abono, pack, paquete, cuota
 
 **Membresía**:
-Asignación de un Plan a un Atleta para una Vigencia concreta. Lleva una copia propia de las condiciones del Plan al momento de crearse, y los ajustes individuales (por ejemplo, un Crédito de regalo) se hacen sobre ella. Un Atleta tiene como máximo una Membresía vigente en una fecha dada.
+Asignación de un Plan a un Atleta para una Vigencia concreta. Lleva una copia propia de las condiciones del Plan al momento de crearse, y los ajustes individuales de Créditos (por ejemplo, un Crédito de cortesía) se hacen sobre ella como una bolsa para toda su Vigencia que no se renueva semanalmente. Un Atleta tiene como máximo una Membresía vigente en una fecha dada.
 _Avoid_: Plan (cuando se habla del atleta), suscripción, abono, afiliación
 
 **Crédito**:
