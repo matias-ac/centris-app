@@ -12,7 +12,7 @@ erDiagram
         uuid id PK
         string email UK "Identidad global única"
         string nombre
-        string password_hash "Credencial portable para Auth.js / JWT"
+        string password_hash "Nullable al crearse en mostrador; se define en primer ingreso"
         timestamptz created_at
         timestamptz updated_at
         timestamptz deleted_at "Soft delete"
@@ -64,7 +64,7 @@ erDiagram
         bigint precio "Copiado del Plan y ajustable (beca/descuento)"
         string modalidad_creditos "Copiado del Plan al crearse"
         int creditos_por_periodo "Copiado del Plan al crearse"
-        int creditos_extra "Ajustes individuales (+/-)"
+        int creditos_extra "Bolsa de ajuste para toda la Vigencia (no se renueva cada lunes)"
         date fecha_inicio "En timezone del Box"
         date fecha_fin "En timezone del Box (acortable por Baja Anticipada)"
         timestamptz baja_anticipada_en "NULL si sigue su curso normal"
@@ -178,12 +178,30 @@ erDiagram
 ### 2.1. Aislamiento Multi-tenant y Row Level Security ([ADR 0004](./adr/0004-aislamiento-por-box-con-rls-en-postgresql.md))
 - **Tablas Globales (sin RLS)**: `USUARIO` y `BOX`.
 - **Tablas Operativas del Box (con `FORCE ROW LEVEL SECURITY`)**: `AFILIACION`, `PLAN`, `MEMBRESIA`, `PAGO`, `TIPO_CLASE`, `HORARIO`, `CLASE`, `RESERVA`.
-- **Política RLS Canónica**:
+- **Política RLS Canónica (Tablas operativas generales del Box)**:
   ```sql
   ALTER TABLE <tabla> ENABLE ROW LEVEL SECURITY;
   ALTER TABLE <tabla> FORCE ROW LEVEL SECURITY;
 
   CREATE POLICY box_isolation_policy ON <tabla>
+    USING (box_id = current_setting('app.box_id', true)::uuid)
+    WITH CHECK (box_id = current_setting('app.box_id', true)::uuid);
+  ```
+- **Política RLS en `AFILIACION` (Lectura por `app.box_id` o `app.usuario_id`, Escritura estricta por `app.box_id`)**:
+  Para permitir que un `Usuario` recién autenticado consulte sus propias `Afiliaciones` (Selector de Box) antes de fijar `app.box_id`, sin usar funciones `SECURITY DEFINER` ni roles con `BYPASSRLS`:
+  ```sql
+  ALTER TABLE afiliaciones ENABLE ROW LEVEL SECURITY;
+  ALTER TABLE afiliaciones FORCE ROW LEVEL SECURITY;
+
+  CREATE POLICY afiliaciones_select_policy ON afiliaciones
+    FOR SELECT
+    USING (
+      box_id = current_setting('app.box_id', true)::uuid
+      OR usuario_id = current_setting('app.usuario_id', true)::uuid
+    );
+
+  CREATE POLICY afiliaciones_write_policy ON afiliaciones
+    FOR ALL
     USING (box_id = current_setting('app.box_id', true)::uuid)
     WITH CHECK (box_id = current_setting('app.box_id', true)::uuid);
   ```
