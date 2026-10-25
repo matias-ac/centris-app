@@ -1,0 +1,74 @@
+name: CI — Centris Monorepo (Lint, Typecheck, Postgres RLS & E2E)
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  MIGRATION_DATABASE_URL: "postgresql://centris_owner:centris_owner_pass@localhost:5432/centris_db"
+  DATABASE_URL: "postgresql://centris_app_user:centris_app_pass@localhost:5432/centris_db"
+  PORT: "3001"
+  CORS_ORIGIN: "http://localhost:3000"
+  AUTH_SECRET: "ci-secreto-jwt-portable-centris-github-actions-32chars"
+  NEXT_PUBLIC_API_URL: "http://localhost:3001/api"
+
+jobs:
+  verify:
+    name: Calidad, RLS en PostgreSQL Real y Tests E2E
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: centris_owner
+          POSTGRES_PASSWORD: centris_owner_pass
+          POSTGRES_DB: centris_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U centris_owner -d centris_db"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Configurar Node.js 22 LTS
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: ".nvmrc"
+          cache: "pnpm"
+
+      - name: Instalar dependencias del monorepo
+        run: pnpm install --frozen-lockfile
+
+      - name: Instalar navegador Chromium para Playwright
+        run: pnpm --filter @centris/web exec playwright install --with-deps chromium
+
+      - name: Ejecutar migraciones SQL y políticas RLS (0001_core_rls)
+        run: pnpm db:migrate
+
+      - name: Cargar dataset de Seed oficial
+        run: pnpm db:seed
+
+      - name: Compilar paquetes del monorepo
+        run: pnpm build
+
+      - name: Verificar Lint (ESLint)
+        run: pnpm lint
+
+      - name: Verificar Tipos (TypeScript)
+        run: pnpm typecheck
+
+      - name: Ejecutar pruebas unitarias, integración RLS y E2E (Vitest + playwright-bdd)
+        run: pnpm test
