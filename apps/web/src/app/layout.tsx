@@ -1,10 +1,25 @@
 import type { Metadata } from "next";
+import { Inter, Oswald } from "next/font/google";
 import "./globals.css";
+
+const inter = Inter({
+  subsets: ["latin", "latin-ext"],
+  weight: ["400", "500", "600"],
+  variable: "--font-inter",
+  display: "swap"
+});
+
+const oswald = Oswald({
+  subsets: ["latin", "latin-ext"],
+  weight: ["600", "700"],
+  variable: "--font-oswald",
+  display: "swap"
+});
 
 export const metadata: Metadata = {
   title: "Centris — Gestión Multitenant de Boxes",
   description:
-    "Sistema de gestión de Boxes con aislamiento PostgreSQL FORCE ROW LEVEL SECURITY."
+    "Plataforma de gestión para boxes y centros de entrenamiento funcional con aislamiento PostgreSQL RLS."
 };
 
 export default function RootLayout({
@@ -13,8 +28,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className="dark">
-      <body className="min-h-screen bg-black text-white antialiased">
+    <html lang="es" className={`${inter.variable} ${oswald.variable} dark`}>
+      <body className="bg-background text-foreground font-sans antialiased min-h-screen">
         {children}
       </body>
     </html>

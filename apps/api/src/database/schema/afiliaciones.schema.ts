@@ -15,10 +15,10 @@ export const afiliaciones = pgTable(
     id: uuid("id").defaultRandom().primaryKey(),
     boxId: uuid("box_id")
       .notNull()
-      .references(() => boxes.id),
+      .references(() => boxes.id, { onDelete: "restrict" }),
     usuarioId: uuid("usuario_id")
       .notNull()
-      .references(() => usuarios.id),
+      .references(() => usuarios.id, { onDelete: "restrict" }),
     roles: text("roles").array().notNull(),
     activo: boolean("activo").default(true).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })

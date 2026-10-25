@@ -1,8 +1,9 @@
+import { SEED_BOX_IDS } from "@centris/shared";
 import pg from "pg";
 
 export const SEED_IDS = {
-  boxCentrisNorte: "00000000-0000-4000-8000-000000000101",
-  boxCentrisSur: "00000000-0000-4000-8000-000000000102",
+  boxCentrisNorte: SEED_BOX_IDS.boxCentrisNorte,
+  boxCentrisSur: SEED_BOX_IDS.boxCentrisSur,
   usuarioAdmin: "00000000-0000-4000-8000-000000000201",
   usuarioRecepcion: "00000000-0000-4000-8000-000000000202",
   usuarioCoachMulti: "00000000-0000-4000-8000-000000000203",

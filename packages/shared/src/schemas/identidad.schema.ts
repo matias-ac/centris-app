@@ -44,3 +44,8 @@ export const AfiliacionSchema = z.object({
 });
 
 export type Afiliacion = z.infer<typeof AfiliacionSchema>;
+
+export const SEED_BOX_IDS = {
+  boxCentrisNorte: "00000000-0000-4000-8000-000000000101",
+  boxCentrisSur: "00000000-0000-4000-8000-000000000102"
+} as const;

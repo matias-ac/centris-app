@@ -16,6 +16,7 @@ export {
   BoxSchema,
   UsuarioSchema,
   AfiliacionSchema,
+  SEED_BOX_IDS,
   type Box,
   type Usuario,
   type Afiliacion

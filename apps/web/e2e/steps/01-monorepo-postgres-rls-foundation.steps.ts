@@ -1,11 +1,14 @@
 import { expect } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
-import { EstadoSaludSchema, type EstadoSalud } from "@centris/shared";
+import {
+  EstadoSaludSchema,
+  SEED_BOX_IDS,
+  type EstadoSalud
+} from "@centris/shared";
 
 const { Given, When, Then } = createBdd();
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api";
-const BOX_CENTRIS_NORTE_ID = "00000000-0000-4000-8000-000000000101";
 
 let ultimaRespuestaSalud: EstadoSalud | null = null;
 
@@ -44,8 +47,8 @@ When(
   async ({ request }, nombreBox: string) => {
     const boxId =
       nombreBox === "Box Centris Norte"
-        ? BOX_CENTRIS_NORTE_ID
-        : "00000000-0000-4000-8000-000000000102";
+        ? SEED_BOX_IDS.boxCentrisNorte
+        : SEED_BOX_IDS.boxCentrisSur;
     const response = await request.get(`${API_URL}/salud?boxId=${boxId}`);
     expect(response.ok()).toBe(true);
     const json = await response.json();
@@ -80,7 +83,7 @@ Then(
     ).toBeVisible();
     await expect(page.getByTestId("rol-conexion")).toContainText(rolEsperado);
     await expect(page.getByTestId("estado-rls")).toContainText(
-      /FORCE ROW LEVEL SECURITY/i
+      /Force Row Level Security Activo/i
     );
     await expect(page.getByTestId("conteo-sin-contexto")).toHaveText("0");
     await expect(page.getByTestId("conteo-box-norte")).toHaveText("7");
