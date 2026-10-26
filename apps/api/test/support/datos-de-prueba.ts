@@ -88,6 +88,10 @@ export class DatosDePrueba {
       `DELETE FROM afiliaciones WHERE box_id = ANY($1::uuid[]) OR usuario_id = ANY($2::uuid[])`,
       [boxIds, usuarioIds]
     );
+    await this.pool.query(
+      `DELETE FROM planes WHERE box_id = ANY($1::uuid[])`,
+      [boxIds]
+    );
     await this.pool.query(`DELETE FROM usuarios WHERE id = ANY($1::uuid[])`, [
       usuarioIds
     ]);
