@@ -49,6 +49,7 @@ export type Box = z.infer<typeof BoxSchema>;
  * Esquema de actualización de la configuración general de un Box por su Administrador.
  */
 export const ActualizarConfiguracionBoxSchema = z.object({
+  nombre: z.string().trim().min(1).max(120).optional(),
   timezone: TimezoneIanaSchema,
   moneda: MonedaIsoSchema,
   anticipacionReservaDias: z.coerce.number().int().min(1).max(90),
@@ -117,11 +118,11 @@ export const AfiliacionConBoxSchema = AfiliacionSchema.extend({
 
 export type AfiliacionConBox = z.infer<typeof AfiliacionConBoxSchema>;
 
-export const AfiliacionStaffSchema = AfiliacionSchema.extend({
+export const AfiliacionConUsuarioSchema = AfiliacionSchema.extend({
   usuario: UsuarioSchema
 });
 
-export type AfiliacionStaff = z.infer<typeof AfiliacionStaffSchema>;
+export type AfiliacionConUsuario = z.infer<typeof AfiliacionConUsuarioSchema>;
 
 export const ActualizarRolesAfiliacionSchema = z.object({
   roles: z

@@ -9,6 +9,18 @@ import { DomainException } from "../../common/errors/domain.exception.js";
 import { DatabaseService } from "../../database/database.service.js";
 import { boxes } from "../../database/schema/index.js";
 
+function mapearBox(fila: typeof boxes.$inferSelect): Box {
+  return {
+    id: fila.id,
+    nombre: fila.nombre,
+    slug: fila.slug,
+    timezone: fila.timezone,
+    moneda: fila.moneda,
+    anticipacionReservaDias: fila.anticipacionReservaDias,
+    ventanaCancelacionMinutos: fila.ventanaCancelacionMinutos
+  };
+}
+
 @Injectable()
 export class BoxesService {
   constructor(
@@ -31,15 +43,7 @@ export class BoxesService {
         );
       }
 
-      return {
-        id: box.id,
-        nombre: box.nombre,
-        slug: box.slug,
-        timezone: box.timezone,
-        moneda: box.moneda,
-        anticipacionReservaDias: box.anticipacionReservaDias,
-        ventanaCancelacionMinutos: box.ventanaCancelacionMinutos
-      };
+      return mapearBox(box);
     });
   }
 
@@ -48,15 +52,20 @@ export class BoxesService {
     input: ActualizarConfiguracionBox
   ): Promise<Box> {
     return this.db.withBoxTransaction(boxId, async (tx) => {
+      const valoresActualizados: Partial<typeof boxes.$inferInsert> = {
+        timezone: input.timezone,
+        moneda: input.moneda,
+        anticipacionReservaDias: input.anticipacionReservaDias,
+        ventanaCancelacionMinutos: input.ventanaCancelacionMinutos,
+        updatedAt: new Date()
+      };
+      if (input.nombre !== undefined) {
+        valoresActualizados.nombre = input.nombre;
+      }
+
       const actualizados = await tx
         .update(boxes)
-        .set({
-          timezone: input.timezone,
-          moneda: input.moneda,
-          anticipacionReservaDias: input.anticipacionReservaDias,
-          ventanaCancelacionMinutos: input.ventanaCancelacionMinutos,
-          updatedAt: new Date()
-        })
+        .set(valoresActualizados)
         .where(and(eq(boxes.id, boxId), isNull(boxes.deletedAt)))
         .returning();
 
@@ -69,15 +78,7 @@ export class BoxesService {
         );
       }
 
-      return {
-        id: box.id,
-        nombre: box.nombre,
-        slug: box.slug,
-        timezone: box.timezone,
-        moneda: box.moneda,
-        anticipacionReservaDias: box.anticipacionReservaDias,
-        ventanaCancelacionMinutos: box.ventanaCancelacionMinutos
-      };
+      return mapearBox(box);
     });
   }
 }

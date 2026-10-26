@@ -19,6 +19,28 @@ export class AuthService {
     @Inject(JwtTokenService) private readonly jwtTokenService: JwtTokenService
   ) {}
 
+  private async emitirSesionUsuario(usuario: {
+    id: string;
+    email: string;
+    nombre: string;
+  }): Promise<SesionAuth> {
+    const accessToken = await this.jwtTokenService.firmarTokenUsuario({
+      id: usuario.id,
+      email: usuario.email,
+      nombre: usuario.nombre
+    });
+
+    return {
+      accessToken,
+      usuario: {
+        id: usuario.id,
+        email: usuario.email,
+        nombre: usuario.nombre,
+        passwordActivada: true
+      }
+    };
+  }
+
   async iniciarSesion(input: LoginInput): Promise<SesionAuth> {
     const emailNormalizado = input.email.toLowerCase().trim();
     const filas = await this.db.client
@@ -41,21 +63,7 @@ export class AuthService {
       );
     }
 
-    const accessToken = await this.jwtTokenService.firmarTokenUsuario({
-      id: usuario.id,
-      email: usuario.email,
-      nombre: usuario.nombre
-    });
-
-    return {
-      accessToken,
-      usuario: {
-        id: usuario.id,
-        email: usuario.email,
-        nombre: usuario.nombre,
-        passwordActivada: true
-      }
-    };
+    return this.emitirSesionUsuario(usuario);
   }
 
   async activarCuentaPrimerIngreso(
@@ -128,20 +136,6 @@ export class AuthService {
       );
     }
 
-    const accessToken = await this.jwtTokenService.firmarTokenUsuario({
-      id: usuario.id,
-      email: usuario.email,
-      nombre: usuario.nombre
-    });
-
-    return {
-      accessToken,
-      usuario: {
-        id: usuario.id,
-        email: usuario.email,
-        nombre: usuario.nombre,
-        passwordActivada: true
-      }
-    };
+    return this.emitirSesionUsuario(usuario);
   }
 }

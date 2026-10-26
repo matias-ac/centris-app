@@ -1,6 +1,13 @@
 import { Controller, Get } from "@nestjs/common";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { ERROR_CODES } from "@centris/shared";
+import {
+  ERROR_CODES,
+  type Afiliacion,
+  type AfiliacionConBox,
+  type AfiliacionConUsuario,
+  type Box,
+  type SesionAuth
+} from "@centris/shared";
 import { Roles } from "../src/common/decorators/roles.decorator.js";
 import {
   type ApiDePrueba,
@@ -163,13 +170,16 @@ describe("Seam 2 — API HTTP + PostgreSQL RLS: Auth JWT, Selector de Box, 4 Rol
     );
 
     // 5. Activación de primer ingreso define password_hash y devuelve sesión JWT válida
-    const activacionExitosa = await api.pedir("/auth/activar-cuenta", {
-      method: "POST",
-      body: {
-        email: "mostrador.t02@test.centris.dev",
-        password: "NuevaPassword123!"
+    const activacionExitosa = await api.pedir<SesionAuth>(
+      "/auth/activar-cuenta",
+      {
+        method: "POST",
+        body: {
+          email: "mostrador.t02@test.centris.dev",
+          password: "NuevaPassword123!"
+        }
       }
-    });
+    );
     expect(activacionExitosa.status).toBe(200);
     expect(activacionExitosa.body.usuario.id).toBe(IDS.usuarioMostrador);
     expect(activacionExitosa.body.usuario.passwordActivada).toBe(true);
@@ -189,7 +199,7 @@ describe("Seam 2 — API HTTP + PostgreSQL RLS: Auth JWT, Selector de Box, 4 Rol
     );
 
     // 7. Ahora puede iniciar sesión normalmente con la contraseña recién activada
-    const loginPostActivacion = await api.pedir("/auth/login", {
+    const loginPostActivacion = await api.pedir<SesionAuth>("/auth/login", {
       method: "POST",
       body: {
         email: "mostrador.t02@test.centris.dev",
@@ -201,7 +211,7 @@ describe("Seam 2 — API HTTP + PostgreSQL RLS: Auth JWT, Selector de Box, 4 Rol
   });
 
   it("Criterios 2 y 3: lista las Afiliaciones del Usuario bajo RLS (app.usuario_id) y aplica la unión de los 4 roles atómicos al cambiar de Box sin re-autenticarse", async () => {
-    const loginMulti = await api.pedir("/auth/login", {
+    const loginMulti = await api.pedir<SesionAuth>("/auth/login", {
       method: "POST",
       body: {
         email: "multi.t02@test.centris.dev",
@@ -209,14 +219,16 @@ describe("Seam 2 — API HTTP + PostgreSQL RLS: Auth JWT, Selector de Box, 4 Rol
       }
     });
     expect(loginMulti.status).toBe(200);
-    const tokenMulti = loginMulti.body.accessToken as string;
+    const tokenMulti = loginMulti.body.accessToken;
 
     // Consulta sus Afiliaciones bajo SET LOCAL app.usuario_id (sin ver las de usuarioAdmin)
-    const mias = await api.pedir("/afiliaciones/mias", { token: tokenMulti });
+    const mias = await api.pedir<AfiliacionConBox[]>("/afiliaciones/mias", {
+      token: tokenMulti
+    });
     expect(mias.status).toBe(200);
     expect(mias.body).toHaveLength(2);
     expect(
-      mias.body.map((a: { boxId: string; roles: string[] }) => ({
+      mias.body.map((a) => ({
         boxId: a.boxId,
         roles: a.roles
       }))
@@ -266,23 +278,23 @@ describe("Seam 2 — API HTTP + PostgreSQL RLS: Auth JWT, Selector de Box, 4 Rol
   });
 
   it("Criterio 4: permite al Administrador actualizar la configuración de su Box validada con Zod y devuelve 403 Forbidden a Recepcionista, Coach o Atleta", async () => {
-    const loginAdmin = await api.pedir("/auth/login", {
+    const loginAdmin = await api.pedir<SesionAuth>("/auth/login", {
       method: "POST",
       body: {
         email: "admin.t02@test.centris.dev",
         password: "PasswordSegura123!"
       }
     });
-    const tokenAdmin = loginAdmin.body.accessToken as string;
+    const tokenAdmin = loginAdmin.body.accessToken;
 
-    const loginMulti = await api.pedir("/auth/login", {
+    const loginMulti = await api.pedir<SesionAuth>("/auth/login", {
       method: "POST",
       body: {
         email: "multi.t02@test.centris.dev",
         password: "PasswordSegura123!"
       }
     });
-    const tokenMulti = loginMulti.body.accessToken as string;
+    const tokenMulti = loginMulti.body.accessToken;
 
     // 1. Un usuario con ['coach', 'recepcionista'] en Box Sur o ['atleta'] en Box Norte recibe 403 al intentar PUT /boxes/configuracion
     const intentoNoAdmin = await api.pedir("/boxes/configuracion", {
@@ -317,7 +329,7 @@ describe("Seam 2 — API HTTP + PostgreSQL RLS: Auth JWT, Selector de Box, 4 Rol
     );
 
     // 3. El Administrador actualiza la configuración de Box Norte y se persiste en la tabla boxes
-    const actualizacionOk = await api.pedir("/boxes/configuracion", {
+    const actualizacionOk = await api.pedir<Box>("/boxes/configuracion", {
       method: "PUT",
       token: tokenAdmin,
       boxId: IDS.boxNorte,
@@ -337,7 +349,7 @@ describe("Seam 2 — API HTTP + PostgreSQL RLS: Auth JWT, Selector de Box, 4 Rol
       ventanaCancelacionMinutos: 180
     });
 
-    const lecturaConfig = await api.pedir("/boxes/configuracion", {
+    const lecturaConfig = await api.pedir<Box>("/boxes/configuracion", {
       token: tokenAdmin,
       boxId: IDS.boxNorte
     });
@@ -347,35 +359,31 @@ describe("Seam 2 — API HTTP + PostgreSQL RLS: Auth JWT, Selector de Box, 4 Rol
   });
 
   it("Criterio 5: permite al Administrador gestionar roles y aplicar Soft Delete a Afiliaciones de su Box con efecto inmediato sin afectar otros Boxes, protegiendo al último Administrador", async () => {
-    const loginAdmin = await api.pedir("/auth/login", {
+    const loginAdmin = await api.pedir<SesionAuth>("/auth/login", {
       method: "POST",
       body: {
         email: "admin.t02@test.centris.dev",
         password: "PasswordSegura123!"
       }
     });
-    const tokenAdmin = loginAdmin.body.accessToken as string;
+    const tokenAdmin = loginAdmin.body.accessToken;
 
-    const loginMulti = await api.pedir("/auth/login", {
+    const loginMulti = await api.pedir<SesionAuth>("/auth/login", {
       method: "POST",
       body: {
         email: "multi.t02@test.centris.dev",
         password: "PasswordSegura123!"
       }
     });
-    const tokenMulti = loginMulti.body.accessToken as string;
+    const tokenMulti = loginMulti.body.accessToken;
 
     // 1. El Administrador de Box Norte lista las Afiliaciones de su Box (aisladas por RLS)
-    const listado = await api.pedir("/afiliaciones", {
+    const listado = await api.pedir<AfiliacionConUsuario[]>("/afiliaciones", {
       token: tokenAdmin,
       boxId: IDS.boxNorte
     });
     expect(listado.status).toBe(200);
-    expect(
-      listado.body.every(
-        (a: { boxId: string }) => a.boxId === IDS.boxNorte
-      )
-    ).toBe(true);
+    expect(listado.body.every((a) => a.boxId === IDS.boxNorte)).toBe(true);
 
     // 2. Protección del último Administrador: no puede quitarse el rol de administrador ni hacerse soft delete si es el único en Box Norte
     const quitarUltimoAdmin = await api.pedir(
@@ -406,7 +414,7 @@ describe("Seam 2 — API HTTP + PostgreSQL RLS: Auth JWT, Selector de Box, 4 Rol
     );
 
     // 3. El Administrador asigna ['coach', 'atleta'] a usuarioMulti en Box Norte: el permiso se habilita de inmediato sin re-login
-    const promoverCoachNorte = await api.pedir(
+    const promoverCoachNorte = await api.pedir<Afiliacion>(
       `/afiliaciones/${IDS.afiliacionMultiNorte}`,
       {
         method: "PATCH",

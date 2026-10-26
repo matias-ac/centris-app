@@ -5,12 +5,13 @@ import {
   type ActualizarRolesAfiliacion,
   type Afiliacion,
   type AfiliacionConBox,
-  type AfiliacionStaff
+  type AfiliacionConUsuario
 } from "@centris/shared";
 import { and, asc, eq, isNull, sql } from "drizzle-orm";
 import { DomainException } from "../../common/errors/domain.exception.js";
 import {
   DatabaseService,
+  type DrizzleTx,
   UUID_REGEX
 } from "../../database/database.service.js";
 import {
@@ -19,11 +20,69 @@ import {
   usuarios
 } from "../../database/schema/index.js";
 
+function validarUuidAfiliacion(afiliacionId: string): void {
+  if (!UUID_REGEX.test(afiliacionId)) {
+    throw new DomainException(
+      ERROR_CODES.VALIDACION_FALLIDA,
+      "El identificador de la Afiliación no es un UUID válido.",
+      HttpStatus.BAD_REQUEST,
+      { id: ["UUID inválido"] }
+    );
+  }
+}
+
 @Injectable()
 export class AfiliacionesService {
   constructor(
     @Inject(DatabaseService) private readonly db: DatabaseService
   ) {}
+
+  private async obtenerAfiliacionEnBox(
+    tx: DrizzleTx,
+    afiliacionId: string
+  ): Promise<typeof afiliaciones.$inferSelect> {
+    const existentes = await tx
+      .select()
+      .from(afiliaciones)
+      .where(
+        and(eq(afiliaciones.id, afiliacionId), isNull(afiliaciones.deletedAt))
+      );
+
+    const actual = existentes[0];
+    if (!actual) {
+      throw new DomainException(
+        ERROR_CODES.VALIDACION_FALLIDA,
+        "No se encontró la Afiliación en el Box activo.",
+        HttpStatus.BAD_REQUEST,
+        { id: ["Afiliación inexistente en este Box"] }
+      );
+    }
+    return actual;
+  }
+
+  private async asegurarNoEsUltimoAdministrador(
+    tx: DrizzleTx,
+    mensajeError: string
+  ): Promise<void> {
+    const adminsActivos = await tx
+      .select({ id: afiliaciones.id })
+      .from(afiliaciones)
+      .where(
+        and(
+          eq(afiliaciones.activo, true),
+          isNull(afiliaciones.deletedAt),
+          sql`${afiliaciones.roles} @> ARRAY['administrador']::text[]`
+        )
+      );
+
+    if (adminsActivos.length <= 1) {
+      throw new DomainException(
+        ERROR_CODES.ULTIMO_ADMINISTRADOR,
+        mensajeError,
+        HttpStatus.CONFLICT
+      );
+    }
+  }
 
   async listarMisAfiliaciones(usuarioId: string): Promise<AfiliacionConBox[]> {
     return this.db.withUsuarioTransaction(usuarioId, async (tx) => {
@@ -62,7 +121,9 @@ export class AfiliacionesService {
     });
   }
 
-  async listarAfiliacionesDelBox(boxId: string): Promise<AfiliacionStaff[]> {
+  async listarAfiliacionesDelBox(
+    boxId: string
+  ): Promise<AfiliacionConUsuario[]> {
     return this.db.withBoxTransaction(boxId, async (tx) => {
       const filas = await tx
         .select({
@@ -101,61 +162,20 @@ export class AfiliacionesService {
     afiliacionId: string,
     input: ActualizarRolesAfiliacion
   ): Promise<Afiliacion> {
-    if (!UUID_REGEX.test(afiliacionId)) {
-      throw new DomainException(
-        ERROR_CODES.VALIDACION_FALLIDA,
-        "El identificador de la Afiliación no es un UUID válido.",
-        HttpStatus.BAD_REQUEST,
-        { id: ["UUID inválido"] }
-      );
-    }
-
+    validarUuidAfiliacion(afiliacionId);
     const rolesUnicos = Array.from(new Set(input.roles));
 
     return this.db.withBoxTransaction(boxId, async (tx) => {
-      const existentes = await tx
-        .select()
-        .from(afiliaciones)
-        .where(
-          and(
-            eq(afiliaciones.id, afiliacionId),
-            isNull(afiliaciones.deletedAt)
-          )
-        );
-
-      const actual = existentes[0];
-      if (!actual) {
-        throw new DomainException(
-          ERROR_CODES.VALIDACION_FALLIDA,
-          "No se encontró la Afiliación en el Box activo.",
-          HttpStatus.BAD_REQUEST,
-          { id: ["Afiliación inexistente en este Box"] }
-        );
-      }
-
+      const actual = await this.obtenerAfiliacionEnBox(tx, afiliacionId);
       const eraAdmin =
         actual.activo && actual.roles.includes("administrador");
       const sigueSiendoAdmin = rolesUnicos.includes("administrador");
 
       if (eraAdmin && !sigueSiendoAdmin) {
-        const adminsActivos = await tx
-          .select({ id: afiliaciones.id })
-          .from(afiliaciones)
-          .where(
-            and(
-              eq(afiliaciones.activo, true),
-              isNull(afiliaciones.deletedAt),
-              sql`${afiliaciones.roles} @> ARRAY['administrador']::text[]`
-            )
-          );
-
-        if (adminsActivos.length <= 1) {
-          throw new DomainException(
-            ERROR_CODES.ULTIMO_ADMINISTRADOR,
-            "No se puede quitar el rol de Administrador al único Administrador activo del Box.",
-            HttpStatus.CONFLICT
-          );
-        }
+        await this.asegurarNoEsUltimoAdministrador(
+          tx,
+          "No se puede quitar el rol de Administrador al único Administrador activo del Box."
+        );
       }
 
       const actualizadas = await tx
@@ -182,55 +202,16 @@ export class AfiliacionesService {
     boxId: string,
     afiliacionId: string
   ): Promise<{ eliminada: boolean; id: string }> {
-    if (!UUID_REGEX.test(afiliacionId)) {
-      throw new DomainException(
-        ERROR_CODES.VALIDACION_FALLIDA,
-        "El identificador de la Afiliación no es un UUID válido.",
-        HttpStatus.BAD_REQUEST,
-        { id: ["UUID inválido"] }
-      );
-    }
+    validarUuidAfiliacion(afiliacionId);
 
     return this.db.withBoxTransaction(boxId, async (tx) => {
-      const existentes = await tx
-        .select()
-        .from(afiliaciones)
-        .where(
-          and(
-            eq(afiliaciones.id, afiliacionId),
-            isNull(afiliaciones.deletedAt)
-          )
-        );
-
-      const actual = existentes[0];
-      if (!actual) {
-        throw new DomainException(
-          ERROR_CODES.VALIDACION_FALLIDA,
-          "No se encontró la Afiliación en el Box activo.",
-          HttpStatus.BAD_REQUEST,
-          { id: ["Afiliación inexistente en este Box"] }
-        );
-      }
+      const actual = await this.obtenerAfiliacionEnBox(tx, afiliacionId);
 
       if (actual.activo && actual.roles.includes("administrador")) {
-        const adminsActivos = await tx
-          .select({ id: afiliaciones.id })
-          .from(afiliaciones)
-          .where(
-            and(
-              eq(afiliaciones.activo, true),
-              isNull(afiliaciones.deletedAt),
-              sql`${afiliaciones.roles} @> ARRAY['administrador']::text[]`
-            )
-          );
-
-        if (adminsActivos.length <= 1) {
-          throw new DomainException(
-            ERROR_CODES.ULTIMO_ADMINISTRADOR,
-            "No se puede dar de baja al único Administrador activo del Box.",
-            HttpStatus.CONFLICT
-          );
-        }
+        await this.asegurarNoEsUltimoAdministrador(
+          tx,
+          "No se puede dar de baja al único Administrador activo del Box."
+        );
       }
 
       await tx
@@ -246,4 +227,3 @@ export class AfiliacionesService {
     });
   }
 }
-

@@ -7,7 +7,7 @@ import { configurarApp } from "../../src/app.setup.js";
 
 export interface ApiDePrueba {
   url: string;
-  pedir: (
+  pedir: <T = Record<string, unknown>>(
     ruta: string,
     opciones?: {
       method?: string;
@@ -15,7 +15,7 @@ export interface ApiDePrueba {
       boxId?: string;
       body?: unknown;
     }
-  ) => Promise<{ status: number; body: any }>;
+  ) => Promise<{ status: number; body: T }>;
   cerrar: () => Promise<void>;
 }
 

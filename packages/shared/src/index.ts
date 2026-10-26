@@ -25,7 +25,7 @@ export {
   SesionAuthSchema,
   AfiliacionSchema,
   AfiliacionConBoxSchema,
-  AfiliacionStaffSchema,
+  AfiliacionConUsuarioSchema,
   ActualizarRolesAfiliacionSchema,
   SEED_BOX_IDS,
   type Box,
@@ -36,7 +36,7 @@ export {
   type SesionAuth,
   type Afiliacion,
   type AfiliacionConBox,
-  type AfiliacionStaff,
+  type AfiliacionConUsuario,
   type ActualizarRolesAfiliacion
 } from "./schemas/identidad.schema.js";
 

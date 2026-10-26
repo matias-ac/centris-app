@@ -11,7 +11,7 @@ import {
   ActualizarRolesAfiliacionSchema,
   type Afiliacion,
   type AfiliacionConBox,
-  type AfiliacionStaff
+  type AfiliacionConUsuario
 } from "@centris/shared";
 import {
   ContextoBox,
@@ -41,7 +41,7 @@ export class AfiliacionesController {
   @Roles("administrador")
   async listarAfiliacionesBox(
     @ContextoBox() contexto: ContextoBoxActivo
-  ): Promise<AfiliacionStaff[]> {
+  ): Promise<AfiliacionConUsuario[]> {
     return this.afiliacionesService.listarAfiliacionesDelBox(contexto.boxId);
   }
 
