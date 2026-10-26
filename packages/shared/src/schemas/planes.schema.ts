@@ -44,7 +44,6 @@ export const CrearPlanSchema = z
     creditosPorPeriodo: z.coerce
       .number()
       .int("Los créditos deben ser un número entero")
-      .min(1, "Los créditos por período deben ser mayores a cero")
       .nullable()
       .optional()
   })
@@ -94,7 +93,6 @@ export const ActualizarPlanSchema = z
     creditosPorPeriodo: z.coerce
       .number()
       .int("Los créditos deben ser un número entero")
-      .min(1, "Los créditos por período deben ser mayores a cero")
       .nullable()
       .optional(),
     activo: z.boolean().optional()
@@ -102,8 +100,9 @@ export const ActualizarPlanSchema = z
   .superRefine((data, ctx) => {
     if (data.modalidadCreditos && data.modalidadCreditos !== "ILIMITADO") {
       if (
-        data.creditosPorPeriodo !== undefined &&
-        (data.creditosPorPeriodo === null || data.creditosPorPeriodo <= 0)
+        data.creditosPorPeriodo === undefined ||
+        data.creditosPorPeriodo === null ||
+        data.creditosPorPeriodo <= 0
       ) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,

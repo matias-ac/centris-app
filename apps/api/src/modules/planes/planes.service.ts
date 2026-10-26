@@ -10,6 +10,7 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import { DomainException } from "../../common/errors/domain.exception.js";
 import {
   DatabaseService,
+  type DrizzleTx,
   UUID_REGEX
 } from "../../database/database.service.js";
 import { planes } from "../../database/schema/index.js";
@@ -68,23 +69,31 @@ export class PlanesService {
     });
   }
 
+  private async buscarPlanActivoPorId(
+    tx: DrizzleTx,
+    planId: string
+  ): Promise<typeof planes.$inferSelect> {
+    const filas = await tx
+      .select()
+      .from(planes)
+      .where(and(eq(planes.id, planId), isNull(planes.deletedAt)));
+
+    const plan = filas[0];
+    if (!plan) {
+      throw new DomainException(
+        ERROR_CODES.VALIDACION_FALLIDA,
+        "Plan no encontrado en el Box activo.",
+        HttpStatus.NOT_FOUND,
+        { id: ["Plan inexistente en este Box"] }
+      );
+    }
+    return plan;
+  }
+
   async obtenerPlanPorId(boxId: string, planId: string): Promise<Plan> {
     validarUuidPlan(planId);
     return this.db.withBoxTransaction(boxId, async (tx) => {
-      const filas = await tx
-        .select()
-        .from(planes)
-        .where(and(eq(planes.id, planId), isNull(planes.deletedAt)));
-
-      const plan = filas[0];
-      if (!plan) {
-        throw new DomainException(
-          ERROR_CODES.VALIDACION_FALLIDA,
-          "Plan no encontrado en el Box activo.",
-          HttpStatus.NOT_FOUND,
-          { id: ["Plan inexistente en este Box"] }
-        );
-      }
+      const plan = await this.buscarPlanActivoPorId(tx, planId);
       return mapearPlan(plan);
     });
   }
@@ -123,20 +132,7 @@ export class PlanesService {
   ): Promise<Plan> {
     validarUuidPlan(planId);
     return this.db.withBoxTransaction(boxId, async (tx) => {
-      const existentes = await tx
-        .select()
-        .from(planes)
-        .where(and(eq(planes.id, planId), isNull(planes.deletedAt)));
-
-      const actual = existentes[0];
-      if (!actual) {
-        throw new DomainException(
-          ERROR_CODES.VALIDACION_FALLIDA,
-          "Plan no encontrado en el Box activo.",
-          HttpStatus.NOT_FOUND,
-          { id: ["Plan inexistente en este Box"] }
-        );
-      }
+      await this.buscarPlanActivoPorId(tx, planId);
 
       const valoresActualizados: Partial<typeof planes.$inferInsert> = {
         updatedAt: new Date()
@@ -176,20 +172,7 @@ export class PlanesService {
   ): Promise<{ success: boolean; id: string }> {
     validarUuidPlan(planId);
     return this.db.withBoxTransaction(boxId, async (tx) => {
-      const existentes = await tx
-        .select()
-        .from(planes)
-        .where(and(eq(planes.id, planId), isNull(planes.deletedAt)));
-
-      const actual = existentes[0];
-      if (!actual) {
-        throw new DomainException(
-          ERROR_CODES.VALIDACION_FALLIDA,
-          "Plan no encontrado en el Box activo.",
-          HttpStatus.NOT_FOUND,
-          { id: ["Plan inexistente en este Box"] }
-        );
-      }
+      await this.buscarPlanActivoPorId(tx, planId);
 
       await tx
         .update(planes)

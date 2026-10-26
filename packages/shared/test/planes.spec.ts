@@ -90,6 +90,18 @@ describe("Seam 1 — Esquemas Zod y Contratos de Dominio de Planes (@centris/sha
       // Debe guardarse estrictamente como NULL según el criterio de aceptación
       expect(ilimitadoConNumero.data.creditosPorPeriodo).toBeNull();
     }
+
+    const ilimitadoConCero = CrearPlanSchema.safeParse({
+      nombre: "Plan Libre Mensual",
+      precioBase: 48000,
+      duracionDias: 30,
+      modalidadCreditos: "ILIMITADO",
+      creditosPorPeriodo: 0
+    });
+    expect(ilimitadoConCero.success).toBe(true);
+    if (ilimitadoConCero.success) {
+      expect(ilimitadoConCero.data.creditosPorPeriodo).toBeNull();
+    }
   });
 
   it("rechaza duracion_dias menor a 1 o precio_base negativo", () => {
@@ -131,5 +143,16 @@ describe("Seam 1 — Esquemas Zod y Contratos de Dominio de Planes (@centris/sha
       activo: false
     });
     expect(actualizacion.success).toBe(true);
+
+    const actualizacionModalidadSinCreditos = ActualizarPlanSchema.safeParse({
+      modalidadCreditos: "SEMANAL"
+    });
+    expect(actualizacionModalidadSinCreditos.success).toBe(false);
+
+    const actualizacionModalidadConCreditos = ActualizarPlanSchema.safeParse({
+      modalidadCreditos: "SEMANAL",
+      creditosPorPeriodo: 4
+    });
+    expect(actualizacionModalidadConCreditos.success).toBe(true);
   });
 });

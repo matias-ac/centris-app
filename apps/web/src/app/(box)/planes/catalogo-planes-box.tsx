@@ -1,9 +1,10 @@
 "use client";
 
-import { AlertCircle, CheckCircle, Plus, Trash2 } from "lucide-react";
+import { AlertCircle, CheckCircle, Edit3, Plus, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
+  ActualizarPlanSchema,
   CrearPlanSchema,
   MODALIDADES_CREDITOS,
   type ModalidadCreditos,
@@ -35,12 +36,23 @@ export function CatalogoPlanesBox({
 }: CatalogoPlanesBoxProps) {
   const router = useRouter();
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
+  const [planEditando, setPlanEditando] = useState<Plan | null>(null);
+
+  // Estados de alta
   const [nombre, setNombre] = useState("");
   const [precioBase, setPrecioBase] = useState("");
   const [duracionDias, setDuracionDias] = useState("30");
   const [modalidadCreditos, setModalidadCreditos] =
     useState<ModalidadCreditos>("SEMANAL");
   const [creditosPorPeriodo, setCreditosPorPeriodo] = useState("3");
+
+  // Estados de edición
+  const [editNombre, setEditNombre] = useState("");
+  const [editPrecioBase, setEditPrecioBase] = useState("");
+  const [editDuracionDias, setEditDuracionDias] = useState("30");
+  const [editModalidad, setEditModalidad] =
+    useState<ModalidadCreditos>("SEMANAL");
+  const [editCreditos, setEditCreditos] = useState("3");
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [exitoMsg, setExitoMsg] = useState<string | null>(null);
@@ -99,6 +111,61 @@ export function CatalogoPlanesBox({
     });
   }
 
+  function iniciarEdicion(plan: Plan) {
+    setPlanEditando(plan);
+    setEditNombre(plan.nombre);
+    setEditPrecioBase(plan.precioBase.toString());
+    setEditDuracionDias(plan.duracionDias.toString());
+    setEditModalidad(plan.modalidadCreditos);
+    setEditCreditos(
+      plan.creditosPorPeriodo ? plan.creditosPorPeriodo.toString() : "3"
+    );
+    setMostrarFormulario(false);
+    setErrorMsg(null);
+    setExitoMsg(null);
+  }
+
+  function handleGuardarEdicion(e: React.FormEvent) {
+    e.preventDefault();
+    if (!planEditando) return;
+    setErrorMsg(null);
+    setExitoMsg(null);
+
+    const inputData = {
+      nombre: editNombre,
+      precioBase: Number(editPrecioBase),
+      duracionDias: Number(editDuracionDias),
+      modalidadCreditos: editModalidad,
+      creditosPorPeriodo:
+        editModalidad === "ILIMITADO" ? null : Number(editCreditos)
+    };
+
+    const validacion = ActualizarPlanSchema.safeParse(inputData);
+    if (!validacion.success) {
+      setErrorMsg(
+        validacion.error.issues[0]?.message ??
+          "Error en los datos de actualización del plan."
+      );
+      return;
+    }
+
+    startTransition(async () => {
+      const res = await actualizarPlanAction(
+        boxId,
+        planEditando.id,
+        validacion.data
+      );
+      if (!res.ok) {
+        setErrorMsg(`${res.errorCode ?? "ERROR"}: ${res.message ?? ""}`);
+        return;
+      }
+
+      setExitoMsg(`El plan "${editNombre}" fue actualizado con éxito.`);
+      setPlanEditando(null);
+      router.refresh();
+    });
+  }
+
   function handleEliminarPlan(planId: string, nombrePlan: string) {
     if (!confirm(`¿Dar de baja lógica el plan "${nombrePlan}"?`)) {
       return;
@@ -145,12 +212,12 @@ export function CatalogoPlanesBox({
           </h1>
           <p className="text-sm text-muted-foreground">
             {esAdmin
-              ? "Administrá las ofertas comerciales y paquetes de créditos de tu Box."
+              ? "Administrá las ofertas comerciales y ofertas de créditos de tu Box."
               : "Consultá las ofertas vigentes disponibles para la venta de membresías."}
           </p>
         </div>
 
-        {esAdmin && !mostrarFormulario && (
+        {esAdmin && !mostrarFormulario && !planEditando && (
           <Button
             type="button"
             data-testid="btn-nuevo-plan"
@@ -172,7 +239,11 @@ export function CatalogoPlanesBox({
           data-testid="banner-solo-lectura"
           className="rounded-lg border border-border bg-card p-4 text-xs text-muted-foreground"
         >
-          <span className="font-semibold text-foreground">Modo Consulta de Recepción:</span> Podés visualizar los planes activos disponibles para asociar a los atletas al dar de alta una membresía.
+          <span className="font-semibold text-foreground">
+            Modo Consulta de Recepción:
+          </span>{" "}
+          Podés visualizar los planes activos disponibles para asociar a los
+          atletas al dar de alta una membresía.
         </div>
       )}
 
@@ -275,7 +346,7 @@ export function CatalogoPlanesBox({
                         {mod === "SEMANAL"
                           ? "Créditos Semanales (se renuevan los lunes)"
                           : mod === "VIGENCIA_TOTAL"
-                            ? "Pack de Créditos (vigencia completa)"
+                            ? "Créditos por Vigencia Total (vigencia completa)"
                             : "Ilimitado (sin límite de clases)"}
                       </option>
                     ))}
@@ -328,6 +399,130 @@ export function CatalogoPlanesBox({
         </Card>
       )}
 
+      {/* Formulario de Edición de Plan para Administrador */}
+      {esAdmin && planEditando && (
+        <Card className="border-border bg-card">
+          <CardHeader>
+            <CardTitle className="font-display text-xl uppercase tracking-tight text-foreground">
+              Editar Plan: {planEditando.nombre}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form
+              onSubmit={handleGuardarEdicion}
+              data-testid="formulario-editar-plan"
+              className="space-y-4"
+            >
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-plan-nombre" className="text-foreground">
+                    Nombre del Plan
+                  </Label>
+                  <Input
+                    id="edit-plan-nombre"
+                    data-testid="input-editar-plan-nombre"
+                    value={editNombre}
+                    onChange={(e) => setEditNombre(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-plan-precio" className="text-foreground">
+                    Precio Base ({moneda})
+                  </Label>
+                  <Input
+                    id="edit-plan-precio"
+                    data-testid="input-editar-plan-precio"
+                    type="number"
+                    min="0"
+                    value={editPrecioBase}
+                    onChange={(e) => setEditPrecioBase(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-plan-duracion" className="text-foreground">
+                    Duración (Días de Vigencia)
+                  </Label>
+                  <Input
+                    id="edit-plan-duracion"
+                    data-testid="input-editar-plan-duracion"
+                    type="number"
+                    min="1"
+                    value={editDuracionDias}
+                    onChange={(e) => setEditDuracionDias(e.target.value)}
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-plan-modalidad" className="text-foreground">
+                    Modalidad de Créditos
+                  </Label>
+                  <select
+                    id="edit-plan-modalidad"
+                    data-testid="select-editar-plan-modalidad"
+                    value={editModalidad}
+                    onChange={(e) =>
+                      setEditModalidad(e.target.value as ModalidadCreditos)
+                    }
+                    className="flex h-10 w-full rounded-md border border-input bg-card px-3 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    {MODALIDADES_CREDITOS.map((mod) => (
+                      <option key={mod} value={mod}>
+                        {mod === "SEMANAL"
+                          ? "Créditos Semanales (se renuevan los lunes)"
+                          : mod === "VIGENCIA_TOTAL"
+                            ? "Créditos por Vigencia Total (vigencia completa)"
+                            : "Ilimitado (sin límite de clases)"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {editModalidad !== "ILIMITADO" && (
+                  <div className="space-y-1.5 md:col-span-2">
+                    <Label htmlFor="edit-plan-creditos" className="text-foreground">
+                      Créditos por Período
+                    </Label>
+                    <Input
+                      id="edit-plan-creditos"
+                      data-testid="input-editar-plan-creditos"
+                      type="number"
+                      min="1"
+                      value={editCreditos}
+                      onChange={(e) => setEditCreditos(e.target.value)}
+                      required
+                    />
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  data-testid="btn-cancelar-edicion-plan"
+                  onClick={() => setPlanEditando(null)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  type="submit"
+                  data-testid="btn-guardar-edicion-plan"
+                  disabled={isPending}
+                  className="bg-primary font-semibold text-primary-foreground hover:bg-volt-500"
+                >
+                  {isPending ? "Guardando..." : "Guardar Cambios"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Tabla de Planes del Box */}
       <Card className="border-border bg-card">
         <CardHeader>
@@ -357,7 +552,9 @@ export function CatalogoPlanesBox({
                     <th className="px-4 py-3">Vigencia</th>
                     <th className="px-4 py-3">Precio Base</th>
                     <th className="px-4 py-3">Estado</th>
-                    {esAdmin && <th className="px-4 py-3 text-right">Acciones</th>}
+                    {esAdmin && (
+                      <th className="px-4 py-3 text-right">Acciones</th>
+                    )}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -402,6 +599,17 @@ export function CatalogoPlanesBox({
                       {esAdmin && (
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="min-h-8 px-2.5 py-1 text-xs"
+                              data-testid={`btn-abrir-edicion-${plan.id}`}
+                              disabled={isPending}
+                              onClick={() => iniciarEdicion(plan)}
+                            >
+                              <Edit3 className="mr-1 h-3.5 w-3.5" />
+                              Editar
+                            </Button>
                             <Button
                               type="button"
                               variant="secondary"
