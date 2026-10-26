@@ -55,14 +55,14 @@ jobs:
       - name: Instalar navegador Chromium para Playwright
         run: pnpm --filter @centris/web exec playwright install --with-deps chromium
 
+      - name: Compilar paquetes del monorepo
+        run: pnpm build
+
       - name: Ejecutar migraciones SQL y políticas RLS (0001_core_rls)
         run: pnpm db:migrate
 
       - name: Cargar dataset de Seed oficial
         run: pnpm db:seed
-
-      - name: Compilar paquetes del monorepo
-        run: pnpm build
 
       - name: Verificar Lint (ESLint)
         run: pnpm lint
