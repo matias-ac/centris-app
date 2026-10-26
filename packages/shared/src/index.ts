@@ -45,3 +45,18 @@ export {
   type EstadoSalud
 } from "./schemas/salud.schema.js";
 
+export {
+  MODALIDADES_CREDITOS,
+  ModalidadCreditosSchema,
+  PlanSchema,
+  CrearPlanSchema,
+  ActualizarPlanSchema,
+  type ModalidadCreditos,
+  type Plan,
+  type CrearPlanInput,
+  type CrearPlan,
+  type ActualizarPlanInput,
+  type ActualizarPlan
+} from "./schemas/planes.schema.js";
+
+
