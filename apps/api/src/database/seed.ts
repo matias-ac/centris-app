@@ -1,5 +1,6 @@
 import { SEED_BOX_IDS } from "@centris/shared";
 import pg from "pg";
+import { hashearContrasena } from "../modules/auth/contrasenas.js";
 
 export const SEED_IDS = {
   boxCentrisNorte: SEED_BOX_IDS.boxCentrisNorte,
@@ -35,7 +36,10 @@ export async function ejecutarSeed(connectionString?: string): Promise<void> {
       [SEED_IDS.boxCentrisNorte, SEED_IDS.boxCentrisSur]
     );
 
-    const passwordHashDemo = "scrypt:centris_demo_salt:Centris123!";
+    const passwordHashDemo = await hashearContrasena(
+      "Centris123!",
+      "centris_demo_salt"
+    );
 
     await pool.query(
       `INSERT INTO usuarios (id, email, nombre, password_hash)
@@ -48,7 +52,8 @@ export async function ejecutarSeed(connectionString?: string): Promise<void> {
          ($6, 'atleta.moroso@centris.dev', 'Nicolás Pérez', $8),
          ($7, 'atleta.nuevo@centris.dev', 'Camila Díaz', NULL)
        ON CONFLICT (email) DO UPDATE SET
-         nombre = EXCLUDED.nombre`,
+         nombre = EXCLUDED.nombre,
+         password_hash = EXCLUDED.password_hash`,
       [
         SEED_IDS.usuarioAdmin,
         SEED_IDS.usuarioRecepcion,

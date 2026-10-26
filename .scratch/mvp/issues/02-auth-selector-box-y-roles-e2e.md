@@ -8,7 +8,7 @@ Implementar de punta a punta (BD $\rightarrow$ NestJS $\rightarrow$ Next.js + `s
 
 **Blocked by:** 01: Cimientos del Monorepo, PostgreSQL en Docker e Infraestructura RLS
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 ## Acceptance Criteria (TDD / BDD)
 
