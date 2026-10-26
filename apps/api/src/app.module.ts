@@ -6,6 +6,7 @@ import { DatabaseModule } from "./database/database.module.js";
 import { AfiliacionesModule } from "./modules/afiliaciones/afiliaciones.module.js";
 import { AuthModule } from "./modules/auth/auth.module.js";
 import { BoxesModule } from "./modules/boxes/boxes.module.js";
+import { PlanesModule } from "./modules/planes/planes.module.js";
 import { SaludModule } from "./modules/salud/salud.module.js";
 
 @Module({
@@ -14,6 +15,7 @@ import { SaludModule } from "./modules/salud/salud.module.js";
     AuthModule,
     AfiliacionesModule,
     BoxesModule,
+    PlanesModule,
     SaludModule
   ],
   providers: [

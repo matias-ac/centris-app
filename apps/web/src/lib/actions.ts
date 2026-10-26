@@ -5,17 +5,24 @@ import { AuthError } from "next-auth";
 import {
   ActivarCuentaSchema,
   ActualizarConfiguracionBoxSchema,
+  ActualizarPlanSchema,
   ActualizarRolesAfiliacionSchema,
+  CrearPlanSchema,
   ERROR_CODES,
   LoginSchema,
+  type ActualizarPlanInput,
+  type CrearPlanInput,
   type RolAfiliacion,
   type SesionAuth
 } from "@centris/shared";
 import {
   activarCuentaApi,
   actualizarConfiguracionBoxApi,
+  actualizarPlanApi,
   actualizarRolesAfiliacionApi,
+  crearPlanApi,
   eliminarAfiliacionApi,
+  eliminarPlanApi,
   iniciarSesionApi,
   obtenerMisAfiliacionesApi
 } from "./api-client";
@@ -225,6 +232,112 @@ export async function bajaAfiliacionAction(
     boxId,
     afiliacionId
   );
+  if (!res.ok) {
+    return {
+      ok: false,
+      errorCode: res.error.errorCode,
+      message: res.error.message
+    };
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function crearPlanAction(
+  boxId: string,
+  input: CrearPlanInput
+): Promise<ResultadoAccion> {
+  const sesion = await obtenerSesionWeb();
+  if (!sesion) {
+    return {
+      ok: false,
+      errorCode: ERROR_CODES.NO_AUTENTICADO,
+      message: "Debés iniciar sesión."
+    };
+  }
+
+  const validado = CrearPlanSchema.safeParse(input);
+  if (!validado.success) {
+    return {
+      ok: false,
+      errorCode: ERROR_CODES.VALIDACION_FALLIDA,
+      message:
+        validado.error.issues[0]?.message ??
+        "Datos del plan inválidos."
+    };
+  }
+
+  const res = await crearPlanApi(sesion.accessToken, boxId, validado.data);
+  if (!res.ok) {
+    return {
+      ok: false,
+      errorCode: res.error.errorCode,
+      message: res.error.message
+    };
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function actualizarPlanAction(
+  boxId: string,
+  planId: string,
+  input: ActualizarPlanInput
+): Promise<ResultadoAccion> {
+  const sesion = await obtenerSesionWeb();
+  if (!sesion) {
+    return {
+      ok: false,
+      errorCode: ERROR_CODES.NO_AUTENTICADO,
+      message: "Debés iniciar sesión."
+    };
+  }
+
+  const validado = ActualizarPlanSchema.safeParse(input);
+  if (!validado.success) {
+    return {
+      ok: false,
+      errorCode: ERROR_CODES.VALIDACION_FALLIDA,
+      message:
+        validado.error.issues[0]?.message ??
+        "Datos de actualización del plan inválidos."
+    };
+  }
+
+  const res = await actualizarPlanApi(
+    sesion.accessToken,
+    boxId,
+    planId,
+    validado.data
+  );
+  if (!res.ok) {
+    return {
+      ok: false,
+      errorCode: res.error.errorCode,
+      message: res.error.message
+    };
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function eliminarPlanAction(
+  boxId: string,
+  planId: string
+): Promise<ResultadoAccion> {
+  const sesion = await obtenerSesionWeb();
+  if (!sesion) {
+    return {
+      ok: false,
+      errorCode: ERROR_CODES.NO_AUTENTICADO,
+      message: "Debés iniciar sesión."
+    };
+  }
+
+  const res = await eliminarPlanApi(sesion.accessToken, boxId, planId);
   if (!res.ok) {
     return {
       ok: false,
