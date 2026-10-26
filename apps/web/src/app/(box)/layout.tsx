@@ -25,6 +25,10 @@ export default async function BoxLayout({
   }
 
   const esAdmin = tieneAlgunRol(afiliacionActiva.roles, ["administrador"]);
+  const puedeVerPlanes = tieneAlgunRol(afiliacionActiva.roles, [
+    "administrador",
+    "recepcionista"
+  ]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -73,6 +77,15 @@ export default async function BoxLayout({
           >
             Panel Operativo
           </Link>
+          {puedeVerPlanes ? (
+            <Link
+              href="/planes"
+              data-testid="nav-link-planes"
+              className="rounded-md px-3 py-1.5 text-[0.9375rem] font-semibold tracking-[0.01em] text-foreground hover:bg-secondary"
+            >
+              Catálogo de Planes
+            </Link>
+          ) : null}
           {esAdmin ? (
             <>
               <Link

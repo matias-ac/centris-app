@@ -4,15 +4,19 @@ import {
   AfiliacionSchema,
   BoxSchema,
   ErrorResponseSchema,
+  PlanSchema,
   SesionAuthSchema,
   type ActivarCuentaInput,
   type ActualizarConfiguracionBox,
+  type ActualizarPlanInput,
   type Afiliacion,
   type AfiliacionConBox,
   type AfiliacionConUsuario,
   type Box,
+  type CrearPlanInput,
   type ErrorResponse,
   type LoginInput,
+  type Plan,
   type RolAfiliacion,
   type SesionAuth
 } from "@centris/shared";
@@ -206,3 +210,95 @@ export async function eliminarAfiliacionApi(
   const json = await response.json();
   return { ok: true, data: json as { eliminada: boolean; id: string } };
 }
+
+export async function listarPlanesApi(
+  accessToken: string,
+  boxId: string
+): Promise<ResultadoApi<Plan[]>> {
+  const response = await fetch(`${API_URL}/planes`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: z.array(PlanSchema).parse(json) };
+}
+
+export async function crearPlanApi(
+  accessToken: string,
+  boxId: string,
+  input: CrearPlanInput
+): Promise<ResultadoApi<Plan>> {
+  const response = await fetch(`${API_URL}/planes`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    body: JSON.stringify(input),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: PlanSchema.parse(json) };
+}
+
+export async function actualizarPlanApi(
+  accessToken: string,
+  boxId: string,
+  planId: string,
+  input: ActualizarPlanInput
+): Promise<ResultadoApi<Plan>> {
+  const response = await fetch(`${API_URL}/planes/${planId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    body: JSON.stringify(input),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: PlanSchema.parse(json) };
+}
+
+export async function eliminarPlanApi(
+  accessToken: string,
+  boxId: string,
+  planId: string
+): Promise<ResultadoApi<{ success: boolean; id: string }>> {
+  const response = await fetch(`${API_URL}/planes/${planId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: json as { success: boolean; id: string } };
+}
+
