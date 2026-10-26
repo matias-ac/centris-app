@@ -1,5 +1,4 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import { eq } from "drizzle-orm";
 import { ERROR_CODES, type Plan } from "@centris/shared";
 import { DatabaseService } from "../src/database/database.service.js";
 import { planes } from "../src/database/schema/index.js";
