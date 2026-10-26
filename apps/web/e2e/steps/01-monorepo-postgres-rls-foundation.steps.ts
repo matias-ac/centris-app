@@ -68,7 +68,7 @@ Then(
 When(
   "el usuario abre la pantalla de diagnóstico de salud e infraestructura RLS",
   async ({ page }) => {
-    await page.goto("/");
+    await page.goto("/salud");
   }
 );
 

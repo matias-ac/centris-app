@@ -1,6 +1,7 @@
 export {
   ROLES_AFILIACION,
   RolAfiliacionSchema,
+  tieneAlgunRol,
   type RolAfiliacion
 } from "./roles/roles.schema.js";
 
@@ -14,15 +15,33 @@ export {
 
 export {
   BoxSchema,
+  TimezoneIanaSchema,
+  MonedaIsoSchema,
+  esTimezoneIanaValida,
+  ActualizarConfiguracionBoxSchema,
   UsuarioSchema,
+  LoginSchema,
+  ActivarCuentaSchema,
+  SesionAuthSchema,
   AfiliacionSchema,
+  AfiliacionConBoxSchema,
+  AfiliacionConUsuarioSchema,
+  ActualizarRolesAfiliacionSchema,
   SEED_BOX_IDS,
   type Box,
+  type ActualizarConfiguracionBox,
   type Usuario,
-  type Afiliacion
+  type LoginInput,
+  type ActivarCuentaInput,
+  type SesionAuth,
+  type Afiliacion,
+  type AfiliacionConBox,
+  type AfiliacionConUsuario,
+  type ActualizarRolesAfiliacion
 } from "./schemas/identidad.schema.js";
 
 export {
   EstadoSaludSchema,
   type EstadoSalud
 } from "./schemas/salud.schema.js";
+
