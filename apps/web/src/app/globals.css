@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+:root,
+.dark {
+  --background: #000000;
+  --foreground: #ffffff;
+
+  --card: #121214;
+  --card-foreground: #ffffff;
+
+  --popover: #121214;
+  --popover-foreground: #ffffff;
+
+  --primary: #e2f800;
+  --primary-foreground: #000000;
+
+  --secondary: #1c1c1f;
+  --secondary-foreground: #ffffff;
+
+  --muted: #1c1c1f;
+  --muted-foreground: #a1a1aa;
+
+  --accent: #1c1c1f;
+  --accent-foreground: #ffffff;
+
+  --destructive: #fb7185;
+  --destructive-foreground: #000000;
+
+  --border: #27272a;
+  --input: #27272a;
+  --ring: #e2f800;
+
+  --radius: 0.5rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-volt-50: #fcffe5;
+  --color-volt-400: #e2f800;
+  --color-volt-500: #cde000;
+
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-oswald), ui-sans-serif, system-ui, sans-serif;
+
+  --text-stat: clamp(2rem, 1.6rem + 1.8vw, 2.75rem);
+  --text-stat--line-height: 1.05;
+  --text-stat--letter-spacing: -0.02em;
+
+  --text-h1: clamp(1.625rem, 1.35rem + 1.2vw, 2.25rem);
+  --text-h1--line-height: 1.15;
+  --text-h1--letter-spacing: -0.02em;
+
+  --text-h2: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
+  --text-h2--line-height: 1.2;
+  --text-h2--letter-spacing: -0.015em;
+
+  --text-h3: clamp(1.125rem, 1.05rem + 0.3vw, 1.25rem);
+  --text-h3--line-height: 1.25;
+  --text-h3--letter-spacing: -0.01em;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
