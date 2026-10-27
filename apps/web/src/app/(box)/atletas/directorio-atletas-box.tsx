@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, CheckCircle, Edit3, Plus, Search, Trash2, UserPlus, Users } from "lucide-react";
+import { AlertCircle, CheckCircle, Edit3, Search, Trash2, UserPlus, Users } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import {
