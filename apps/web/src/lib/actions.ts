@@ -7,21 +7,28 @@ import {
   ActualizarConfiguracionBoxSchema,
   ActualizarPlanSchema,
   ActualizarRolesAfiliacionSchema,
+  CrearAtletaSchema,
+  ActualizarAtletaSchema,
   CrearPlanSchema,
   ERROR_CODES,
   LoginSchema,
+  type ActualizarAtleta,
   type ActualizarPlanInput,
+  type CrearAtleta,
   type CrearPlanInput,
   type RolAfiliacion,
   type SesionAuth
 } from "@centris/shared";
 import {
   activarCuentaApi,
+  actualizarAtletaApi,
   actualizarConfiguracionBoxApi,
   actualizarPlanApi,
   actualizarRolesAfiliacionApi,
+  crearAtletaApi,
   crearPlanApi,
   eliminarAfiliacionApi,
+  eliminarAtletaApi,
   eliminarPlanApi,
   iniciarSesionApi,
   obtenerMisAfiliacionesApi
@@ -349,3 +356,110 @@ export async function eliminarPlanAction(
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+export async function crearAtletaAction(
+  boxId: string,
+  input: CrearAtleta
+): Promise<ResultadoAccion> {
+  const sesion = await obtenerSesionWeb();
+  if (!sesion) {
+    return {
+      ok: false,
+      errorCode: ERROR_CODES.NO_AUTENTICADO,
+      message: "Debés iniciar sesión."
+    };
+  }
+
+  const validado = CrearAtletaSchema.safeParse(input);
+  if (!validado.success) {
+    return {
+      ok: false,
+      errorCode: ERROR_CODES.VALIDACION_FALLIDA,
+      message:
+        validado.error.issues[0]?.message ??
+        "Datos de alta de atleta inválidos."
+    };
+  }
+
+  const res = await crearAtletaApi(sesion.accessToken, boxId, validado.data);
+  if (!res.ok) {
+    return {
+      ok: false,
+      errorCode: res.error.errorCode,
+      message: res.error.message
+    };
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function actualizarAtletaAction(
+  boxId: string,
+  atletaId: string,
+  input: ActualizarAtleta
+): Promise<ResultadoAccion> {
+  const sesion = await obtenerSesionWeb();
+  if (!sesion) {
+    return {
+      ok: false,
+      errorCode: ERROR_CODES.NO_AUTENTICADO,
+      message: "Debés iniciar sesión."
+    };
+  }
+
+  const validado = ActualizarAtletaSchema.safeParse(input);
+  if (!validado.success) {
+    return {
+      ok: false,
+      errorCode: ERROR_CODES.VALIDACION_FALLIDA,
+      message:
+        validado.error.issues[0]?.message ??
+        "Datos de actualización del atleta inválidos."
+    };
+  }
+
+  const res = await actualizarAtletaApi(
+    sesion.accessToken,
+    boxId,
+    atletaId,
+    validado.data
+  );
+  if (!res.ok) {
+    return {
+      ok: false,
+      errorCode: res.error.errorCode,
+      message: res.error.message
+    };
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function eliminarAtletaAction(
+  boxId: string,
+  atletaId: string
+): Promise<ResultadoAccion> {
+  const sesion = await obtenerSesionWeb();
+  if (!sesion) {
+    return {
+      ok: false,
+      errorCode: ERROR_CODES.NO_AUTENTICADO,
+      message: "Debés iniciar sesión."
+    };
+  }
+
+  const res = await eliminarAtletaApi(sesion.accessToken, boxId, atletaId);
+  if (!res.ok) {
+    return {
+      ok: false,
+      errorCode: res.error.errorCode,
+      message: res.error.message
+    };
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+

@@ -2,19 +2,24 @@ import {
   AfiliacionConBoxSchema,
   AfiliacionConUsuarioSchema,
   AfiliacionSchema,
+  AtletaSchema,
   BoxSchema,
   ErrorResponseSchema,
   PlanSchema,
   SesionAuthSchema,
   type ActivarCuentaInput,
+  type ActualizarAtleta,
   type ActualizarConfiguracionBox,
   type ActualizarPlanInput,
   type Afiliacion,
   type AfiliacionConBox,
   type AfiliacionConUsuario,
+  type Atleta,
   type Box,
+  type CrearAtleta,
   type CrearPlanInput,
   type ErrorResponse,
+  type FiltroAtletas,
   type LoginInput,
   type Plan,
   type RolAfiliacion,
@@ -301,4 +306,129 @@ export async function eliminarPlanApi(
   const json = await response.json();
   return { ok: true, data: json as { success: boolean; id: string } };
 }
+
+export async function listarAtletasApi(
+  accessToken: string,
+  boxId: string,
+  filtro?: FiltroAtletas
+): Promise<ResultadoApi<Atleta[]>> {
+  const params = new URLSearchParams();
+  if (filtro?.buscar) {
+    params.set("buscar", filtro.buscar);
+  }
+  if (filtro?.soloActivos !== undefined) {
+    params.set("soloActivos", String(filtro.soloActivos));
+  }
+
+  const queryString = params.toString();
+  const url = `${API_URL}/atletas${queryString ? `?${queryString}` : ""}`;
+
+  const response = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: z.array(AtletaSchema).parse(json) };
+}
+
+export async function obtenerAtletaApi(
+  accessToken: string,
+  boxId: string,
+  atletaId: string
+): Promise<ResultadoApi<Atleta>> {
+  const response = await fetch(`${API_URL}/atletas/${atletaId}`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: AtletaSchema.parse(json) };
+}
+
+export async function crearAtletaApi(
+  accessToken: string,
+  boxId: string,
+  input: CrearAtleta
+): Promise<ResultadoApi<Atleta>> {
+  const response = await fetch(`${API_URL}/atletas`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    body: JSON.stringify(input),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: AtletaSchema.parse(json) };
+}
+
+export async function actualizarAtletaApi(
+  accessToken: string,
+  boxId: string,
+  atletaId: string,
+  input: ActualizarAtleta
+): Promise<ResultadoApi<Atleta>> {
+  const response = await fetch(`${API_URL}/atletas/${atletaId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    body: JSON.stringify(input),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: AtletaSchema.parse(json) };
+}
+
+export async function eliminarAtletaApi(
+  accessToken: string,
+  boxId: string,
+  atletaId: string
+): Promise<ResultadoApi<{ eliminada: boolean; id: string }>> {
+  const response = await fetch(`${API_URL}/atletas/${atletaId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: json as { eliminada: boolean; id: string } };
+}
+
 

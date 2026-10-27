@@ -29,6 +29,10 @@ export default async function BoxLayout({
     "administrador",
     "recepcionista"
   ]);
+  const puedeVerAtletas = tieneAlgunRol(afiliacionActiva.roles, [
+    "administrador",
+    "recepcionista"
+  ]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -84,6 +88,15 @@ export default async function BoxLayout({
               className="rounded-md px-3 py-1.5 text-[0.9375rem] font-semibold tracking-[0.01em] text-foreground hover:bg-secondary"
             >
               Catálogo de Planes
+            </Link>
+          ) : null}
+          {puedeVerAtletas ? (
+            <Link
+              href="/atletas"
+              data-testid="nav-link-atletas"
+              className="rounded-md px-3 py-1.5 text-[0.9375rem] font-semibold tracking-[0.01em] text-foreground hover:bg-secondary"
+            >
+              Directorio de Atletas
             </Link>
           ) : null}
           {esAdmin ? (
