@@ -59,4 +59,15 @@ export {
   type ActualizarPlan
 } from "./schemas/planes.schema.js";
 
+export {
+  CrearAtletaSchema,
+  ActualizarAtletaSchema,
+  FiltroAtletasSchema,
+  AtletaSchema,
+  type CrearAtleta,
+  type ActualizarAtleta,
+  type FiltroAtletas,
+  type Atleta
+} from "./schemas/atletas.schema.js";
+
 
