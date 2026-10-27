@@ -83,15 +83,14 @@ When(
 );
 
 Then(
-  'el Atleta figura en el directorio con rol {string} y acceso con primer ingreso pendiente',
-  async ({ page }, _rol: string) => {
+  'el Atleta figura en el directorio con rol {string} y estado activo',
+  async ({ page }, rol: string) => {
     await expect(page.getByTestId("alerta-exito")).toBeVisible();
     const fila = page
       .getByTestId("tabla-atletas")
       .locator("tr", { hasText: E2E_ATLETA_BDD.email });
     await expect(fila).toBeVisible();
-    await expect(fila).toContainText("Primer Ingreso Pendiente");
-    await expect(fila).toContainText("atleta");
+    await expect(fila).toContainText(rol);
     await expect(fila).toContainText("Activo");
   }
 );
@@ -148,14 +147,15 @@ When(
 );
 
 Then(
-  'el Atleta figura en {string} con contraseña definida',
-  async ({ page }, _nombreBox: string) => {
+  'el Atleta figura en {string} con rol {string} y estado activo',
+  async ({ page }, _nombreBox: string, rol: string) => {
     await expect(page.getByTestId("alerta-exito")).toBeVisible();
     const fila = page
       .getByTestId("tabla-atletas")
       .locator("tr", { hasText: E2E_ATLETA_SUR.email });
     await expect(fila).toBeVisible();
-    await expect(fila).toContainText("Contraseña Definida");
+    await expect(fila).toContainText(rol);
+    await expect(fila).toContainText("Activo");
   }
 );
 
@@ -260,6 +260,26 @@ Then(
   }
 );
 
+When('consulta la ficha individual del Atleta', async ({ page }) => {
+  const fila = page
+    .getByTestId("tabla-atletas")
+    .locator("tr", { hasText: E2E_ATLETA_BDD.email });
+  await fila.getByRole("button", { name: /Ficha/i }).click();
+});
+
+Then('visualiza los datos completos de su afiliación', async ({ page }) => {
+  const modalFicha = page.getByTestId("modal-ficha-atleta");
+  await expect(modalFicha).toBeVisible();
+  await expect(modalFicha.getByTestId("ficha-atleta-nombre")).toContainText(
+    E2E_ATLETA_BDD.nombre
+  );
+  await expect(modalFicha.getByTestId("ficha-atleta-email")).toContainText(
+    E2E_ATLETA_BDD.email
+  );
+  await page.getByTestId("btn-cerrar-ficha-atleta").click();
+  await expect(modalFicha).not.toBeVisible();
+});
+
 When(
   'edita el nombre del Atleta a {string}',
   async ({ page }, nuevoNombre: string) => {
@@ -337,10 +357,11 @@ When('intenta acceder a la ruta {string}', async ({ page }, ruta: string) => {
 });
 
 Then(
-  'el sistema deniega el acceso y lo redirige al inicio',
+  'visualiza el mensaje de 403 Forbidden y acceso restringido',
   async ({ page }) => {
-    await page.waitForURL(/\/inicio/);
-    await expect(page).toHaveURL(/\/inicio/);
+    const bannerDenegado = page.getByTestId("acceso-denegado-rol");
+    await expect(bannerDenegado).toBeVisible();
+    await expect(bannerDenegado).toContainText("403 Forbidden");
     await expect(page.getByTestId("nav-link-atletas")).not.toBeVisible();
   }
 );

@@ -71,7 +71,6 @@ export const AtletaSchema = z.object({
   email: z.string().email(),
   roles: z.array(RolAfiliacionSchema).min(1),
   activo: z.boolean(),
-  passwordActivada: z.boolean(),
   createdAt: z.string().or(z.date()),
   updatedAt: z.string().or(z.date()).optional()
 });

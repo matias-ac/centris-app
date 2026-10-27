@@ -33,6 +33,24 @@ export class AtletasService {
     @Inject(DatabaseService) private readonly db: DatabaseService
   ) {}
 
+  private mapearAtleta(
+    afiliacion: typeof afiliaciones.$inferSelect,
+    usuario: typeof usuarios.$inferSelect
+  ): Atleta {
+    return {
+      id: afiliacion.id,
+      afiliacionId: afiliacion.id,
+      boxId: afiliacion.boxId,
+      usuarioId: usuario.id,
+      nombre: usuario.nombre,
+      email: usuario.email,
+      roles: afiliacion.roles.map((r) => RolAfiliacionSchema.parse(r)),
+      activo: afiliacion.activo,
+      createdAt: afiliacion.createdAt,
+      updatedAt: afiliacion.updatedAt
+    };
+  }
+
   /**
    * Da de alta a un Atleta en el Box activo.
    * - Si el email no existe, aprovisiona Usuario global con password_hash = NULL (primer ingreso).
@@ -100,19 +118,7 @@ export class AtletasService {
         afiliacion = nuevaAfiliacion!;
       }
 
-      return {
-        id: afiliacion.id,
-        afiliacionId: afiliacion.id,
-        boxId: afiliacion.boxId,
-        usuarioId: usuario.id,
-        nombre: usuario.nombre,
-        email: usuario.email,
-        roles: afiliacion.roles.map((r) => RolAfiliacionSchema.parse(r)),
-        activo: afiliacion.activo,
-        passwordActivada: usuario.passwordHash !== null,
-        createdAt: afiliacion.createdAt,
-        updatedAt: afiliacion.updatedAt
-      };
+      return this.mapearAtleta(afiliacion, usuario);
     });
   }
 
@@ -151,19 +157,9 @@ export class AtletasService {
         .where(and(...condiciones))
         .orderBy(asc(usuarios.nombre));
 
-      return filas.map(({ afiliacion, usuario }) => ({
-        id: afiliacion.id,
-        afiliacionId: afiliacion.id,
-        boxId: afiliacion.boxId,
-        usuarioId: usuario.id,
-        nombre: usuario.nombre,
-        email: usuario.email,
-        roles: afiliacion.roles.map((r) => RolAfiliacionSchema.parse(r)),
-        activo: afiliacion.activo,
-        passwordActivada: usuario.passwordHash !== null,
-        createdAt: afiliacion.createdAt,
-        updatedAt: afiliacion.updatedAt
-      }));
+      return filas.map(({ afiliacion, usuario }) =>
+        this.mapearAtleta(afiliacion, usuario)
+      );
     });
   }
 
@@ -195,21 +191,7 @@ export class AtletasService {
       );
     }
 
-    const { afiliacion, usuario } = fila;
-
-    return {
-      id: afiliacion.id,
-      afiliacionId: afiliacion.id,
-      boxId: afiliacion.boxId,
-      usuarioId: usuario.id,
-      nombre: usuario.nombre,
-      email: usuario.email,
-      roles: afiliacion.roles.map((r) => RolAfiliacionSchema.parse(r)),
-      activo: afiliacion.activo,
-      passwordActivada: usuario.passwordHash !== null,
-      createdAt: afiliacion.createdAt,
-      updatedAt: afiliacion.updatedAt
-    };
+    return this.mapearAtleta(fila.afiliacion, fila.usuario);
   }
 
   /**
@@ -228,6 +210,8 @@ export class AtletasService {
 
   /**
    * Actualiza datos operativos del Atleta (nombre o estado activo).
+   * Si la afiliación posee otros roles (ej. Coach) y se desactiva como Atleta,
+   * se remueve el rol 'atleta' sin dar de baja la afiliación en su totalidad.
    */
   async actualizarAtleta(
     boxId: string,
@@ -250,14 +234,49 @@ export class AtletasService {
       }
 
       if (input.activo !== undefined) {
-        await tx
-          .update(afiliaciones)
-          .set({
-            activo: input.activo,
-            deletedAt: input.activo ? null : new Date(),
-            updatedAt: new Date()
-          })
+        const [afiliacionActual] = await tx
+          .select()
+          .from(afiliaciones)
           .where(eq(afiliaciones.id, atletaId));
+
+        if (afiliacionActual) {
+          if (input.activo === false) {
+            const otrosRoles = afiliacionActual.roles.filter(
+              (r) => r !== "atleta"
+            );
+            if (otrosRoles.length > 0) {
+              await tx
+                .update(afiliaciones)
+                .set({
+                  roles: otrosRoles,
+                  updatedAt: new Date()
+                })
+                .where(eq(afiliaciones.id, atletaId));
+            } else {
+              await tx
+                .update(afiliaciones)
+                .set({
+                  activo: false,
+                  deletedAt: new Date(),
+                  updatedAt: new Date()
+                })
+                .where(eq(afiliaciones.id, atletaId));
+            }
+          } else {
+            const rolesConAtleta = Array.from(
+              new Set([...afiliacionActual.roles, "atleta"])
+            );
+            await tx
+              .update(afiliaciones)
+              .set({
+                roles: rolesConAtleta,
+                activo: true,
+                deletedAt: null,
+                updatedAt: new Date()
+              })
+              .where(eq(afiliaciones.id, atletaId));
+          }
+        }
       }
 
       return this.consultarAtleta(tx, atletaId);
@@ -265,7 +284,9 @@ export class AtletasService {
   }
 
   /**
-   * Desactiva / aplica Soft Delete a la Afiliación de Atleta.
+   * Desactiva / aplica Soft Delete a la condición de Atleta.
+   * Si el usuario posee múltiples roles en el Box (ej. es Coach y Atleta),
+   * preserva la Afiliación para el resto de los roles y remueve únicamente 'atleta'.
    */
   async eliminarAtletaSoftDelete(
     boxId: string,
@@ -274,16 +295,45 @@ export class AtletasService {
     validarUuidAtleta(atletaId);
 
     return this.db.withBoxTransaction(boxId, async (tx) => {
-      await this.consultarAtleta(tx, atletaId);
+      const [fila] = await tx
+        .select()
+        .from(afiliaciones)
+        .where(
+          and(
+            eq(afiliaciones.id, atletaId),
+            sql`${afiliaciones.roles} @> ARRAY['atleta']::text[]`
+          )
+        );
 
-      await tx
-        .update(afiliaciones)
-        .set({
-          activo: false,
-          deletedAt: new Date(),
-          updatedAt: new Date()
-        })
-        .where(eq(afiliaciones.id, atletaId));
+      if (!fila) {
+        throw new DomainException(
+          ERROR_CODES.VALIDACION_FALLIDA,
+          "No se encontró el Atleta en el Box activo.",
+          HttpStatus.NOT_FOUND,
+          { id: ["Atleta no encontrado en este Box"] }
+        );
+      }
+
+      const otrosRoles = fila.roles.filter((r) => r !== "atleta");
+
+      if (otrosRoles.length > 0) {
+        await tx
+          .update(afiliaciones)
+          .set({
+            roles: otrosRoles,
+            updatedAt: new Date()
+          })
+          .where(eq(afiliaciones.id, atletaId));
+      } else {
+        await tx
+          .update(afiliaciones)
+          .set({
+            activo: false,
+            deletedAt: new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(afiliaciones.id, atletaId));
+      }
 
       return { eliminada: true, id: atletaId };
     });

@@ -85,7 +85,6 @@ describe("Seam 1 — Esquemas Zod y Contratos de Dominio de Atletas (@centris/sh
       email: "leo.messi@inter.miami",
       roles: ["atleta"],
       activo: true,
-      passwordActivada: false,
       createdAt: ahora,
       updatedAt: ahora
     });

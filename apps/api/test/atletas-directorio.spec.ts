@@ -159,7 +159,6 @@ describe("Seam 2 — Directorio y Alta de Atletas: API NestJS y Persistencia RLS
     expect(res.body.nombre).toBe("Nuevo Atleta Sin Clave");
     expect(res.body.email).toBe(nuevoAtletaEmail);
     expect(res.body.roles).toEqual(["atleta"]);
-    expect(res.body.passwordActivada).toBe(false);
     expect(res.body.activo).toBe(true);
 
     // Verificar en DB que el password_hash es efectivamente NULL
@@ -187,7 +186,6 @@ describe("Seam 2 — Directorio y Alta de Atletas: API NestJS y Persistencia RLS
     expect(res.status).toBe(201);
     expect(res.body.email).toBe("atleta.sur@test.centris.dev");
     expect(res.body.roles).toEqual(["atleta"]);
-    expect(res.body.passwordActivada).toBe(true); // Ya tiene contraseña
 
     // Verificar en DB que no se duplicó el usuario y conserva su contraseña
     const usuarioDb = await db.client
@@ -230,6 +228,34 @@ describe("Seam 2 — Directorio y Alta de Atletas: API NestJS y Persistencia RLS
       expect(afils[0]!.roles).toEqual(
         expect.arrayContaining(["coach", "atleta"])
       );
+    });
+
+    // Desactivar condición de atleta en usuario multi-rol conserva su rol de coach
+    const resBajaAtleta = await api.pedir<{ eliminada: boolean; id: string }>(
+      `/atletas/${res.body.id}`,
+      {
+        method: "DELETE",
+        token: tokenRecepNorte,
+        boxId: IDS.boxNorte
+      }
+    );
+    expect(resBajaAtleta.status).toBe(200);
+
+    await db.withBoxTransaction(IDS.boxNorte, async (tx) => {
+      const afils = await tx
+        .select()
+        .from(afiliaciones)
+        .where(
+          and(
+            eq(afiliaciones.usuarioId, IDS.usuarioCoachNorte),
+            isNull(afiliaciones.deletedAt)
+          )
+        );
+
+      expect(afils).toHaveLength(1);
+      expect(afils[0]!.activo).toBe(true);
+      expect(afils[0]!.roles).toEqual(["coach"]);
+      expect(afils[0]!.roles).not.toContain("atleta");
     });
   });
 

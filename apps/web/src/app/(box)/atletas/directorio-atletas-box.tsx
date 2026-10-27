@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, CheckCircle, Edit3, Search, Trash2, UserPlus, Users } from "lucide-react";
+import { AlertCircle, CheckCircle, Edit3, Eye, Search, Trash2, UserPlus, Users, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 import {
@@ -31,6 +31,7 @@ export function DirectorioAtletasBox({
   const router = useRouter();
   const [mostrarFormularioAlta, setMostrarFormularioAlta] = useState(false);
   const [atletaEditando, setAtletaEditando] = useState<Atleta | null>(null);
+  const [atletaFicha, setAtletaFicha] = useState<Atleta | null>(null);
 
   // Filtros de búsqueda
   const [terminoBusqueda, setTerminoBusqueda] = useState("");
@@ -186,7 +187,7 @@ export function DirectorioAtletasBox({
       {errorMsg ? (
         <div
           data-testid="alerta-error"
-          className="flex items-center gap-3 rounded-md border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-400"
+          className="flex items-center gap-3 rounded-md border border-rose-500/30 bg-rose-500/15 p-4 text-sm text-rose-400"
         >
           <AlertCircle className="h-5 w-5 shrink-0" />
           <span>{errorMsg}</span>
@@ -196,7 +197,7 @@ export function DirectorioAtletasBox({
       {exitoMsg ? (
         <div
           data-testid="alerta-exito"
-          className="flex items-center gap-3 rounded-md border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-400"
+          className="flex items-center gap-3 rounded-md border border-emerald-500/30 bg-emerald-500/15 p-4 text-sm text-emerald-400"
         >
           <CheckCircle className="h-5 w-5 shrink-0" />
           <span>{exitoMsg}</span>
@@ -339,6 +340,77 @@ export function DirectorioAtletasBox({
         </Card>
       ) : null}
 
+      {/* Ficha Individual del Atleta */}
+      {atletaFicha ? (
+        <Card className="border-border bg-card shadow-sm" data-testid="modal-ficha-atleta">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <div>
+              <CardTitle className="font-display text-lg uppercase tracking-tight text-foreground">
+                Ficha Individual del Atleta
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">Datos de identidad y afiliación al Box</p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              data-testid="btn-cerrar-ficha-atleta"
+              onClick={() => setAtletaFicha(null)}
+              className="min-h-8 px-2 py-1"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <span className="text-xs text-muted-foreground block">Nombre y Apellido</span>
+                <span className="font-semibold text-foreground" data-testid="ficha-atleta-nombre">
+                  {atletaFicha.nombre}
+                </span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Correo Electrónico</span>
+                <span className="text-foreground" data-testid="ficha-atleta-email">
+                  {atletaFicha.email}
+                </span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Identificador de Afiliación</span>
+                <span className="font-mono text-xs text-muted-foreground">
+                  {atletaFicha.id}
+                </span>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Roles en este Box</span>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {atletaFicha.roles.map((rol) => (
+                    <Badge key={rol} variant="emerald">
+                      {rol}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Estado de la Afiliación</span>
+                <div className="mt-1">
+                  {atletaFicha.activo ? (
+                    <Badge variant="emerald">Activo</Badge>
+                  ) : (
+                    <Badge variant="zinc">Inactivo</Badge>
+                  )}
+                </div>
+              </div>
+              <div>
+                <span className="text-xs text-muted-foreground block">Fecha de Registro</span>
+                <span className="text-xs tabular-nums text-muted-foreground">
+                  {new Date(atletaFicha.createdAt).toLocaleDateString("es-AR")}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {/* Barra de Filtros y Búsqueda */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-md">
@@ -376,7 +448,6 @@ export function DirectorioAtletasBox({
                 <th className="px-4 py-3">Nombre</th>
                 <th className="px-4 py-3">Email</th>
                 <th className="px-4 py-3">Roles</th>
-                <th className="px-4 py-3">Acceso Global</th>
                 <th className="px-4 py-3">Estado</th>
                 <th className="px-4 py-3 text-right">Acciones</th>
               </tr>
@@ -384,7 +455,7 @@ export function DirectorioAtletasBox({
             <tbody className="divide-y divide-border">
               {atletasFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-muted-foreground">
+                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
                     <div className="flex flex-col items-center justify-center gap-2">
                       <Users className="h-8 w-8 text-muted-foreground/50" />
                       <span>No se encontraron atletas registrados.</span>
@@ -418,17 +489,6 @@ export function DirectorioAtletasBox({
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      {atleta.passwordActivada ? (
-                        <Badge variant="emerald" data-testid={`badge-clave-activada-${atleta.id}`}>
-                          Contraseña Definida
-                        </Badge>
-                      ) : (
-                        <Badge variant="amber" data-testid={`badge-clave-pendiente-${atleta.id}`}>
-                          Primer Ingreso Pendiente
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
                       {atleta.activo ? (
                         <Badge variant="emerald" data-testid={`badge-estado-activo-${atleta.id}`}>
                           Activo
@@ -443,12 +503,27 @@ export function DirectorioAtletasBox({
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           type="button"
+                          variant="ghost"
+                          data-testid={`btn-ficha-atleta-${atleta.id}`}
+                          onClick={() => {
+                            setAtletaFicha(atleta);
+                            setAtletaEditando(null);
+                            setMostrarFormularioAlta(false);
+                          }}
+                          className="min-h-8 px-2.5 py-1 text-xs text-foreground"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          <span className="sr-only sm:not-sr-only sm:ml-1.5">Ficha</span>
+                        </Button>
+                        <Button
+                          type="button"
                           variant="secondary"
                           data-testid={`btn-editar-atleta-${atleta.id}`}
                           onClick={() => {
                             setAtletaEditando(atleta);
                             setEditNombre(atleta.nombre);
                             setEditActivo(atleta.activo);
+                            setAtletaFicha(null);
                             setMostrarFormularioAlta(false);
                             setErrorMsg(null);
                             setExitoMsg(null);
