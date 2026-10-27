@@ -246,6 +246,15 @@ describe("Seam 2 — Directorio y Alta de Atletas: API NestJS y Persistencia RLS
     const emailsNorte = resListado.body.map((a) => a.email);
     expect(emailsNorte).not.toContain("admin.sur.atletas@test.centris.dev");
 
+    // Y el Administrador de Box Sur bajo RLS no ve los atletas de Box Norte
+    const resSurListado = await api.pedir<Atleta[]>("/atletas", {
+      token: tokenAdminSur,
+      boxId: IDS.boxSur
+    });
+    expect(resSurListado.status).toBe(200);
+    const emailsSur = resSurListado.body.map((a) => a.email);
+    expect(emailsSur).not.toContain("atleta.existente@test.centris.dev");
+
     // 2. Buscador por texto parcial
     const resBusqueda = await api.pedir<Atleta[]>("/atletas?buscar=Inicial", {
       token: tokenRecepNorte,
