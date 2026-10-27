@@ -8,7 +8,7 @@ Permitir al `Recepcionista` y al `Administrador` registrar nuevos `Atletas` en s
 
 **Blocked by:** 02: Identidad Global, Autenticación, Selector de Box y Guard de 4 Roles Componibles E2E
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 ## Acceptance Criteria (TDD / BDD)
 
