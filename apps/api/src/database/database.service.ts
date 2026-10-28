@@ -31,7 +31,16 @@ export class DatabaseService implements OnModuleDestroy {
       process.env.DATABASE_URL ??
       "postgresql://centris_app_user:centris_app_pass@localhost:5432/centris_db";
 
-    this.pool = new pg.Pool({ connectionString: url });
+    const isRemote = !url.includes("localhost") && !url.includes("127.0.0.1");
+    const useSsl =
+      url.includes("sslmode=require") ||
+      url.includes("neon.tech") ||
+      (isRemote && process.env.NODE_ENV === "production");
+
+    this.pool = new pg.Pool({
+      connectionString: url,
+      ssl: useSsl ? { rejectUnauthorized: false } : undefined
+    });
     this.db = drizzle(this.pool, { schema });
   }
 
