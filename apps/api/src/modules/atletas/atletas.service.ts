@@ -131,6 +131,7 @@ export class AtletasService {
   ): Promise<Atleta[]> {
     return this.db.withBoxTransaction(boxId, async (tx) => {
       const condiciones = [
+        eq(afiliaciones.boxId, boxId),
         isNull(usuarios.deletedAt),
         sql`${afiliaciones.roles} @> ARRAY['atleta']::text[]`
       ];

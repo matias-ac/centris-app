@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: centris-api
+    runtime: node
+    plan: free
+    region: ohio
+    buildCommand: pnpm install && pnpm build
+    startCommand: pnpm --filter @centris/api start
+    healthCheckPath: /api/salud
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGIN
+        sync: false
