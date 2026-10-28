@@ -6,6 +6,12 @@ Esta guía documenta el procedimiento secuencial para desplegar la arquitectura 
 2. **Backend API**: [Render](https://render.com) (Web Service Node.js / NestJS con compilación monorepo pnpm).
 3. **Frontend Web**: [Vercel](https://vercel.com) (Next.js 15 App Router con Server Actions y sesión JWT).
 
+> [!NOTE]
+> **Ambientes de Producción Activos**:
+> - **Frontend Web**: [https://centris-app.vercel.app](https://centris-app.vercel.app)
+> - **Backend API**: [https://centris-app.onrender.com/api/salud](https://centris-app.onrender.com/api/salud)
+> - **Base de Datos**: Neon Serverless Postgres (`centris-db`, AWS `us-east-1`)
+
 ```mermaid
 flowchart LR
     Browser["Navegador del Usuario"] --> Vercel["Vercel (Next.js 15 Web)"]
