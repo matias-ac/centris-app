@@ -95,6 +95,7 @@ export class AfiliacionesService {
         .innerJoin(boxes, eq(afiliaciones.boxId, boxes.id))
         .where(
           and(
+            eq(afiliaciones.usuarioId, usuarioId),
             eq(afiliaciones.activo, true),
             isNull(afiliaciones.deletedAt),
             isNull(boxes.deletedAt)
@@ -134,6 +135,7 @@ export class AfiliacionesService {
         .innerJoin(usuarios, eq(afiliaciones.usuarioId, usuarios.id))
         .where(
           and(
+            eq(afiliaciones.boxId, boxId),
             eq(afiliaciones.activo, true),
             isNull(afiliaciones.deletedAt),
             isNull(usuarios.deletedAt)

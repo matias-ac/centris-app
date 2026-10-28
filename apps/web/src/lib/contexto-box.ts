@@ -36,7 +36,7 @@ export async function obtenerContextoOperativoWeb(): Promise<ContextoOperativoWe
   const boxIdCookie = store.get(COOKIE_BOX_ACTIVO)?.value;
 
   const afiliacionPorCookie = afiliaciones.find(
-    (a) => a.boxId === boxIdCookie
+    (a) => a.boxId === boxIdCookie && a.usuarioId === sesion.usuarioId
   );
 
   const afiliacionActiva =

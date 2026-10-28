@@ -55,6 +55,7 @@ export class PlanesService {
     return this.db.withBoxTransaction(boxId, async (tx) => {
       const esAdmin = rolesUsuario.includes("administrador");
       const condiciones = [
+        eq(planes.boxId, boxId),
         isNull(planes.deletedAt),
         ...(!esAdmin ? [eq(planes.activo, true)] : [])
       ];
@@ -71,12 +72,18 @@ export class PlanesService {
 
   private async buscarPlanActivoPorId(
     tx: DrizzleTx,
-    planId: string
+    planId: string,
+    boxId?: string
   ): Promise<typeof planes.$inferSelect> {
+    const condiciones = [eq(planes.id, planId), isNull(planes.deletedAt)];
+    if (boxId) {
+      condiciones.push(eq(planes.boxId, boxId));
+    }
+
     const filas = await tx
       .select()
       .from(planes)
-      .where(and(eq(planes.id, planId), isNull(planes.deletedAt)));
+      .where(and(...condiciones));
 
     const plan = filas[0];
     if (!plan) {
