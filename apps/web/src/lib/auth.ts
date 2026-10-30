@@ -7,7 +7,34 @@ import {
 } from "@centris/shared";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api";
-const DEFAULT_SECRET = "ci-secreto-jwt-portable-centris-github-actions-32chars";
+const DURACION_SESION_SEGUNDOS = 12 * 60 * 60;
+
+function exigirAuthSecret(): string {
+  const secreto = process.env.AUTH_SECRET?.trim();
+  if (!secreto) {
+    throw new Error(
+      "Variable de entorno obligatoria no definida: AUTH_SECRET. Configurala en el entorno o en el archivo .env."
+    );
+  }
+  return secreto;
+}
+
+export function esTokenJwtVigente(token: string): boolean {
+  try {
+    const partes = token.split(".");
+    if (partes.length !== 3 || !partes[1]) {
+      return false;
+    }
+    const payloadJson = Buffer.from(partes[1], "base64url").toString("utf8");
+    const payload = JSON.parse(payloadJson) as { exp?: unknown };
+    if (typeof payload.exp !== "number") {
+      return false;
+    }
+    return payload.exp * 1000 > Date.now();
+  } catch {
+    return false;
+  }
+}
 
 export interface SesionUsuarioWeb {
   usuarioId: string;
@@ -17,10 +44,11 @@ export interface SesionUsuarioWeb {
 }
 
 const nextAuth = NextAuth({
-  secret: process.env.AUTH_SECRET ?? DEFAULT_SECRET,
+  secret: exigirAuthSecret(),
   trustHost: true,
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
+    maxAge: DURACION_SESION_SEGUNDOS
   },
   pages: {
     signIn: "/login"
@@ -127,7 +155,11 @@ export async function obtenerSesionWeb(): Promise<SesionUsuarioWeb | null> {
     usuarioId?: string;
     accessToken?: string;
   };
-  if (!extendida.usuarioId || !extendida.accessToken) {
+  if (
+    !extendida.usuarioId ||
+    !extendida.accessToken ||
+    !esTokenJwtVigente(extendida.accessToken)
+  ) {
     return null;
   }
   return {

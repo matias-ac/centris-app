@@ -87,9 +87,9 @@ export async function activarCuentaApi(
   return { ok: true, data: SesionAuthSchema.parse(json) };
 }
 
-export async function obtenerMisAfiliacionesApi(
+export async function obtenerMisAfiliacionesResultadoApi(
   accessToken: string
-): Promise<AfiliacionConBox[]> {
+): Promise<ResultadoApi<AfiliacionConBox[]>> {
   const response = await fetch(`${API_URL}/afiliaciones/mias`, {
     headers: {
       Authorization: `Bearer ${accessToken}`
@@ -98,11 +98,18 @@ export async function obtenerMisAfiliacionesApi(
   });
 
   if (!response.ok) {
-    return [];
+    return { ok: false, error: await parsearErrorHttp(response) };
   }
 
   const json = await response.json();
-  return z.array(AfiliacionConBoxSchema).parse(json);
+  return { ok: true, data: z.array(AfiliacionConBoxSchema).parse(json) };
+}
+
+export async function obtenerMisAfiliacionesApi(
+  accessToken: string
+): Promise<AfiliacionConBox[]> {
+  const resultado = await obtenerMisAfiliacionesResultadoApi(accessToken);
+  return resultado.ok ? resultado.data : [];
 }
 
 export async function obtenerConfiguracionBoxApi(

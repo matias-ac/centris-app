@@ -1,5 +1,14 @@
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig, devices } from "@playwright/test";
 import { defineBddConfig } from "playwright-bdd";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const rootEnvPath = path.resolve(__dirname, "../../.env");
+if (fs.existsSync(rootEnvPath) && typeof process.loadEnvFile === "function") {
+  process.loadEnvFile(rootEnvPath);
+}
 
 const testDir = defineBddConfig({
   features: "e2e/features/**/*.feature",
