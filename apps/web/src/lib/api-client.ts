@@ -5,22 +5,28 @@ import {
   AtletaSchema,
   BoxSchema,
   ErrorResponseSchema,
+  MembresiaSchema,
   PlanSchema,
   SesionAuthSchema,
   type ActivarCuentaInput,
   type ActualizarAtleta,
   type ActualizarConfiguracionBox,
   type ActualizarPlanInput,
+  type AjustarCreditosExtra,
+  type AjustarPrecioMembresia,
   type Afiliacion,
   type AfiliacionConBox,
   type AfiliacionConUsuario,
   type Atleta,
+  type BajaAnticipada,
   type Box,
   type CrearAtleta,
+  type CrearMembresia,
   type CrearPlanInput,
   type ErrorResponse,
   type FiltroAtletas,
   type LoginInput,
+  type Membresia,
   type Plan,
   type RolAfiliacion,
   type SesionAuth
@@ -439,3 +445,101 @@ export async function eliminarAtletaApi(
 }
 
 
+
+async function llamarMembresiasApi(
+  accessToken: string,
+  boxId: string,
+  ruta: string,
+  opciones: { method?: string; body?: unknown } = {}
+): Promise<ResultadoApi<unknown>> {
+  const response = await fetch(`${API_URL}/membresias${ruta}`, {
+    method: opciones.method ?? "GET",
+    headers: {
+      ...(opciones.body !== undefined
+        ? { "Content-Type": "application/json" }
+        : {}),
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    body: opciones.body !== undefined ? JSON.stringify(opciones.body) : undefined,
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+  return { ok: true, data: await response.json() };
+}
+
+function comoMembresia(res: ResultadoApi<unknown>): ResultadoApi<Membresia> {
+  return res.ok ? { ok: true, data: MembresiaSchema.parse(res.data) } : res;
+}
+
+export async function listarMembresiasApi(
+  accessToken: string,
+  boxId: string
+): Promise<ResultadoApi<Membresia[]>> {
+  const res = await llamarMembresiasApi(accessToken, boxId, "");
+  return res.ok
+    ? { ok: true, data: z.array(MembresiaSchema).parse(res.data) }
+    : res;
+}
+
+export async function asignarMembresiaApi(
+  accessToken: string,
+  boxId: string,
+  input: CrearMembresia
+): Promise<ResultadoApi<Membresia>> {
+  return comoMembresia(
+    await llamarMembresiasApi(accessToken, boxId, "", {
+      method: "POST",
+      body: input
+    })
+  );
+}
+
+export async function ajustarCreditosExtraApi(
+  accessToken: string,
+  boxId: string,
+  membresiaId: string,
+  input: AjustarCreditosExtra
+): Promise<ResultadoApi<Membresia>> {
+  return comoMembresia(
+    await llamarMembresiasApi(
+      accessToken,
+      boxId,
+      `/${membresiaId}/creditos-extra`,
+      { method: "PATCH", body: input }
+    )
+  );
+}
+
+export async function ajustarPrecioMembresiaApi(
+  accessToken: string,
+  boxId: string,
+  membresiaId: string,
+  input: AjustarPrecioMembresia
+): Promise<ResultadoApi<Membresia>> {
+  return comoMembresia(
+    await llamarMembresiasApi(accessToken, boxId, `/${membresiaId}/precio`, {
+      method: "PATCH",
+      body: input
+    })
+  );
+}
+
+export async function bajaAnticipadaApi(
+  accessToken: string,
+  boxId: string,
+  membresiaId: string,
+  input: BajaAnticipada
+): Promise<ResultadoApi<Membresia>> {
+  return comoMembresia(
+    await llamarMembresiasApi(
+      accessToken,
+      boxId,
+      `/${membresiaId}/baja-anticipada`,
+      { method: "POST", body: input }
+    )
+  );
+}
