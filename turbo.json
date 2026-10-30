@@ -5,7 +5,6 @@
     "DATABASE_URL",
     "NODE_ENV",
     "PORT",
-    "JWT_SECRET",
     "CORS_ORIGIN",
     "NEXT_PUBLIC_API_URL",
     "AUTH_SECRET",
