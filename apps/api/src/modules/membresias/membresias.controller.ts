@@ -2,6 +2,7 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
   Inject,
   Param,
   Patch,
@@ -11,13 +12,16 @@ import {
 import {
   AjustarCreditosExtraSchema,
   AjustarPrecioMembresiaSchema,
+  BajaAnticipadaSchema,
   CrearMembresiaSchema,
   FiltroMembresiasSchema,
   type Membresia
 } from "@centris/shared";
 import {
   ContextoBox,
-  type ContextoBoxActivo
+  UsuarioActual,
+  type ContextoBoxActivo,
+  type UsuarioAutenticado
 } from "../../common/decorators/contexto.decorator.js";
 import { Roles } from "../../common/decorators/roles.decorator.js";
 import { validarConZod } from "../../common/pipes/zod-validation.pipe.js";
@@ -77,8 +81,20 @@ export class MembresiasController {
   }
 
   @Post(":id/baja-anticipada")
+  @HttpCode(200)
   @Roles("administrador")
-  async bajaAnticipada(): Promise<Membresia> {
-    return this.membresiasService.bajaAnticipada();
+  async bajaAnticipada(
+    @ContextoBox() contexto: ContextoBoxActivo,
+    @UsuarioActual() usuario: UsuarioAutenticado,
+    @Param("id") id: string,
+    @Body() body: unknown
+  ): Promise<Membresia> {
+    const input = validarConZod(BajaAnticipadaSchema, body);
+    return this.membresiasService.bajaAnticipada(
+      contexto.boxId,
+      id,
+      usuario.id,
+      input
+    );
   }
 }

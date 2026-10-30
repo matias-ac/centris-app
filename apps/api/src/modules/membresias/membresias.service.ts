@@ -4,6 +4,7 @@ import {
   calcularFechaFinVigencia,
   type AjustarCreditosExtra,
   type AjustarPrecioMembresia,
+  type BajaAnticipada,
   type CrearMembresia,
   type Membresia
 } from "@centris/shared";
@@ -43,6 +44,26 @@ function mapearMembresia(fila: typeof membresias.$inferSelect): Membresia {
 }
 
 const PG_EXCLUSION_VIOLATION = "23P01";
+
+function exigirUuidMembresia(membresiaId: string): void {
+  if (!UUID_REGEX.test(membresiaId)) {
+    throw new DomainException(
+      ERROR_CODES.VALIDACION_FALLIDA,
+      "El identificador de la Membresía no es un UUID válido.",
+      HttpStatus.BAD_REQUEST,
+      { id: ["UUID inválido"] }
+    );
+  }
+}
+
+function membresiaNoEncontrada(): DomainException {
+  return new DomainException(
+    ERROR_CODES.VALIDACION_FALLIDA,
+    "Membresía no encontrada en el Box activo.",
+    HttpStatus.NOT_FOUND,
+    { id: ["Membresía inexistente en este Box"] }
+  );
+}
 
 function esViolacionDeSolapamiento(error: unknown): boolean {
   let actual: unknown = error;
@@ -177,14 +198,7 @@ export class MembresiasService {
     membresiaId: string,
     valores: Partial<typeof membresias.$inferInsert>
   ): Promise<Membresia> {
-    if (!UUID_REGEX.test(membresiaId)) {
-      throw new DomainException(
-        ERROR_CODES.VALIDACION_FALLIDA,
-        "El identificador de la Membresía no es un UUID válido.",
-        HttpStatus.BAD_REQUEST,
-        { id: ["UUID inválido"] }
-      );
-    }
+    exigirUuidMembresia(membresiaId);
     return this.db.withBoxTransaction(boxId, async (tx) => {
       const [actualizada] = await tx
         .update(membresias)
@@ -194,24 +208,63 @@ export class MembresiasService {
         )
         .returning();
       if (!actualizada) {
-        throw new DomainException(
-          ERROR_CODES.VALIDACION_FALLIDA,
-          "Membresía no encontrada en el Box activo.",
-          HttpStatus.NOT_FOUND,
-          { id: ["Membresía inexistente en este Box"] }
-        );
+        throw membresiaNoEncontrada();
       }
       return mapearMembresia(actualizada);
     });
   }
 
-  /** Pendiente: se implementa en el criterio "Baja Anticipada" del ticket 05. */
-  async bajaAnticipada(): Promise<Membresia> {
-    throw new DomainException(
-      ERROR_CODES.ERROR_INTERNO,
-      "La Baja Anticipada todavía no está implementada.",
-      HttpStatus.NOT_IMPLEMENTED
-    );
+  /**
+   * Baja Anticipada (solo Administrador): acorta la Vigencia al día indicado y
+   * registra quién y cuándo la ejecutó. Solo puede acortar, sin quedar antes del inicio.
+   */
+  async bajaAnticipada(
+    boxId: string,
+    membresiaId: string,
+    usuarioId: string,
+    input: BajaAnticipada
+  ): Promise<Membresia> {
+    exigirUuidMembresia(membresiaId);
+    return this.db.withBoxTransaction(boxId, async (tx) => {
+      const [actual] = await tx
+        .select()
+        .from(membresias)
+        .where(
+          and(eq(membresias.id, membresiaId), isNull(membresias.deletedAt))
+        )
+        .for("update");
+      if (!actual) {
+        throw membresiaNoEncontrada();
+      }
+      if (input.fechaFin < actual.fechaInicio || input.fechaFin >= actual.fechaFin) {
+        throw new DomainException(
+          ERROR_CODES.VALIDACION_FALLIDA,
+          "La Baja Anticipada debe acortar la Vigencia sin quedar antes de su inicio.",
+          HttpStatus.BAD_REQUEST,
+          {
+            fechaFin: [
+              `Debe estar entre ${actual.fechaInicio} y el día anterior a ${actual.fechaFin}`
+            ]
+          }
+        );
+      }
+
+      const ahora = new Date();
+      const [actualizada] = await tx
+        .update(membresias)
+        .set({
+          fechaFin: input.fechaFin,
+          bajaAnticipadaEn: ahora,
+          bajaPorUsuarioId: usuarioId,
+          updatedAt: ahora
+        })
+        .where(eq(membresias.id, membresiaId))
+        .returning();
+      if (!actualizada) {
+        throw membresiaNoEncontrada();
+      }
+      return mapearMembresia(actualizada);
+    });
   }
 
   private async buscarPlanActivo(
