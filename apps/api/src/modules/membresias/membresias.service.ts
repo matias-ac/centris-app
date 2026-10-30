@@ -39,6 +39,27 @@ function mapearMembresia(fila: typeof membresias.$inferSelect): Membresia {
   };
 }
 
+const PG_EXCLUSION_VIOLATION = "23P01";
+
+function esViolacionDeSolapamiento(error: unknown): boolean {
+  let actual: unknown = error;
+  while (actual && typeof actual === "object") {
+    const { code, constraint, cause } = actual as {
+      code?: string;
+      constraint?: string;
+      cause?: unknown;
+    };
+    if (
+      code === PG_EXCLUSION_VIOLATION &&
+      constraint === "ex_membresias_sin_solapamiento"
+    ) {
+      return true;
+    }
+    actual = cause;
+  }
+  return false;
+}
+
 @Injectable()
 export class MembresiasService {
   constructor(
@@ -48,8 +69,28 @@ export class MembresiasService {
   /**
    * Asigna una Membresía copiando precio y condiciones del Plan al momento del alta.
    * La Vigencia es inclusiva y se calcula a partir de `duracion_dias` del Plan.
+   * El no solapamiento por Atleta lo garantiza la constraint de exclusión en PostgreSQL.
    */
   async crearMembresia(
+    boxId: string,
+    input: CrearMembresia
+  ): Promise<Membresia> {
+    try {
+      return await this.insertarMembresia(boxId, input);
+    } catch (error) {
+      if (esViolacionDeSolapamiento(error)) {
+        throw new DomainException(
+          ERROR_CODES.MEMBRESIA_SUPERPUESTA,
+          "El Atleta ya posee una Membresía cuya Vigencia se solapa con la solicitada.",
+          HttpStatus.CONFLICT,
+          { fechaInicio: ["La Vigencia se solapa con otra Membresía del Atleta"] }
+        );
+      }
+      throw error;
+    }
+  }
+
+  private async insertarMembresia(
     boxId: string,
     input: CrearMembresia
   ): Promise<Membresia> {
