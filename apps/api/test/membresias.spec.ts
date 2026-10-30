@@ -370,4 +370,60 @@ describe("Seam 2 — Membresías: Vigencia, permisos por rol y aislamiento RLS e
       bajaAnticipadaEn: null
     });
   });
+
+  it("Criterio 4: la Baja Anticipada del Administrador acorta la Vigencia y registra quién y cuándo", async () => {
+    const plan = await crearPlan(tokenAdminNorte, IDS.boxNorte, {
+      nombre: "Pase libre mensual",
+      precioBase: 40000,
+      duracionDias: 30,
+      modalidadCreditos: "ILIMITADO"
+    });
+    const alta = await api.pedir<Membresia>("/membresias", {
+      method: "POST",
+      token: tokenRecepNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        afiliacionId: IDS.afiliacionAtletaBaja,
+        planId: plan.id,
+        fechaInicio: "2026-11-01"
+      }
+    });
+    expect(alta.status).toBe(201);
+    expect(alta.body.fechaFin).toBe("2026-11-30");
+
+    const darDeBaja = (fechaFin: string) =>
+      api.pedir<Membresia>(`/membresias/${alta.body.id}/baja-anticipada`, {
+        method: "POST",
+        token: tokenAdminNorte,
+        boxId: IDS.boxNorte,
+        body: { fechaFin }
+      });
+
+    // La Baja solo puede acortar la Vigencia, sin quedar antes del inicio
+    expect((await darDeBaja("2026-12-10")).status).toBe(400);
+    expect((await darDeBaja("2026-10-31")).status).toBe(400);
+
+    const baja = await darDeBaja("2026-11-15");
+    expect(baja.status).toBe(200);
+    expect(baja.body).toMatchObject({
+      id: alta.body.id,
+      fechaInicio: "2026-11-01",
+      fechaFin: "2026-11-15",
+      bajaPorUsuarioId: IDS.usuarioAdminNorte
+    });
+    expect(baja.body.bajaAnticipadaEn).not.toBeNull();
+
+    // La Vigencia liberada admite una nueva Membresía desde el día siguiente
+    const nueva = await api.pedir<Membresia>("/membresias", {
+      method: "POST",
+      token: tokenRecepNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        afiliacionId: IDS.afiliacionAtletaBaja,
+        planId: plan.id,
+        fechaInicio: "2026-11-16"
+      }
+    });
+    expect(nueva.status).toBe(201);
+  });
 });
