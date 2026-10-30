@@ -10,7 +10,7 @@ Implementar de punta a punta el ciclo de vida de la `Membresía` de un `Atleta` 
 - 03: Catálogo de Planes Comerciales E2E
 - 04: Alta y Directorio de Atletas por Recepción y Administración E2E
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 ## Acceptance Criteria (TDD / BDD)
 
