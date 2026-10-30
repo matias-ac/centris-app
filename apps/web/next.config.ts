@@ -1,12 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import type { NextConfig } from "next";
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const rootEnvPath = path.resolve(__dirname, "../../.env");
-if (fs.existsSync(rootEnvPath) && typeof process.loadEnvFile === "function") {
-  process.loadEnvFile(rootEnvPath);
+for (const candidate of [
+  path.resolve(process.cwd(), ".env"),
+  path.resolve(process.cwd(), "../../.env")
+]) {
+  if (fs.existsSync(candidate) && typeof process.loadEnvFile === "function") {
+    process.loadEnvFile(candidate);
+    break;
+  }
 }
 
 const nextConfig: NextConfig = {
