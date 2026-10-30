@@ -2,6 +2,8 @@ import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import {
   ERROR_CODES,
   calcularFechaFinVigencia,
+  type AjustarCreditosExtra,
+  type AjustarPrecioMembresia,
   type CrearMembresia,
   type Membresia
 } from "@centris/shared";
@@ -9,7 +11,8 @@ import { and, asc, eq, isNull } from "drizzle-orm";
 import { DomainException } from "../../common/errors/domain.exception.js";
 import {
   DatabaseService,
-  type DrizzleTx
+  type DrizzleTx,
+  UUID_REGEX
 } from "../../database/database.service.js";
 import {
   afiliaciones,
@@ -145,6 +148,70 @@ export class MembresiasService {
         .orderBy(asc(membresias.fechaInicio));
       return filas.map(mapearMembresia);
     });
+  }
+
+  /** Ajusta la bolsa `creditos_extra` (válida para toda la Vigencia, no se renueva cada lunes). */
+  async ajustarCreditosExtra(
+    boxId: string,
+    membresiaId: string,
+    input: AjustarCreditosExtra
+  ): Promise<Membresia> {
+    return this.actualizarMembresia(boxId, membresiaId, {
+      creditosExtra: input.creditosExtra
+    });
+  }
+
+  /** Ajusta el Precio copiado del Plan (descuento o beca a $0). */
+  async ajustarPrecio(
+    boxId: string,
+    membresiaId: string,
+    input: AjustarPrecioMembresia
+  ): Promise<Membresia> {
+    return this.actualizarMembresia(boxId, membresiaId, {
+      precio: input.precio
+    });
+  }
+
+  private async actualizarMembresia(
+    boxId: string,
+    membresiaId: string,
+    valores: Partial<typeof membresias.$inferInsert>
+  ): Promise<Membresia> {
+    if (!UUID_REGEX.test(membresiaId)) {
+      throw new DomainException(
+        ERROR_CODES.VALIDACION_FALLIDA,
+        "El identificador de la Membresía no es un UUID válido.",
+        HttpStatus.BAD_REQUEST,
+        { id: ["UUID inválido"] }
+      );
+    }
+    return this.db.withBoxTransaction(boxId, async (tx) => {
+      const [actualizada] = await tx
+        .update(membresias)
+        .set({ ...valores, updatedAt: new Date() })
+        .where(
+          and(eq(membresias.id, membresiaId), isNull(membresias.deletedAt))
+        )
+        .returning();
+      if (!actualizada) {
+        throw new DomainException(
+          ERROR_CODES.VALIDACION_FALLIDA,
+          "Membresía no encontrada en el Box activo.",
+          HttpStatus.NOT_FOUND,
+          { id: ["Membresía inexistente en este Box"] }
+        );
+      }
+      return mapearMembresia(actualizada);
+    });
+  }
+
+  /** Pendiente: se implementa en el criterio "Baja Anticipada" del ticket 05. */
+  async bajaAnticipada(): Promise<Membresia> {
+    throw new DomainException(
+      ERROR_CODES.ERROR_INTERNO,
+      "La Baja Anticipada todavía no está implementada.",
+      HttpStatus.NOT_IMPLEMENTED
+    );
   }
 
   private async buscarPlanActivo(
