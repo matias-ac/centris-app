@@ -343,6 +343,11 @@ describe("Seam 2 — Membresías: Vigencia, permisos por rol y aislamiento RLS e
     expect(porAdministrador.status).toBe(200);
     expect(porAdministrador.body.creditosExtra).toBe(5);
 
+    const porAtleta = await ajustar(tokenAtletaNorte, "/creditos-extra", {
+      creditosExtra: 10
+    });
+    expect(porAtleta.status).toBe(403);
+
     // Precio y Baja Anticipada: exclusivos del Administrador
     const precioPorRecepcion = await ajustar(tokenRecepNorte, "/precio", {
       precio: 0
