@@ -1,5 +1,9 @@
 import { SEED_BOX_IDS } from "@centris/shared";
 import pg from "pg";
+import {
+  cargarVariablesDeEntorno,
+  exigirVariableDeEntorno
+} from "../common/config/env.js";
 import { hashearContrasena } from "../modules/auth/contrasenas.js";
 
 export const SEED_IDS = {
@@ -15,11 +19,11 @@ export const SEED_IDS = {
 } as const;
 
 export async function ejecutarSeed(connectionString?: string): Promise<void> {
+  cargarVariablesDeEntorno();
   const url =
     connectionString ??
     process.env.MIGRATION_DATABASE_URL ??
-    process.env.DATABASE_URL ??
-    "postgresql://centris_owner:centris_owner_pass@localhost:5432/centris_db";
+    exigirVariableDeEntorno("DATABASE_URL");
 
   const isRemote = !url.includes("localhost") && !url.includes("127.0.0.1");
   const useSsl =

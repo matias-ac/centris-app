@@ -5,9 +5,17 @@ import pg from "pg";
 
 const { Given, When, Then, After } = createBdd();
 
-const MIGRATION_URL =
-  process.env.MIGRATION_DATABASE_URL ??
-  "postgresql://centris_owner:centris_owner_pass@localhost:5432/centris_db";
+function obtenerMigrationUrl(): string {
+  const url = process.env.MIGRATION_DATABASE_URL?.trim();
+  if (!url) {
+    throw new Error(
+      "Variable de entorno obligatoria no definida: MIGRATION_DATABASE_URL."
+    );
+  }
+  return url;
+}
+
+const MIGRATION_URL = obtenerMigrationUrl();
 
 const E2E_MOSTRADOR = {
   usuarioId: "d0000000-0000-4000-8000-000000000001",

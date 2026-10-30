@@ -1,13 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { SignJWT, jwtVerify } from "jose";
+import { exigirVariableDeEntorno } from "../../common/config/env.js";
 import type { UsuarioAutenticado } from "../../common/decorators/contexto.decorator.js";
-
-const DEFAULT_SECRET = "ci-secreto-jwt-portable-centris-github-actions-32chars";
 
 @Injectable()
 export class JwtTokenService {
   private obtenerClaveSecreta(): Uint8Array {
-    const secreto = process.env.AUTH_SECRET ?? DEFAULT_SECRET;
+    const secreto = exigirVariableDeEntorno("AUTH_SECRET");
     return new TextEncoder().encode(secreto);
   }
 

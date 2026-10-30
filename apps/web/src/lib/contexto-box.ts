@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import type { AfiliacionConBox } from "@centris/shared";
-import { obtenerMisAfiliacionesApi } from "./api-client";
+import { obtenerMisAfiliacionesResultadoApi } from "./api-client";
 import { obtenerSesionWeb, type SesionUsuarioWeb } from "./auth";
 
 export const COOKIE_BOX_ACTIVO = "centris_box_id";
@@ -31,7 +31,19 @@ export async function obtenerContextoOperativoWeb(): Promise<ContextoOperativoWe
     return null;
   }
 
-  const afiliaciones = await obtenerMisAfiliacionesApi(sesion.accessToken);
+  const resultadoAfiliaciones = await obtenerMisAfiliacionesResultadoApi(
+    sesion.accessToken
+  );
+  if (
+    !resultadoAfiliaciones.ok &&
+    resultadoAfiliaciones.error.statusCode === 401
+  ) {
+    return null;
+  }
+
+  const afiliaciones = resultadoAfiliaciones.ok
+    ? resultadoAfiliaciones.data
+    : [];
   const store = await cookies();
   const boxIdCookie = store.get(COOKIE_BOX_ACTIVO)?.value;
 

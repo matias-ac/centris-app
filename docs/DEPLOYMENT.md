@@ -116,11 +116,11 @@ En la solapa **Environment** de Render, agregá las siguientes variables:
 | `NODE_ENV` | `production` | Activa modo producción en NestJS |
 | `PORT` | `10000` | Puerto asignado por Render (default en su infraestructura) |
 | `DATABASE_URL` | `postgresql://neondb_owner:...@ep-...neon.tech/neondb?sslmode=require` | Cadena de conexión copiada de Neon |
-| `JWT_SECRET` | *(generar con comando abajo)* | Secreto para firmar tokens JWT |
+| `AUTH_SECRET` | *(generar con `openssl rand -base64 32`)* | Secreto para firmar y verificar tokens JWT en la API |
 | `CORS_ORIGIN` | `*` *(temporal, se ajustará en el Paso 4)* | Orígenes habilitados |
 
 > [!NOTE]
-> Para generar un `JWT_SECRET` seguro podés correr en tu terminal:
+> Para generar un `AUTH_SECRET` criptográfico seguro (uno para Render y otro independiente para Vercel) corré en tu terminal:
 > ```bash
 > openssl rand -base64 32
 > ```
@@ -161,7 +161,7 @@ En la sección **Environment Variables**, agregá:
 | Variable | Valor |
 | :--- | :--- |
 | `NEXT_PUBLIC_API_URL` | `https://centris-api.onrender.com/api` *(la URL pública de tu API en Render terminada en `/api`)* |
-| `AUTH_SECRET` | *(misma clave aleatoria de 32 chars o una nueva generada con `openssl rand -base64 32`)* |
+| `AUTH_SECRET` | *(clave aleatoria independiente de 32 bytes generada con `openssl rand -base64 32`)* |
 | `AUTH_TRUST_HOST` | `true` |
 
 3. Hacé clic en **Deploy**.

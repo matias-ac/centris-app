@@ -1,4 +1,5 @@
 import { Controller, Get } from "@nestjs/common";
+import { SignJWT } from "jose";
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import {
   ERROR_CODES,
@@ -9,6 +10,7 @@ import {
   type SesionAuth
 } from "@centris/shared";
 import { Roles } from "../src/common/decorators/roles.decorator.js";
+import { JwtTokenService } from "../src/modules/auth/jwt-token.service.js";
 import {
   type ApiDePrueba,
   levantarApiDePrueba
@@ -471,5 +473,44 @@ describe("Seam 2 — API HTTP + PostgreSQL RLS: Auth JWT, Selector de Box, 4 Rol
     const filaSur = filasBd.find((f) => f.id === IDS.afiliacionMultiSur);
     expect(filaNorte?.deleted_at).not.toBeNull();
     expect(filaSur?.deleted_at).toBeNull();
+  });
+
+  it("Seguridad JWT: rechaza tokens expirados con 401 NO_AUTENTICADO y exige AUTH_SECRET sin usar secretos por defecto", async () => {
+    const jwtService = new JwtTokenService();
+    const secretoActual = process.env.AUTH_SECRET;
+    expect(secretoActual).toBeTruthy();
+
+    // 1. Un JWT firmado con la clave válida pero ya expirado (exp en el pasado) es rechazado con 401 NO_AUTENTICADO
+    const clave = new TextEncoder().encode(secretoActual);
+    const ahoraSegundos = Math.floor(Date.now() / 1000);
+    const tokenExpirado = await new SignJWT({
+      email: "admin.t02@test.centris.dev",
+      nombre: "Admin Test"
+    })
+      .setProtectedHeader({ alg: "HS256" })
+      .setSubject(IDS.usuarioAdmin)
+      .setIssuedAt(ahoraSegundos - 7200)
+      .setExpirationTime(ahoraSegundos - 3600)
+      .sign(clave);
+
+    const respuestaExpirado = await api.pedir("/afiliaciones/mias", {
+      token: tokenExpirado
+    });
+    expect(respuestaExpirado.status).toBe(401);
+    expect(respuestaExpirado.body.errorCode).toBe(ERROR_CODES.NO_AUTENTICADO);
+
+    // 2. Si AUTH_SECRET no está definido, JwtTokenService falla explícitamente sin recurrir a un secreto hardcodeado
+    try {
+      delete process.env.AUTH_SECRET;
+      await expect(
+        jwtService.firmarTokenUsuario({
+          id: IDS.usuarioAdmin,
+          email: "admin.t02@test.centris.dev",
+          nombre: "Admin Test"
+        })
+      ).rejects.toThrow(/Variable de entorno obligatoria no definida: AUTH_SECRET/);
+    } finally {
+      process.env.AUTH_SECRET = secretoActual;
+    }
   });
 });
