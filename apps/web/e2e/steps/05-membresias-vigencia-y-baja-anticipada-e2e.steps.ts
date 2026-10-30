@@ -110,7 +110,11 @@ function filaDeMembresia(page: Page, fechaInicio: string) {
   return page
     .getByTestId("seccion-membresias")
     .getByTestId("fila-membresia")
-    .filter({ has: page.getByTestId("membresia-fecha-inicio").getByText(fechaInicio) });
+    .filter({
+      has: page.locator('[data-testid="membresia-fecha-inicio"]', {
+        hasText: fechaInicio
+      })
+    });
 }
 
 async function asignarPlanDesdeLaFicha(

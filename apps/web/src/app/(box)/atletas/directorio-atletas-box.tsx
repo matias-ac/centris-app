@@ -6,7 +6,9 @@ import { useMemo, useState, useTransition } from "react";
 import {
   ActualizarAtletaSchema,
   CrearAtletaSchema,
-  type Atleta
+  type Atleta,
+  type Membresia,
+  type Plan
 } from "@centris/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,15 +20,24 @@ import {
   crearAtletaAction,
   eliminarAtletaAction
 } from "@/lib/actions";
+import { FichaMembresiasAtleta } from "./ficha-membresias-atleta";
 
 interface DirectorioAtletasBoxProps {
   boxId: string;
+  moneda: string;
+  esAdministrador: boolean;
   atletasIniciales: Atleta[];
+  planes: Plan[];
+  membresias: Membresia[];
 }
 
 export function DirectorioAtletasBox({
   boxId,
-  atletasIniciales
+  moneda,
+  esAdministrador,
+  atletasIniciales,
+  planes,
+  membresias
 }: DirectorioAtletasBoxProps) {
   const router = useRouter();
   const [mostrarFormularioAlta, setMostrarFormularioAlta] = useState(false);
@@ -407,6 +418,16 @@ export function DirectorioAtletasBox({
                 </span>
               </div>
             </div>
+            <FichaMembresiasAtleta
+              boxId={boxId}
+              moneda={moneda}
+              afiliacionId={atletaFicha.afiliacionId}
+              planes={planes}
+              membresias={membresias.filter(
+                (membresia) => membresia.afiliacionId === atletaFicha.afiliacionId
+              )}
+              esAdministrador={esAdministrador}
+            />
           </CardContent>
         </Card>
       ) : null}
