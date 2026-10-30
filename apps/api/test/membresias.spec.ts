@@ -1,5 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
-import type { Membresia, Plan } from "@centris/shared";
+import { ERROR_CODES, type Membresia, type Plan } from "@centris/shared";
 import {
   type ApiDePrueba,
   levantarApiDePrueba
@@ -14,11 +14,13 @@ const IDS = {
   usuarioAtletaNorte: "b1000000-0000-4000-8000-000000000003",
   usuarioAdminSur: "b1000000-0000-4000-8000-000000000004",
   usuarioAtletaSur: "b1000000-0000-4000-8000-000000000005",
+  usuarioAtletaSolapamiento: "b1000000-0000-4000-8000-000000000006",
   afiliacionAdminNorte: "b2000000-0000-4000-8000-000000000001",
   afiliacionRecepNorte: "b2000000-0000-4000-8000-000000000002",
   afiliacionAtletaNorte: "b2000000-0000-4000-8000-000000000003",
   afiliacionAdminSur: "b2000000-0000-4000-8000-000000000004",
-  afiliacionAtletaSur: "b2000000-0000-4000-8000-000000000005"
+  afiliacionAtletaSur: "b2000000-0000-4000-8000-000000000005",
+  afiliacionAtletaSolapamiento: "b2000000-0000-4000-8000-000000000006"
 } as const;
 
 const PASSWORD = "PasswordSegura123!";
@@ -65,6 +67,12 @@ describe("Seam 2 — Membresías: Vigencia, permisos por rol y aislamiento RLS e
         email: "atleta.sur@membresias.centris.dev",
         nombre: "Atleta Sur",
         contrasena: PASSWORD
+      },
+      {
+        id: IDS.usuarioAtletaSolapamiento,
+        email: "atleta.solapamiento@membresias.centris.dev",
+        nombre: "Atleta Solapamiento",
+        contrasena: PASSWORD
       }
     ],
     afiliaciones: [
@@ -96,6 +104,12 @@ describe("Seam 2 — Membresías: Vigencia, permisos por rol y aislamiento RLS e
         id: IDS.afiliacionAtletaSur,
         boxId: IDS.boxSur,
         usuarioId: IDS.usuarioAtletaSur,
+        roles: ["atleta"]
+      },
+      {
+        id: IDS.afiliacionAtletaSolapamiento,
+        boxId: IDS.boxNorte,
+        usuarioId: IDS.usuarioAtletaSolapamiento,
         roles: ["atleta"]
       }
     ]
@@ -200,5 +214,52 @@ describe("Seam 2 — Membresías: Vigencia, permisos por rol y aislamiento RLS e
       fechaInicio: "2026-11-01",
       fechaFin: "2026-11-30"
     });
+  });
+
+  it("Criterio 2: rechaza Membresías con Vigencia solapada y acepta una Renovación futura contigua", async () => {
+    const plan = await crearPlan(tokenAdminNorte, IDS.boxNorte, {
+      nombre: "Pack mensual ilimitado",
+      precioBase: 50000,
+      duracionDias: 30,
+      modalidadCreditos: "ILIMITADO"
+    });
+    const asignar = (fechaInicio: string) =>
+      api.pedir<Membresia & { errorCode?: string }>("/membresias", {
+        method: "POST",
+        token: tokenRecepNorte,
+        boxId: IDS.boxNorte,
+        body: {
+          afiliacionId: IDS.afiliacionAtletaSolapamiento,
+          planId: plan.id,
+          fechaInicio
+        }
+      });
+
+    // Vigencia 01/11 al 30/11
+    const vigente = await asignar("2026-11-01");
+    expect(vigente.status).toBe(201);
+    expect(vigente.body.fechaFin).toBe("2026-11-30");
+
+    // 15/11 al 14/12 se solapa con la Vigencia anterior
+    const solapada = await asignar("2026-11-15");
+    expect(solapada.status).toBe(409);
+    expect(solapada.body.errorCode).toBe(ERROR_CODES.MEMBRESIA_SUPERPUESTA);
+
+    // Renovación con inicio el 01/12: Membresía futura sin solapamiento
+    const renovacion = await asignar("2026-12-01");
+    expect(renovacion.status).toBe(201);
+    expect(renovacion.body).toMatchObject({
+      fechaInicio: "2026-12-01",
+      fechaFin: "2026-12-30"
+    });
+
+    const todas = await api.pedir<Membresia[]>(
+      `/membresias?afiliacionId=${IDS.afiliacionAtletaSolapamiento}`,
+      { token: tokenRecepNorte, boxId: IDS.boxNorte }
+    );
+    expect(todas.body.map((m) => m.fechaInicio)).toEqual([
+      "2026-11-01",
+      "2026-12-01"
+    ]);
   });
 });
