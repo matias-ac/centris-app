@@ -1,10 +1,9 @@
 import pg from "pg";
 import type { RolAfiliacion } from "@centris/shared";
+import { exigirVariableDeEntorno } from "../../src/common/config/env.js";
 import { hashearContrasena } from "../../src/modules/auth/contrasenas.js";
 
-const MIGRATION_URL =
-  process.env.MIGRATION_DATABASE_URL ??
-  "postgresql://centris_owner:centris_owner_pass@localhost:5432/centris_db";
+const MIGRATION_URL = exigirVariableDeEntorno("MIGRATION_DATABASE_URL");
 
 interface BoxDePrueba {
   id: string;

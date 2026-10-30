@@ -1,4 +1,10 @@
 import { defineConfig } from "drizzle-kit";
+import {
+  cargarVariablesDeEntorno,
+  exigirVariableDeEntorno
+} from "./src/common/config/env.js";
+
+cargarVariablesDeEntorno();
 
 export default defineConfig({
   dialect: "postgresql",
@@ -7,6 +13,6 @@ export default defineConfig({
   dbCredentials: {
     url:
       process.env.MIGRATION_DATABASE_URL ??
-      "postgresql://centris_owner:centris_owner_pass@localhost:5432/centris_db"
+      exigirVariableDeEntorno("DATABASE_URL")
   }
 });

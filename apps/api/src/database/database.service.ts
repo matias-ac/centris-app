@@ -2,6 +2,7 @@ import { Injectable, type OnModuleDestroy } from "@nestjs/common";
 import { sql } from "drizzle-orm";
 import { drizzle, type NodePgDatabase } from "drizzle-orm/node-postgres";
 import pg from "pg";
+import { exigirVariableDeEntorno } from "../common/config/env.js";
 import * as schema from "./schema/index.js";
 
 export type DrizzleTx = NodePgDatabase<typeof schema>;
@@ -26,10 +27,7 @@ export class DatabaseService implements OnModuleDestroy {
   private readonly db: DrizzleTx;
 
   constructor(connectionString?: string) {
-    const url =
-      connectionString ??
-      process.env.DATABASE_URL ??
-      "postgresql://centris_app_user:centris_app_pass@localhost:5432/centris_db";
+    const url = connectionString ?? exigirVariableDeEntorno("DATABASE_URL");
 
     const isRemote = !url.includes("localhost") && !url.includes("127.0.0.1");
     const useSsl =

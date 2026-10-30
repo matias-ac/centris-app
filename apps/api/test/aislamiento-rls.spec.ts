@@ -1,13 +1,12 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { eq, sql } from "drizzle-orm";
 import pg from "pg";
+import { exigirVariableDeEntorno } from "../src/common/config/env.js";
 import { DatabaseService } from "../src/database/database.service.js";
 import { afiliaciones } from "../src/database/schema/index.js";
 import { SaludService } from "../src/modules/salud/salud.service.js";
 
-const MIGRATION_URL =
-  process.env.MIGRATION_DATABASE_URL ??
-  "postgresql://centris_owner:centris_owner_pass@localhost:5432/centris_db";
+const MIGRATION_URL = exigirVariableDeEntorno("MIGRATION_DATABASE_URL");
 
 describe("Seam 2 — Aislamiento PostgreSQL con FORCE ROW LEVEL SECURITY (DatabaseService)", () => {
   let db: DatabaseService;
