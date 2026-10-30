@@ -1,5 +1,7 @@
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { ERROR_CODES, type Membresia, type Plan } from "@centris/shared";
+import { DatabaseService } from "../src/database/database.service.js";
+import { membresias, planes } from "../src/database/schema/index.js";
 import {
   type ApiDePrueba,
   levantarApiDePrueba
@@ -31,6 +33,7 @@ const PASSWORD = "PasswordSegura123!";
 
 describe("Seam 2 — Membresías: Vigencia, permisos por rol y aislamiento RLS en API", () => {
   let api: ApiDePrueba;
+  let db: DatabaseService;
   let tokenAdminNorte: string;
   let tokenRecepNorte: string;
   let tokenAtletaNorte: string;
@@ -167,6 +170,7 @@ describe("Seam 2 — Membresías: Vigencia, permisos por rol y aislamiento RLS e
   }
 
   beforeAll(async () => {
+    db = new DatabaseService();
     await datos.sembrar();
     api = await levantarApiDePrueba();
     tokenAdminNorte = await login("admin.norte@membresias.centris.dev");
@@ -178,6 +182,7 @@ describe("Seam 2 — Membresías: Vigencia, permisos por rol y aislamiento RLS e
   afterAll(async () => {
     await api?.cerrar();
     await datos.cerrar();
+    await db?.close();
   });
 
   it("Criterio 1: la Membresía copia precio y condiciones del Plan, calcula fecha_fin y no cambia si el Plan se edita luego", async () => {
@@ -425,5 +430,135 @@ describe("Seam 2 — Membresías: Vigencia, permisos por rol y aislamiento RLS e
       }
     });
     expect(nueva.status).toBe(201);
+  });
+
+  it("Aislamiento RLS: el Box Sur no ve, edita ni asigna Membresías del Box Norte y PostgreSQL lo garantiza", async () => {
+    const planNorte = await crearPlan(tokenAdminNorte, IDS.boxNorte, {
+      nombre: "Plan Norte aislamiento",
+      precioBase: 30000,
+      duracionDias: 30,
+      modalidadCreditos: "ILIMITADO"
+    });
+    const planSur = await crearPlan(tokenAdminSur, IDS.boxSur, {
+      nombre: "Plan Sur aislamiento",
+      precioBase: 31000,
+      duracionDias: 30,
+      modalidadCreditos: "ILIMITADO"
+    });
+    const altaNorte = await api.pedir<Membresia>("/membresias", {
+      method: "POST",
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        afiliacionId: IDS.afiliacionAtletaNorte,
+        planId: planNorte.id,
+        fechaInicio: "2027-03-01"
+      }
+    });
+    expect(altaNorte.status).toBe(201);
+    const altaSur = await api.pedir<Membresia>("/membresias", {
+      method: "POST",
+      token: tokenAdminSur,
+      boxId: IDS.boxSur,
+      body: {
+        afiliacionId: IDS.afiliacionAtletaSur,
+        planId: planSur.id,
+        fechaInicio: "2027-03-01"
+      }
+    });
+    expect(altaSur.status).toBe(201);
+
+    // API: el Administrador del Box Sur no ve ni modifica la Membresía del Norte
+    const listadoSur = await api.pedir<Membresia[]>("/membresias", {
+      token: tokenAdminSur,
+      boxId: IDS.boxSur
+    });
+    expect(listadoSur.body.every((m) => m.boxId === IDS.boxSur)).toBe(true);
+    expect(listadoSur.body.some((m) => m.id === altaNorte.body.id)).toBe(false);
+
+    const edicionCruzada = await api.pedir(
+      `/membresias/${altaNorte.body.id}/precio`,
+      {
+        method: "PATCH",
+        token: tokenAdminSur,
+        boxId: IDS.boxSur,
+        body: { precio: 0 }
+      }
+    );
+    expect(edicionCruzada.status).toBe(404);
+
+    const asignacionCruzada = await api.pedir("/membresias", {
+      method: "POST",
+      token: tokenAdminSur,
+      boxId: IDS.boxSur,
+      body: {
+        afiliacionId: IDS.afiliacionAtletaNorte,
+        planId: planSur.id,
+        fechaInicio: "2027-06-01"
+      }
+    });
+    expect(asignacionCruzada.status).toBe(404);
+
+    // PostgreSQL: RLS filtra por Box y falla cerrado fuera de una transacción con contexto
+    const filasSur = await db.withBoxTransaction(IDS.boxSur, (tx) =>
+      tx.select().from(membresias)
+    );
+    expect(filasSur.some((m) => m.id === altaNorte.body.id)).toBe(false);
+    expect(filasSur.every((m) => m.boxId === IDS.boxSur)).toBe(true);
+    expect(await db.client.select().from(membresias)).toEqual([]);
+
+    // PostgreSQL: WITH CHECK de RLS impide insertar en otro Box
+    await expect(
+      db.withBoxTransaction(IDS.boxNorte, (tx) =>
+        tx.insert(membresias).values({
+          boxId: IDS.boxSur,
+          afiliacionId: IDS.afiliacionAtletaSur,
+          planId: planSur.id,
+          precio: 1000,
+          modalidadCreditos: "ILIMITADO",
+          creditosPorPeriodo: null,
+          fechaInicio: "2028-01-01",
+          fechaFin: "2028-01-30"
+        })
+      )
+    ).rejects.toThrow();
+
+    // PostgreSQL: la FK compuesta (box_id, afiliacion_id) impide mezclar Boxes
+    await expect(
+      db.withBoxTransaction(IDS.boxSur, (tx) =>
+        tx.insert(membresias).values({
+          boxId: IDS.boxSur,
+          afiliacionId: IDS.afiliacionAtletaNorte,
+          planId: planSur.id,
+          precio: 1000,
+          modalidadCreditos: "ILIMITADO",
+          creditosPorPeriodo: null,
+          fechaInicio: "2028-01-01",
+          fechaFin: "2028-01-30"
+        })
+      )
+    ).rejects.toThrow();
+
+    // PostgreSQL: la FK compuesta (box_id, plan_id) impide usar Planes de otro Box
+    await expect(
+      db.withBoxTransaction(IDS.boxSur, (tx) =>
+        tx.insert(membresias).values({
+          boxId: IDS.boxSur,
+          afiliacionId: IDS.afiliacionAtletaSur,
+          planId: planNorte.id,
+          precio: 1000,
+          modalidadCreditos: "ILIMITADO",
+          creditosPorPeriodo: null,
+          fechaInicio: "2028-02-01",
+          fechaFin: "2028-02-28"
+        })
+      )
+    ).rejects.toThrow();
+
+    // Sanidad: el Plan del Norte sigue visible solo desde el Norte
+    const planesSur = await db.withBoxTransaction(IDS.boxSur, (tx) =>
+      tx.select().from(planes)
+    );
+    expect(planesSur.some((p) => p.id === planNorte.id)).toBe(false);
   });
 });
