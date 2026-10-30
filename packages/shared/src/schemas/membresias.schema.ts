@@ -59,6 +59,12 @@ export const CrearMembresiaSchema = z.object({
 
 export type CrearMembresia = z.infer<typeof CrearMembresiaSchema>;
 
+export const FiltroMembresiasSchema = z.object({
+  afiliacionId: z.string().uuid("La afiliación del Atleta es inválida").optional()
+});
+
+export type FiltroMembresias = z.infer<typeof FiltroMembresiasSchema>;
+
 export const AjustarCreditosExtraSchema = z.object({
   creditosExtra: z.coerce
     .number()
