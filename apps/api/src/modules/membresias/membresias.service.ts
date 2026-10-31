@@ -119,8 +119,8 @@ export class MembresiasService {
     input: CrearMembresia
   ): Promise<Membresia> {
     return this.db.withBoxTransaction(boxId, async (tx) => {
-      const plan = await this.buscarPlanActivo(tx, input.planId);
-      await this.exigirAfiliacionDelBox(tx, input.afiliacionId);
+      const plan = await this.buscarPlanActivo(tx, boxId, input.planId);
+      await this.exigirAfiliacionDelBox(tx, boxId, input.afiliacionId);
 
       const [insertada] = await tx
         .insert(membresias)
@@ -204,7 +204,11 @@ export class MembresiasService {
         .update(membresias)
         .set({ ...valores, updatedAt: new Date() })
         .where(
-          and(eq(membresias.id, membresiaId), isNull(membresias.deletedAt))
+          and(
+            eq(membresias.boxId, boxId),
+            eq(membresias.id, membresiaId),
+            isNull(membresias.deletedAt)
+          )
         )
         .returning();
       if (!actualizada) {
@@ -230,11 +234,23 @@ export class MembresiasService {
         .select()
         .from(membresias)
         .where(
-          and(eq(membresias.id, membresiaId), isNull(membresias.deletedAt))
+          and(
+            eq(membresias.boxId, boxId),
+            eq(membresias.id, membresiaId),
+            isNull(membresias.deletedAt)
+          )
         )
         .for("update");
       if (!actual) {
         throw membresiaNoEncontrada();
+      }
+      if (actual.bajaAnticipadaEn !== null) {
+        throw new DomainException(
+          ERROR_CODES.VALIDACION_FALLIDA,
+          "La Membresía ya registra una Baja Anticipada.",
+          HttpStatus.BAD_REQUEST,
+          { id: ["La Membresía ya fue dada de baja anticipadamente"] }
+        );
       }
       if (input.fechaFin < actual.fechaInicio || input.fechaFin >= actual.fechaFin) {
         throw new DomainException(
@@ -258,7 +274,9 @@ export class MembresiasService {
           bajaPorUsuarioId: usuarioId,
           updatedAt: ahora
         })
-        .where(eq(membresias.id, membresiaId))
+        .where(
+          and(eq(membresias.boxId, boxId), eq(membresias.id, membresiaId))
+        )
         .returning();
       if (!actualizada) {
         throw membresiaNoEncontrada();
@@ -269,6 +287,7 @@ export class MembresiasService {
 
   private async buscarPlanActivo(
     tx: DrizzleTx,
+    boxId: string,
     planId: string
   ): Promise<typeof planes.$inferSelect> {
     const [plan] = await tx
@@ -276,6 +295,7 @@ export class MembresiasService {
       .from(planes)
       .where(
         and(
+          eq(planes.boxId, boxId),
           eq(planes.id, planId),
           isNull(planes.deletedAt),
           eq(planes.activo, true)
@@ -294,13 +314,19 @@ export class MembresiasService {
 
   private async exigirAfiliacionDelBox(
     tx: DrizzleTx,
+    boxId: string,
     afiliacionId: string
   ): Promise<void> {
     const [afiliacion] = await tx
       .select({ id: afiliaciones.id, roles: afiliaciones.roles })
       .from(afiliaciones)
       .where(
-        and(eq(afiliaciones.id, afiliacionId), isNull(afiliaciones.deletedAt))
+        and(
+          eq(afiliaciones.boxId, boxId),
+          eq(afiliaciones.id, afiliacionId),
+          eq(afiliaciones.activo, true),
+          isNull(afiliaciones.deletedAt)
+        )
       );
     if (!afiliacion || !afiliacion.roles.includes("atleta")) {
       throw new DomainException(

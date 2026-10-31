@@ -73,7 +73,7 @@ export function FichaMembresiasAtleta({
 
   return (
     <div className="space-y-4 border-t border-border pt-4" data-testid="seccion-membresias">
-      <h3 className="font-display text-sm uppercase tracking-tight text-foreground">
+      <h3 className="font-display text-lg uppercase tracking-tight text-foreground">
         Membresías
       </h3>
 
@@ -100,7 +100,7 @@ export function FichaMembresiasAtleta({
             value={planId}
             onChange={(e) => setPlanId(e.target.value)}
             disabled={isPending}
-            className="h-10 w-full rounded-md border border-border bg-secondary px-3 text-sm text-foreground"
+            className="h-10 w-full rounded-md border border-border bg-secondary px-3 text-base text-foreground sm:text-sm"
           >
             {planesActivos.map((plan) => (
               <option key={plan.id} value={plan.id}>
@@ -182,7 +182,7 @@ function FilaMembresia({
       data-testid="fila-membresia"
       className="space-y-3 rounded-md border border-border bg-card p-3 text-sm"
     >
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
         <div>
           <span className="block text-xs text-muted-foreground">Inicio</span>
           <span className="tabular-nums" data-testid="membresia-fecha-inicio">
@@ -193,6 +193,14 @@ function FilaMembresia({
           <span className="block text-xs text-muted-foreground">Fin</span>
           <span className="tabular-nums" data-testid="membresia-fecha-fin">
             {membresia.fechaFin}
+          </span>
+        </div>
+        <div>
+          <span className="block text-xs text-muted-foreground">Condiciones</span>
+          <span className="tabular-nums" data-testid="membresia-condiciones">
+            {membresia.modalidadCreditos === "ILIMITADO"
+              ? "ILIMITADO"
+              : `${membresia.creditosPorPeriodo} (${membresia.modalidadCreditos})`}
           </span>
         </div>
         <div>
@@ -214,7 +222,7 @@ function FilaMembresia({
       </div>
 
       {membresia.bajaAnticipadaEn ? (
-        <Badge variant="amber">Baja Anticipada</Badge>
+        <Badge variant="rose">Baja Anticipada</Badge>
       ) : null}
 
       <div className="flex flex-wrap items-end gap-2">
@@ -273,31 +281,33 @@ function FilaMembresia({
               Ajustar Precio
             </Button>
           </div>
-          <div className="flex items-end gap-2">
-            <Input
-              type="date"
-              aria-label="Fin de la Vigencia tras la Baja Anticipada"
-              data-testid="input-fecha-baja"
-              value={fechaBaja}
-              onChange={(e) => setFechaBaja(e.target.value)}
-              disabled={deshabilitado}
-            />
-            <Button
-              type="button"
-              variant="destructive"
-              data-testid="btn-baja-anticipada"
-              disabled={deshabilitado}
-              onClick={() =>
-                ejecutar(() =>
-                  bajaAnticipadaAction(boxId, membresia.id, {
-                    fechaFin: fechaBaja
-                  })
-                )
-              }
-            >
-              Baja Anticipada
-            </Button>
-          </div>
+          {!membresia.bajaAnticipadaEn ? (
+            <div className="flex items-end gap-2">
+              <Input
+                type="date"
+                aria-label="Fin de la Vigencia tras la Baja Anticipada"
+                data-testid="input-fecha-baja"
+                value={fechaBaja}
+                onChange={(e) => setFechaBaja(e.target.value)}
+                disabled={deshabilitado}
+              />
+              <Button
+                type="button"
+                variant="destructive"
+                data-testid="btn-baja-anticipada"
+                disabled={deshabilitado}
+                onClick={() =>
+                  ejecutar(() =>
+                    bajaAnticipadaAction(boxId, membresia.id, {
+                      fechaFin: fechaBaja
+                    })
+                  )
+                }
+              >
+                Baja Anticipada
+              </Button>
+            </div>
+          ) : null}
         </div>
       ) : null}
     </li>

@@ -419,6 +419,7 @@ export function DirectorioAtletasBox({
               </div>
             </div>
             <FichaMembresiasAtleta
+              key={atletaFicha.afiliacionId}
               boxId={boxId}
               moneda={moneda}
               afiliacionId={atletaFicha.afiliacionId}

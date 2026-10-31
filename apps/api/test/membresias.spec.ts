@@ -251,7 +251,7 @@ describe("Seam 2 — Membresías: Vigencia, permisos por rol y aislamiento RLS e
 
   it("Criterio 2: rechaza Membresías con Vigencia solapada y acepta una Renovación futura contigua", async () => {
     const plan = await crearPlan(tokenAdminNorte, IDS.boxNorte, {
-      nombre: "Pack mensual ilimitado",
+      nombre: "Plan mensual ilimitado",
       precioBase: 50000,
       duracionDias: 30,
       modalidadCreditos: "ILIMITADO"
@@ -422,6 +422,7 @@ describe("Seam 2 — Membresías: Vigencia, permisos por rol y aislamiento RLS e
       bajaPorUsuarioId: IDS.usuarioAdminNorte
     });
     expect(baja.body.bajaAnticipadaEn).not.toBeNull();
+    expect((await darDeBaja("2026-11-10")).status).toBe(400);
 
     // La Vigencia liberada admite una nueva Membresía desde el día siguiente
     const nueva = await api.pedir<Membresia>("/membresias", {

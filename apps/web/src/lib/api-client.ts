@@ -477,9 +477,13 @@ function comoMembresia(res: ResultadoApi<unknown>): ResultadoApi<Membresia> {
 
 export async function listarMembresiasApi(
   accessToken: string,
-  boxId: string
+  boxId: string,
+  afiliacionId?: string
 ): Promise<ResultadoApi<Membresia[]>> {
-  const res = await llamarMembresiasApi(accessToken, boxId, "");
+  const ruta = afiliacionId
+    ? `?afiliacionId=${encodeURIComponent(afiliacionId)}`
+    : "";
+  const res = await llamarMembresiasApi(accessToken, boxId, ruta);
   return res.ok
     ? { ok: true, data: z.array(MembresiaSchema).parse(res.data) }
     : res;
