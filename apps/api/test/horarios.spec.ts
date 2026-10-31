@@ -283,8 +283,8 @@ describe("Seam 2 — Horarios Recurrentes: CRUD, Validación de Coach y RLS en A
 
     // Verificar ordenamiento: día ascendente, hora ascendente
     for (let i = 0; i < resNorte.body.length - 1; i++) {
-      const actual = resNorte.body[i];
-      const siguiente = resNorte.body[i + 1];
+      const actual = resNorte.body[i]!;
+      const siguiente = resNorte.body[i + 1]!;
       if (actual.diaSemana === siguiente.diaSemana) {
         expect(actual.horaInicio <= siguiente.horaInicio).toBe(true);
       } else {

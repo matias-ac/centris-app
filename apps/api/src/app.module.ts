@@ -11,6 +11,7 @@ import { MembresiasModule } from "./modules/membresias/membresias.module.js";
 import { PlanesModule } from "./modules/planes/planes.module.js";
 import { SaludModule } from "./modules/salud/salud.module.js";
 import { TiposClaseModule } from "./modules/tipos-clase/tipos-clase.module.js";
+import { HorariosModule } from "./modules/horarios/horarios.module.js";
 
 @Module({
   imports: [
@@ -22,7 +23,8 @@ import { TiposClaseModule } from "./modules/tipos-clase/tipos-clase.module.js";
     MembresiasModule,
     PlanesModule,
     SaludModule,
-    TiposClaseModule
+    TiposClaseModule,
+    HorariosModule
   ],
   providers: [
     {
