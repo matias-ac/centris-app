@@ -2,11 +2,16 @@
 
 import { revalidatePath } from "next/cache";
 import { AuthError } from "next-auth";
+import type { ZodTypeAny, z } from "zod";
 import {
   ActivarCuentaSchema,
   ActualizarConfiguracionBoxSchema,
   ActualizarPlanSchema,
   ActualizarRolesAfiliacionSchema,
+  AjustarCreditosExtraSchema,
+  AjustarPrecioMembresiaSchema,
+  BajaAnticipadaSchema,
+  CrearMembresiaSchema,
   CrearAtletaSchema,
   ActualizarAtletaSchema,
   CrearPlanSchema,
@@ -14,7 +19,11 @@ import {
   LoginSchema,
   type ActualizarAtleta,
   type ActualizarPlanInput,
+  type AjustarCreditosExtra,
+  type AjustarPrecioMembresia,
+  type BajaAnticipada,
   type CrearAtleta,
+  type CrearMembresia,
   type CrearPlanInput,
   type RolAfiliacion,
   type SesionAuth
@@ -22,6 +31,10 @@ import {
 import {
   activarCuentaApi,
   actualizarAtletaApi,
+  ajustarCreditosExtraApi,
+  ajustarPrecioMembresiaApi,
+  asignarMembresiaApi,
+  bajaAnticipadaApi,
   actualizarConfiguracionBoxApi,
   actualizarPlanApi,
   actualizarRolesAfiliacionApi,
@@ -31,7 +44,8 @@ import {
   eliminarAtletaApi,
   eliminarPlanApi,
   iniciarSesionApi,
-  obtenerMisAfiliacionesApi
+  obtenerMisAfiliacionesApi,
+  type ResultadoApi
 } from "./api-client";
 import {
   autenticarConSesion,
@@ -463,3 +477,94 @@ export async function eliminarAtletaAction(
   return { ok: true };
 }
 
+
+async function ejecutarAccionMembresia<S extends ZodTypeAny>(
+  esquema: S,
+  entrada: unknown,
+  mensajeInvalido: string,
+  llamar: (
+    accessToken: string,
+    datos: z.output<S>
+  ) => Promise<ResultadoApi<unknown>>
+): Promise<ResultadoAccion> {
+  const sesion = await obtenerSesionWeb();
+  if (!sesion) {
+    return {
+      ok: false,
+      errorCode: ERROR_CODES.NO_AUTENTICADO,
+      message: "Debés iniciar sesión."
+    };
+  }
+
+  const validado = esquema.safeParse(entrada);
+  if (!validado.success) {
+    return {
+      ok: false,
+      errorCode: ERROR_CODES.VALIDACION_FALLIDA,
+      message: validado.error.issues[0]?.message ?? mensajeInvalido
+    };
+  }
+
+  const res = await llamar(sesion.accessToken, validado.data);
+  if (!res.ok) {
+    return {
+      ok: false,
+      errorCode: res.error.errorCode,
+      message: res.error.message
+    };
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+export async function asignarMembresiaAction(
+  boxId: string,
+  input: CrearMembresia
+): Promise<ResultadoAccion> {
+  return ejecutarAccionMembresia(
+    CrearMembresiaSchema,
+    input,
+    "Datos de la Membresía inválidos.",
+    (token, datos) => asignarMembresiaApi(token, boxId, datos)
+  );
+}
+
+export async function ajustarCreditosExtraAction(
+  boxId: string,
+  membresiaId: string,
+  input: AjustarCreditosExtra
+): Promise<ResultadoAccion> {
+  return ejecutarAccionMembresia(
+    AjustarCreditosExtraSchema,
+    input,
+    "Créditos extra inválidos.",
+    (token, datos) => ajustarCreditosExtraApi(token, boxId, membresiaId, datos)
+  );
+}
+
+export async function ajustarPrecioMembresiaAction(
+  boxId: string,
+  membresiaId: string,
+  input: AjustarPrecioMembresia
+): Promise<ResultadoAccion> {
+  return ejecutarAccionMembresia(
+    AjustarPrecioMembresiaSchema,
+    input,
+    "Precio inválido.",
+    (token, datos) => ajustarPrecioMembresiaApi(token, boxId, membresiaId, datos)
+  );
+}
+
+export async function bajaAnticipadaAction(
+  boxId: string,
+  membresiaId: string,
+  input: BajaAnticipada
+): Promise<ResultadoAccion> {
+  return ejecutarAccionMembresia(
+    BajaAnticipadaSchema,
+    input,
+    "Fecha de fin inválida.",
+    (token, datos) => bajaAnticipadaApi(token, boxId, membresiaId, datos)
+  );
+}

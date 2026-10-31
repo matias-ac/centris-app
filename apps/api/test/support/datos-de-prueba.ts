@@ -84,6 +84,10 @@ export class DatosDePrueba {
     const boxIds = this.datos.boxes.map((b) => b.id);
     const usuarioIds = this.datos.usuarios.map((u) => u.id);
     await this.pool.query(
+      `DELETE FROM membresias WHERE box_id = ANY($1::uuid[])`,
+      [boxIds]
+    );
+    await this.pool.query(
       `DELETE FROM afiliaciones WHERE box_id = ANY($1::uuid[]) OR usuario_id = ANY($2::uuid[])`,
       [boxIds, usuarioIds]
     );

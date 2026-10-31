@@ -7,6 +7,7 @@ import { AfiliacionesModule } from "./modules/afiliaciones/afiliaciones.module.j
 import { AtletasModule } from "./modules/atletas/atletas.module.js";
 import { AuthModule } from "./modules/auth/auth.module.js";
 import { BoxesModule } from "./modules/boxes/boxes.module.js";
+import { MembresiasModule } from "./modules/membresias/membresias.module.js";
 import { PlanesModule } from "./modules/planes/planes.module.js";
 import { SaludModule } from "./modules/salud/salud.module.js";
 
@@ -17,6 +18,7 @@ import { SaludModule } from "./modules/salud/salud.module.js";
     AfiliacionesModule,
     AtletasModule,
     BoxesModule,
+    MembresiasModule,
     PlanesModule,
     SaludModule
   ],

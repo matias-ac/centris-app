@@ -60,6 +60,23 @@ export {
 } from "./schemas/planes.schema.js";
 
 export {
+  FechaCalendarioSchema,
+  MembresiaSchema,
+  CrearMembresiaSchema,
+  FiltroMembresiasSchema,
+  AjustarCreditosExtraSchema,
+  AjustarPrecioMembresiaSchema,
+  BajaAnticipadaSchema,
+  calcularFechaFinVigencia,
+  type Membresia,
+  type CrearMembresia,
+  type FiltroMembresias,
+  type AjustarCreditosExtra,
+  type AjustarPrecioMembresia,
+  type BajaAnticipada
+} from "./schemas/membresias.schema.js";
+
+export {
   CrearAtletaSchema,
   ActualizarAtletaSchema,
   FiltroAtletasSchema,
