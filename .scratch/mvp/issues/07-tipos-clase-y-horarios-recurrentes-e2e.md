@@ -8,7 +8,7 @@ Permitir al `Administrador` configurar la oferta deportiva recurrente del Box de
 
 **Blocked by:** 02: Identidad Global, Autenticación, Selector de Box y Guard de 4 Roles Componibles E2E
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 ## Acceptance Criteria (TDD / BDD)
 
