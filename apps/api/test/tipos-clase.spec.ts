@@ -128,6 +128,7 @@ describe("Seam 2 — Tipos de Clase: CRUD, Soft Delete y Aislamiento RLS en API 
     const res = await api.pedir<TipoClase>("/tipos-clase", {
       method: "POST",
       token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
       body: {
         nombre: "WOD",
         descripcion: "Workout of the Day"
@@ -146,6 +147,7 @@ describe("Seam 2 — Tipos de Clase: CRUD, Soft Delete y Aislamiento RLS en API 
       const res = await api.pedir("/tipos-clase", {
         method: "POST",
         token,
+        boxId: IDS.boxNorte,
         body: {
           nombre: "Halterofilia",
           descripcion: "Levantamiento"
@@ -162,6 +164,7 @@ describe("Seam 2 — Tipos de Clase: CRUD, Soft Delete y Aislamiento RLS en API 
     await api.pedir<TipoClase>("/tipos-clase", {
       method: "POST",
       token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
       body: {
         nombre: "Open Box",
         descripcion: "Entrenamiento libre"
@@ -171,7 +174,8 @@ describe("Seam 2 — Tipos de Clase: CRUD, Soft Delete y Aislamiento RLS en API 
     // Listado en Box Norte
     const resNorte = await api.pedir<TipoClase[]>("/tipos-clase", {
       method: "GET",
-      token: tokenAdminNorte
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte
     });
     expect(resNorte.status).toBe(200);
     expect(resNorte.body.some((tc) => tc.nombre === "WOD")).toBe(true);
@@ -180,7 +184,8 @@ describe("Seam 2 — Tipos de Clase: CRUD, Soft Delete y Aislamiento RLS en API 
     // Listado en Box Sur no debe ver los de Norte
     const resSur = await api.pedir<TipoClase[]>("/tipos-clase", {
       method: "GET",
-      token: tokenAdminSur
+      token: tokenAdminSur,
+      boxId: IDS.boxSur
     });
     expect(resSur.status).toBe(200);
     expect(resSur.body.some((tc) => tc.nombre === "WOD")).toBe(false);
@@ -191,6 +196,7 @@ describe("Seam 2 — Tipos de Clase: CRUD, Soft Delete y Aislamiento RLS en API 
     const creada = await api.pedir<TipoClase>("/tipos-clase", {
       method: "POST",
       token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
       body: {
         nombre: "Gimnasia",
         descripcion: "Skills de gimnásticos"
@@ -201,6 +207,7 @@ describe("Seam 2 — Tipos de Clase: CRUD, Soft Delete y Aislamiento RLS en API 
     const resEdit = await api.pedir<TipoClase>(`/tipos-clase/${creada.body.id}`, {
       method: "PATCH",
       token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
       body: {
         nombre: "Gymnastics Pro"
       }
@@ -211,14 +218,16 @@ describe("Seam 2 — Tipos de Clase: CRUD, Soft Delete y Aislamiento RLS en API 
     // Soft delete
     const resDelete = await api.pedir<void>(`/tipos-clase/${creada.body.id}`, {
       method: "DELETE",
-      token: tokenAdminNorte
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte
     });
     expect(resDelete.status).toBe(200);
 
     // Ya no debe aparecer en el listado activo
     const resList = await api.pedir<TipoClase[]>("/tipos-clase", {
       method: "GET",
-      token: tokenAdminNorte
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte
     });
     expect(resList.body.some((tc) => tc.id === creada.body.id)).toBe(false);
   });
