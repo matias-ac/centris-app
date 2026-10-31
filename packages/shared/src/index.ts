@@ -87,4 +87,27 @@ export {
   type Atleta
 } from "./schemas/atletas.schema.js";
 
+export {
+  TipoClaseSchema,
+  CrearTipoClaseSchema,
+  ActualizarTipoClaseSchema,
+  type TipoClase,
+  type CrearTipoClase,
+  type ActualizarTipoClase
+} from "./schemas/tipos-clase.schema.js";
+
+export {
+  DIAS_SEMANA,
+  NOMBRES_DIAS_SEMANA,
+  HORA_LOCAL_REGEX,
+  HoraLocalSchema,
+  HorarioSchema,
+  CrearHorarioSchema,
+  ActualizarHorarioSchema,
+  type DiaSemana,
+  type Horario,
+  type CrearHorario,
+  type ActualizarHorario
+} from "./schemas/horarios.schema.js";
+
 
