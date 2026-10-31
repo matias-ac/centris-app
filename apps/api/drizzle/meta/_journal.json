@@ -22,6 +22,13 @@
       "when": 1761513600000,
       "tag": "0004_membresias",
       "breakpoints": false
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1761600000000,
+      "tag": "0007_tipos_y_horarios",
+      "breakpoints": false
     }
   ]
 }
