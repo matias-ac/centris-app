@@ -31,7 +31,7 @@ describe("Seam 2 — Horarios Recurrentes: CRUD, Validación de Coach y RLS en A
   let tokenAtletaNorte: string;
   let tokenAdminSur: string;
   let tipoClaseNorteId: string;
-  let tipoClaseSurId: string;
+  let _tipoClaseSurId: string;
 
   const datos = new DatosDePrueba({
     boxes: [
@@ -149,7 +149,7 @@ describe("Seam 2 — Horarios Recurrentes: CRUD, Validación de Coach y RLS en A
       boxId: IDS.boxSur,
       body: { nombre: "WOD Sur", descripcion: "Clase Sur" }
     });
-    tipoClaseSurId = tcSur.body.id;
+    _tipoClaseSurId = tcSur.body.id;
   });
 
   afterAll(async () => {

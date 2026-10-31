@@ -81,6 +81,13 @@ export default async function BoxLayout({
           >
             Panel Operativo
           </Link>
+          <Link
+            href="/horarios"
+            data-testid="nav-link-horarios"
+            className="rounded-md px-3 py-1.5 text-[0.9375rem] font-semibold tracking-[0.01em] text-foreground hover:bg-secondary"
+          >
+            Horarios y Clases
+          </Link>
           {puedeVerPlanes ? (
             <Link
               href="/planes"

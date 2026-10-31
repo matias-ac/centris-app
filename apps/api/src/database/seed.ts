@@ -106,6 +106,20 @@ export async function ejecutarSeed(connectionString?: string): Promise<void> {
         SEED_IDS.usuarioAtletaNuevo
       ]
     );
+
+    await pool.query(
+      `INSERT INTO tipos_clase (id, box_id, nombre, descripcion, activo)
+       VALUES
+         ('00000000-0000-4000-8000-000000000701', $1, 'WOD', 'Workout of the Day', true),
+         ('00000000-0000-4000-8000-000000000702', $1, 'Halterofilia', 'Levantamiento de pesas', true),
+         ('00000000-0000-4000-8000-000000000703', $2, 'WOD Sur', 'Clase Cross Sur', true)
+       ON CONFLICT (box_id, id) DO UPDATE SET
+         nombre = EXCLUDED.nombre,
+         descripcion = EXCLUDED.descripcion,
+         activo = EXCLUDED.activo,
+         deleted_at = NULL`,
+      [SEED_IDS.boxCentrisNorte, SEED_IDS.boxCentrisSur]
+    );
   } finally {
     await pool.end();
   }
