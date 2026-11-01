@@ -69,16 +69,14 @@ export class TiposClaseService {
 
   private async buscarTipoClaseActivoPorId(
     tx: DrizzleTx,
-    tipoClaseId: string,
-    boxId?: string
+    boxId: string,
+    tipoClaseId: string
   ): Promise<typeof tiposClase.$inferSelect> {
     const condiciones = [
       eq(tiposClase.id, tipoClaseId),
+      eq(tiposClase.boxId, boxId),
       isNull(tiposClase.deletedAt)
     ];
-    if (boxId) {
-      condiciones.push(eq(tiposClase.boxId, boxId));
-    }
 
     const filas = await tx
       .select()
@@ -103,7 +101,11 @@ export class TiposClaseService {
   ): Promise<TipoClase> {
     validarUuidTipoClase(tipoClaseId);
     return this.db.withBoxTransaction(boxId, async (tx) => {
-      const tipo = await this.buscarTipoClaseActivoPorId(tx, tipoClaseId);
+      const tipo = await this.buscarTipoClaseActivoPorId(
+        tx,
+        boxId,
+        tipoClaseId
+      );
       return mapearTipoClase(tipo);
     });
   }
@@ -142,7 +144,7 @@ export class TiposClaseService {
   ): Promise<TipoClase> {
     validarUuidTipoClase(tipoClaseId);
     return this.db.withBoxTransaction(boxId, async (tx) => {
-      await this.buscarTipoClaseActivoPorId(tx, tipoClaseId);
+      await this.buscarTipoClaseActivoPorId(tx, boxId, tipoClaseId);
 
       const valoresActualizados: Partial<typeof tiposClase.$inferInsert> = {
         updatedAt: new Date()
@@ -156,7 +158,11 @@ export class TiposClaseService {
         .update(tiposClase)
         .set(valoresActualizados)
         .where(
-          and(eq(tiposClase.id, tipoClaseId), isNull(tiposClase.deletedAt))
+          and(
+            eq(tiposClase.id, tipoClaseId),
+            eq(tiposClase.boxId, boxId),
+            isNull(tiposClase.deletedAt)
+          )
         )
         .returning();
 
@@ -178,7 +184,7 @@ export class TiposClaseService {
   ): Promise<{ success: boolean; id: string }> {
     validarUuidTipoClase(tipoClaseId);
     return this.db.withBoxTransaction(boxId, async (tx) => {
-      await this.buscarTipoClaseActivoPorId(tx, tipoClaseId);
+      await this.buscarTipoClaseActivoPorId(tx, boxId, tipoClaseId);
 
       await tx
         .update(tiposClase)

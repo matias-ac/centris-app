@@ -492,7 +492,7 @@ export async function eliminarAtletaAction(
 }
 
 
-async function ejecutarAccionMembresia<S extends ZodTypeAny>(
+async function ejecutarAccionConValidacion<S extends ZodTypeAny>(
   esquema: S,
   entrada: unknown,
   mensajeInvalido: string,
@@ -531,6 +531,33 @@ async function ejecutarAccionMembresia<S extends ZodTypeAny>(
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+async function ejecutarAccionAutenticada(
+  llamar: (accessToken: string) => Promise<ResultadoApi<unknown>>
+): Promise<ResultadoAccion> {
+  const sesion = await obtenerSesionWeb();
+  if (!sesion) {
+    return {
+      ok: false,
+      errorCode: ERROR_CODES.NO_AUTENTICADO,
+      message: "Debés iniciar sesión."
+    };
+  }
+
+  const res = await llamar(sesion.accessToken);
+  if (!res.ok) {
+    return {
+      ok: false,
+      errorCode: res.error.errorCode,
+      message: res.error.message
+    };
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+const ejecutarAccionMembresia = ejecutarAccionConValidacion;
 
 export async function asignarMembresiaAction(
   boxId: string,
@@ -591,37 +618,12 @@ export async function crearTipoClaseAction(
   boxId: string,
   input: CrearTipoClase
 ): Promise<ResultadoAccion> {
-  const sesion = await obtenerSesionWeb();
-  if (!sesion) {
-    return {
-      ok: false,
-      errorCode: ERROR_CODES.NO_AUTENTICADO,
-      message: "Debés iniciar sesión."
-    };
-  }
-
-  const validado = CrearTipoClaseSchema.safeParse(input);
-  if (!validado.success) {
-    return {
-      ok: false,
-      errorCode: ERROR_CODES.VALIDACION_FALLIDA,
-      message:
-        validado.error.issues[0]?.message ??
-        "Datos del tipo de clase inválidos."
-    };
-  }
-
-  const res = await crearTipoClaseApi(sesion.accessToken, boxId, validado.data);
-  if (!res.ok) {
-    return {
-      ok: false,
-      errorCode: res.error.errorCode,
-      message: res.error.message
-    };
-  }
-
-  revalidatePath("/", "layout");
-  return { ok: true };
+  return ejecutarAccionConValidacion(
+    CrearTipoClaseSchema,
+    input,
+    "Datos del Tipo de Clase inválidos.",
+    (token, datos) => crearTipoClaseApi(token, boxId, datos)
+  );
 }
 
 export async function actualizarTipoClaseAction(
@@ -629,72 +631,21 @@ export async function actualizarTipoClaseAction(
   tipoClaseId: string,
   input: ActualizarTipoClase
 ): Promise<ResultadoAccion> {
-  const sesion = await obtenerSesionWeb();
-  if (!sesion) {
-    return {
-      ok: false,
-      errorCode: ERROR_CODES.NO_AUTENTICADO,
-      message: "Debés iniciar sesión."
-    };
-  }
-
-  const validado = ActualizarTipoClaseSchema.safeParse(input);
-  if (!validado.success) {
-    return {
-      ok: false,
-      errorCode: ERROR_CODES.VALIDACION_FALLIDA,
-      message:
-        validado.error.issues[0]?.message ??
-        "Datos del tipo de clase inválidos."
-    };
-  }
-
-  const res = await actualizarTipoClaseApi(
-    sesion.accessToken,
-    boxId,
-    tipoClaseId,
-    validado.data
+  return ejecutarAccionConValidacion(
+    ActualizarTipoClaseSchema,
+    input,
+    "Datos del Tipo de Clase inválidos.",
+    (token, datos) => actualizarTipoClaseApi(token, boxId, tipoClaseId, datos)
   );
-  if (!res.ok) {
-    return {
-      ok: false,
-      errorCode: res.error.errorCode,
-      message: res.error.message
-    };
-  }
-
-  revalidatePath("/", "layout");
-  return { ok: true };
 }
 
 export async function eliminarTipoClaseAction(
   boxId: string,
   tipoClaseId: string
 ): Promise<ResultadoAccion> {
-  const sesion = await obtenerSesionWeb();
-  if (!sesion) {
-    return {
-      ok: false,
-      errorCode: ERROR_CODES.NO_AUTENTICADO,
-      message: "Debés iniciar sesión."
-    };
-  }
-
-  const res = await eliminarTipoClaseApi(
-    sesion.accessToken,
-    boxId,
-    tipoClaseId
+  return ejecutarAccionAutenticada((token) =>
+    eliminarTipoClaseApi(token, boxId, tipoClaseId)
   );
-  if (!res.ok) {
-    return {
-      ok: false,
-      errorCode: res.error.errorCode,
-      message: res.error.message
-    };
-  }
-
-  revalidatePath("/", "layout");
-  return { ok: true };
 }
 
 // ============================================================================
@@ -705,37 +656,12 @@ export async function crearHorarioAction(
   boxId: string,
   input: CrearHorario
 ): Promise<ResultadoAccion> {
-  const sesion = await obtenerSesionWeb();
-  if (!sesion) {
-    return {
-      ok: false,
-      errorCode: ERROR_CODES.NO_AUTENTICADO,
-      message: "Debés iniciar sesión."
-    };
-  }
-
-  const validado = CrearHorarioSchema.safeParse(input);
-  if (!validado.success) {
-    return {
-      ok: false,
-      errorCode: ERROR_CODES.VALIDACION_FALLIDA,
-      message:
-        validado.error.issues[0]?.message ??
-        "Datos del horario inválidos."
-    };
-  }
-
-  const res = await crearHorarioApi(sesion.accessToken, boxId, validado.data);
-  if (!res.ok) {
-    return {
-      ok: false,
-      errorCode: res.error.errorCode,
-      message: res.error.message
-    };
-  }
-
-  revalidatePath("/", "layout");
-  return { ok: true };
+  return ejecutarAccionConValidacion(
+    CrearHorarioSchema,
+    input,
+    "Datos del Horario inválidos.",
+    (token, datos) => crearHorarioApi(token, boxId, datos)
+  );
 }
 
 export async function actualizarHorarioAction(
@@ -743,67 +669,20 @@ export async function actualizarHorarioAction(
   horarioId: string,
   input: ActualizarHorario
 ): Promise<ResultadoAccion> {
-  const sesion = await obtenerSesionWeb();
-  if (!sesion) {
-    return {
-      ok: false,
-      errorCode: ERROR_CODES.NO_AUTENTICADO,
-      message: "Debés iniciar sesión."
-    };
-  }
-
-  const validado = ActualizarHorarioSchema.safeParse(input);
-  if (!validado.success) {
-    return {
-      ok: false,
-      errorCode: ERROR_CODES.VALIDACION_FALLIDA,
-      message:
-        validado.error.issues[0]?.message ??
-        "Datos del horario inválidos."
-    };
-  }
-
-  const res = await actualizarHorarioApi(
-    sesion.accessToken,
-    boxId,
-    horarioId,
-    validado.data
+  return ejecutarAccionConValidacion(
+    ActualizarHorarioSchema,
+    input,
+    "Datos del Horario inválidos.",
+    (token, datos) => actualizarHorarioApi(token, boxId, horarioId, datos)
   );
-  if (!res.ok) {
-    return {
-      ok: false,
-      errorCode: res.error.errorCode,
-      message: res.error.message
-    };
-  }
-
-  revalidatePath("/", "layout");
-  return { ok: true };
 }
 
 export async function eliminarHorarioAction(
   boxId: string,
   horarioId: string
 ): Promise<ResultadoAccion> {
-  const sesion = await obtenerSesionWeb();
-  if (!sesion) {
-    return {
-      ok: false,
-      errorCode: ERROR_CODES.NO_AUTENTICADO,
-      message: "Debés iniciar sesión."
-    };
-  }
-
-  const res = await eliminarHorarioApi(sesion.accessToken, boxId, horarioId);
-  if (!res.ok) {
-    return {
-      ok: false,
-      errorCode: res.error.errorCode,
-      message: res.error.message
-    };
-  }
-
-  revalidatePath("/", "layout");
-  return { ok: true };
+  return ejecutarAccionAutenticada((token) =>
+    eliminarHorarioApi(token, boxId, horarioId)
+  );
 }
 

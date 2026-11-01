@@ -108,6 +108,7 @@ export class HorariosService {
         and(
           eq(tiposClase.id, tipoClaseId),
           eq(tiposClase.boxId, boxId),
+          eq(tiposClase.activo, true),
           isNull(tiposClase.deletedAt)
         )
       );
@@ -115,9 +116,13 @@ export class HorariosService {
     if (!tipo) {
       throw new DomainException(
         ERROR_CODES.VALIDACION_FALLIDA,
-        "El Tipo de Clase seleccionado no existe en este Box.",
+        "El Tipo de Clase seleccionado no existe o no se encuentra activo en este Box.",
         HttpStatus.BAD_REQUEST,
-        { tipoClaseId: ["Tipo de Clase inexistente en este Box"] }
+        {
+          tipoClaseId: [
+            "Tipo de Clase inexistente o inactivo en este Box"
+          ]
+        }
       );
     }
   }

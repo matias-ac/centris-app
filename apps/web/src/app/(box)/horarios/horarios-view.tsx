@@ -179,7 +179,7 @@ export function HorariosView({
             Horarios y Tipos de Clase
           </h1>
           <p className="text-sm text-muted-foreground">
-            Configuración deportiva recurrente y grilla semanal del Box
+            Configuración de plantilla semanal recurrente y Tipos de Clase del Box
           </p>
         </div>
 
@@ -255,7 +255,7 @@ export function HorariosView({
                   <Input
                     id="tipo-descripcion"
                     data-testid="input-tipo-clase-descripcion"
-                    placeholder="Breve descripción de la disciplina"
+                    placeholder="Breve descripción del Tipo de Clase"
                     value={tipoDescripcion}
                     onChange={(e) => setTipoDescripcion(e.target.value)}
                   />
@@ -289,7 +289,7 @@ export function HorariosView({
                   <select
                     id="horario-tipo"
                     data-testid="select-horario-tipo-clase"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                    className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-base sm:text-sm ring-offset-background"
                     value={horarioTipoClaseId}
                     onChange={(e) => setHorarioTipoClaseId(e.target.value)}
                     required
@@ -308,7 +308,7 @@ export function HorariosView({
                   <select
                     id="horario-coach"
                     data-testid="select-horario-coach"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                    className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-base sm:text-sm ring-offset-background"
                     value={horarioCoachId}
                     onChange={(e) => setHorarioCoachId(e.target.value)}
                     required
@@ -327,7 +327,7 @@ export function HorariosView({
                   <select
                     id="horario-dia"
                     data-testid="select-horario-dia"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background"
+                    className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-base sm:text-sm ring-offset-background"
                     value={horarioDia}
                     onChange={(e) => setHorarioDia(Number(e.target.value))}
                     required
@@ -437,7 +437,7 @@ export function HorariosView({
                             <span className="font-mono text-sm font-bold tracking-tight text-foreground tabular-nums">
                               {horaCorta}
                             </span>
-                            <Badge variant="zinc" className="text-[0.6875rem]">
+                            <Badge variant="zinc" className="text-[0.6875rem] tabular-nums">
                               {h.duracionMinutos} min
                             </Badge>
                           </div>
