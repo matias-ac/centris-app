@@ -5,13 +5,17 @@ import {
   AtletaSchema,
   BoxSchema,
   ErrorResponseSchema,
+  HorarioSchema,
   MembresiaSchema,
   PlanSchema,
   SesionAuthSchema,
+  TipoClaseSchema,
   type ActivarCuentaInput,
   type ActualizarAtleta,
   type ActualizarConfiguracionBox,
+  type ActualizarHorario,
   type ActualizarPlanInput,
+  type ActualizarTipoClase,
   type AjustarCreditosExtra,
   type AjustarPrecioMembresia,
   type Afiliacion,
@@ -21,15 +25,19 @@ import {
   type BajaAnticipada,
   type Box,
   type CrearAtleta,
+  type CrearHorario,
   type CrearMembresia,
   type CrearPlanInput,
+  type CrearTipoClase,
   type ErrorResponse,
   type FiltroAtletas,
+  type Horario,
   type LoginInput,
   type Membresia,
   type Plan,
   type RolAfiliacion,
-  type SesionAuth
+  type SesionAuth,
+  type TipoClase
 } from "@centris/shared";
 import { z } from "zod";
 
@@ -547,3 +555,194 @@ export async function bajaAnticipadaApi(
     )
   );
 }
+
+// ============================================================================
+// Tipos de Clase
+// ============================================================================
+
+export async function listarTiposClaseApi(
+  accessToken: string,
+  boxId: string
+): Promise<ResultadoApi<TipoClase[]>> {
+  const response = await fetch(`${API_URL}/tipos-clase`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: z.array(TipoClaseSchema).parse(json) };
+}
+
+export async function crearTipoClaseApi(
+  accessToken: string,
+  boxId: string,
+  input: CrearTipoClase
+): Promise<ResultadoApi<TipoClase>> {
+  const response = await fetch(`${API_URL}/tipos-clase`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    body: JSON.stringify(input),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: TipoClaseSchema.parse(json) };
+}
+
+export async function actualizarTipoClaseApi(
+  accessToken: string,
+  boxId: string,
+  tipoClaseId: string,
+  input: ActualizarTipoClase
+): Promise<ResultadoApi<TipoClase>> {
+  const response = await fetch(`${API_URL}/tipos-clase/${tipoClaseId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    body: JSON.stringify(input),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: TipoClaseSchema.parse(json) };
+}
+
+export async function eliminarTipoClaseApi(
+  accessToken: string,
+  boxId: string,
+  tipoClaseId: string
+): Promise<ResultadoApi<{ success: boolean; id: string }>> {
+  const response = await fetch(`${API_URL}/tipos-clase/${tipoClaseId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: json };
+}
+
+// ============================================================================
+// Horarios Recurrentes
+// ============================================================================
+
+export async function listarHorariosApi(
+  accessToken: string,
+  boxId: string
+): Promise<ResultadoApi<Horario[]>> {
+  const response = await fetch(`${API_URL}/horarios`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: z.array(HorarioSchema).parse(json) };
+}
+
+export async function crearHorarioApi(
+  accessToken: string,
+  boxId: string,
+  input: CrearHorario
+): Promise<ResultadoApi<Horario>> {
+  const response = await fetch(`${API_URL}/horarios`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    body: JSON.stringify(input),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: HorarioSchema.parse(json) };
+}
+
+export async function actualizarHorarioApi(
+  accessToken: string,
+  boxId: string,
+  horarioId: string,
+  input: ActualizarHorario
+): Promise<ResultadoApi<Horario>> {
+  const response = await fetch(`${API_URL}/horarios/${horarioId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    body: JSON.stringify(input),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: HorarioSchema.parse(json) };
+}
+
+export async function eliminarHorarioApi(
+  accessToken: string,
+  boxId: string,
+  horarioId: string
+): Promise<ResultadoApi<{ success: boolean; id: string }>> {
+  const response = await fetch(`${API_URL}/horarios/${horarioId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: json };
+}
+

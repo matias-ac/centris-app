@@ -14,23 +14,33 @@ import {
   CrearMembresiaSchema,
   CrearAtletaSchema,
   ActualizarAtletaSchema,
+  ActualizarHorarioSchema,
+  ActualizarTipoClaseSchema,
+  CrearHorarioSchema,
   CrearPlanSchema,
+  CrearTipoClaseSchema,
   ERROR_CODES,
   LoginSchema,
   type ActualizarAtleta,
+  type ActualizarHorario,
   type ActualizarPlanInput,
+  type ActualizarTipoClase,
   type AjustarCreditosExtra,
   type AjustarPrecioMembresia,
   type BajaAnticipada,
   type CrearAtleta,
+  type CrearHorario,
   type CrearMembresia,
   type CrearPlanInput,
+  type CrearTipoClase,
   type RolAfiliacion,
   type SesionAuth
 } from "@centris/shared";
 import {
   activarCuentaApi,
   actualizarAtletaApi,
+  actualizarHorarioApi,
+  actualizarTipoClaseApi,
   ajustarCreditosExtraApi,
   ajustarPrecioMembresiaApi,
   asignarMembresiaApi,
@@ -39,10 +49,14 @@ import {
   actualizarPlanApi,
   actualizarRolesAfiliacionApi,
   crearAtletaApi,
+  crearHorarioApi,
   crearPlanApi,
+  crearTipoClaseApi,
   eliminarAfiliacionApi,
   eliminarAtletaApi,
+  eliminarHorarioApi,
   eliminarPlanApi,
+  eliminarTipoClaseApi,
   iniciarSesionApi,
   obtenerMisAfiliacionesApi,
   type ResultadoApi
@@ -478,7 +492,7 @@ export async function eliminarAtletaAction(
 }
 
 
-async function ejecutarAccionMembresia<S extends ZodTypeAny>(
+async function ejecutarAccionConValidacion<S extends ZodTypeAny>(
   esquema: S,
   entrada: unknown,
   mensajeInvalido: string,
@@ -517,6 +531,33 @@ async function ejecutarAccionMembresia<S extends ZodTypeAny>(
   revalidatePath("/", "layout");
   return { ok: true };
 }
+
+async function ejecutarAccionAutenticada(
+  llamar: (accessToken: string) => Promise<ResultadoApi<unknown>>
+): Promise<ResultadoAccion> {
+  const sesion = await obtenerSesionWeb();
+  if (!sesion) {
+    return {
+      ok: false,
+      errorCode: ERROR_CODES.NO_AUTENTICADO,
+      message: "Debés iniciar sesión."
+    };
+  }
+
+  const res = await llamar(sesion.accessToken);
+  if (!res.ok) {
+    return {
+      ok: false,
+      errorCode: res.error.errorCode,
+      message: res.error.message
+    };
+  }
+
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
+const ejecutarAccionMembresia = ejecutarAccionConValidacion;
 
 export async function asignarMembresiaAction(
   boxId: string,
@@ -568,3 +609,80 @@ export async function bajaAnticipadaAction(
     (token, datos) => bajaAnticipadaApi(token, boxId, membresiaId, datos)
   );
 }
+
+// ============================================================================
+// Tipos de Clase Actions
+// ============================================================================
+
+export async function crearTipoClaseAction(
+  boxId: string,
+  input: CrearTipoClase
+): Promise<ResultadoAccion> {
+  return ejecutarAccionConValidacion(
+    CrearTipoClaseSchema,
+    input,
+    "Datos del Tipo de Clase inválidos.",
+    (token, datos) => crearTipoClaseApi(token, boxId, datos)
+  );
+}
+
+export async function actualizarTipoClaseAction(
+  boxId: string,
+  tipoClaseId: string,
+  input: ActualizarTipoClase
+): Promise<ResultadoAccion> {
+  return ejecutarAccionConValidacion(
+    ActualizarTipoClaseSchema,
+    input,
+    "Datos del Tipo de Clase inválidos.",
+    (token, datos) => actualizarTipoClaseApi(token, boxId, tipoClaseId, datos)
+  );
+}
+
+export async function eliminarTipoClaseAction(
+  boxId: string,
+  tipoClaseId: string
+): Promise<ResultadoAccion> {
+  return ejecutarAccionAutenticada((token) =>
+    eliminarTipoClaseApi(token, boxId, tipoClaseId)
+  );
+}
+
+// ============================================================================
+// Horarios Actions
+// ============================================================================
+
+export async function crearHorarioAction(
+  boxId: string,
+  input: CrearHorario
+): Promise<ResultadoAccion> {
+  return ejecutarAccionConValidacion(
+    CrearHorarioSchema,
+    input,
+    "Datos del Horario inválidos.",
+    (token, datos) => crearHorarioApi(token, boxId, datos)
+  );
+}
+
+export async function actualizarHorarioAction(
+  boxId: string,
+  horarioId: string,
+  input: ActualizarHorario
+): Promise<ResultadoAccion> {
+  return ejecutarAccionConValidacion(
+    ActualizarHorarioSchema,
+    input,
+    "Datos del Horario inválidos.",
+    (token, datos) => actualizarHorarioApi(token, boxId, horarioId, datos)
+  );
+}
+
+export async function eliminarHorarioAction(
+  boxId: string,
+  horarioId: string
+): Promise<ResultadoAccion> {
+  return ejecutarAccionAutenticada((token) =>
+    eliminarHorarioApi(token, boxId, horarioId)
+  );
+}
+
