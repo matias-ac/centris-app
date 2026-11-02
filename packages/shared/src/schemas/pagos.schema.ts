@@ -12,7 +12,11 @@ export const CrearPagoSchema = z.object({
   monto: z
     .number()
     .int("El monto debe ser un número entero sin decimales")
-    .positive("El monto debe ser estrictamente mayor a cero"),
+    .positive("El monto debe ser estrictamente mayor a cero")
+    .max(
+      Number.MAX_SAFE_INTEGER,
+      "El monto excede el límite numérico permitido"
+    ),
   medioPago: MedioPagoSchema,
   fechaPago: FechaCalendarioSchema
 });

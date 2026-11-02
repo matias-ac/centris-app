@@ -26,8 +26,10 @@ CREATE TABLE IF NOT EXISTS "pagos" (
 );
 
 -- Permisos para el rol operativo de aplicación (sin BYPASSRLS)
--- Solo SELECT, INSERT y UPDATE (para registrar anulación). No se permite DELETE.
-GRANT SELECT, INSERT, UPDATE ON TABLE "pagos" TO centris_app_user;
+-- Solo SELECT, INSERT y UPDATE restringido a las columnas de anulación. No se permite DELETE ni modificar importes.
+REVOKE UPDATE ON TABLE "pagos" FROM centris_app_user;
+GRANT SELECT, INSERT ON TABLE "pagos" TO centris_app_user;
+GRANT UPDATE ("anulado_en", "anulado_por_usuario_id", "motivo_anulacion") ON TABLE "pagos" TO centris_app_user;
 
 -- Row Level Security forzado en pagos (ADR 0004 y DER.md §2.2)
 ALTER TABLE "pagos" ENABLE ROW LEVEL SECURITY;
@@ -51,5 +53,8 @@ DROP POLICY IF EXISTS "pagos_update_policy" ON "pagos";
 CREATE POLICY "pagos_update_policy" ON "pagos"
   FOR UPDATE
   USING (
+    box_id = NULLIF(current_setting('app.box_id', true), '')::uuid
+  )
+  WITH CHECK (
     box_id = NULLIF(current_setting('app.box_id', true), '')::uuid
   );

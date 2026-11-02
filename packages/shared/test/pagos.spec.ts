@@ -64,6 +64,15 @@ describe("Seam 1 — Dominio, Esquemas Zod y Cálculo de Saldos (@centris/shared
           fechaPago: "2026-11-02"
         }).success
       ).toBe(false);
+
+      expect(
+        CrearPagoSchema.safeParse({
+          membresiaId: UUID_MEMBRESIA,
+          monto: Number.MAX_SAFE_INTEGER + 1,
+          medioPago: "EFECTIVO",
+          fechaPago: "2026-11-02"
+        }).success
+      ).toBe(false);
     });
 
     it("rechaza fechas con formato inválido", () => {

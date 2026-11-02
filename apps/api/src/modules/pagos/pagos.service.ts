@@ -149,14 +149,21 @@ export class PagosService {
           anuladoPorUsuarioId,
           motivoAnulacion: input.motivoAnulacion
         })
-        .where(and(eq(pagos.id, pagoId), eq(pagos.boxId, boxId)))
+        .where(
+          and(
+            eq(pagos.id, pagoId),
+            eq(pagos.boxId, boxId),
+            isNull(pagos.anuladoEn)
+          )
+        )
         .returning();
 
       if (!actualizado) {
         throw new DomainException(
-          ERROR_CODES.ERROR_INTERNO,
-          "No se pudo anular el Pago.",
-          HttpStatus.INTERNAL_SERVER_ERROR
+          ERROR_CODES.PAGO_YA_ANULADO,
+          "El pago ya fue anulado previamente.",
+          HttpStatus.CONFLICT,
+          { pagoId: ["El pago ya se encuentra anulado"] }
         );
       }
 
