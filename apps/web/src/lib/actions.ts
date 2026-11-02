@@ -16,7 +16,9 @@ import {
   ActualizarAtletaSchema,
   ActualizarHorarioSchema,
   ActualizarTipoClaseSchema,
+  AnularPagoSchema,
   CrearHorarioSchema,
+  CrearPagoSchema,
   CrearPlanSchema,
   CrearTipoClaseSchema,
   ERROR_CODES,
@@ -27,10 +29,12 @@ import {
   type ActualizarTipoClase,
   type AjustarCreditosExtra,
   type AjustarPrecioMembresia,
+  type AnularPago,
   type BajaAnticipada,
   type CrearAtleta,
   type CrearHorario,
   type CrearMembresia,
+  type CrearPago,
   type CrearPlanInput,
   type CrearTipoClase,
   type RolAfiliacion,
@@ -43,6 +47,7 @@ import {
   actualizarTipoClaseApi,
   ajustarCreditosExtraApi,
   ajustarPrecioMembresiaApi,
+  anularPagoApi,
   asignarMembresiaApi,
   bajaAnticipadaApi,
   actualizarConfiguracionBoxApi,
@@ -59,6 +64,7 @@ import {
   eliminarTipoClaseApi,
   iniciarSesionApi,
   obtenerMisAfiliacionesApi,
+  registrarPagoApi,
   type ResultadoApi
 } from "./api-client";
 import {
@@ -685,4 +691,34 @@ export async function eliminarHorarioAction(
     eliminarHorarioApi(token, boxId, horarioId)
   );
 }
+
+// ============================================================================
+// Pagos y Caja Actions
+// ============================================================================
+
+export async function registrarPagoAction(
+  boxId: string,
+  input: CrearPago
+): Promise<ResultadoAccion> {
+  return ejecutarAccionConValidacion(
+    CrearPagoSchema,
+    input,
+    "Datos del Pago inválidos.",
+    (token, datos) => registrarPagoApi(token, boxId, datos)
+  );
+}
+
+export async function anularPagoAction(
+  boxId: string,
+  pagoId: string,
+  input: AnularPago
+): Promise<ResultadoAccion> {
+  return ejecutarAccionConValidacion(
+    AnularPagoSchema,
+    input,
+    "Motivo de anulación inválido.",
+    (token, datos) => anularPagoApi(token, boxId, pagoId, datos)
+  );
+}
+
 

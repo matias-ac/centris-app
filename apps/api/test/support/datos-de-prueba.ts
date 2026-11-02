@@ -92,6 +92,10 @@ export class DatosDePrueba {
       [boxIds]
     );
     await this.pool.query(
+      `DELETE FROM pagos WHERE box_id = ANY($1::uuid[])`,
+      [boxIds]
+    );
+    await this.pool.query(
       `DELETE FROM membresias WHERE box_id = ANY($1::uuid[])`,
       [boxIds]
     );

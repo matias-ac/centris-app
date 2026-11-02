@@ -33,6 +33,10 @@ export default async function BoxLayout({
     "administrador",
     "recepcionista"
   ]);
+  const puedeVerCaja = tieneAlgunRol(afiliacionActiva.roles, [
+    "administrador",
+    "recepcionista"
+  ]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -104,6 +108,15 @@ export default async function BoxLayout({
               className="rounded-md px-3 py-1.5 text-[0.9375rem] font-semibold tracking-[0.01em] text-foreground hover:bg-secondary"
             >
               Directorio de Atletas
+            </Link>
+          ) : null}
+          {puedeVerCaja ? (
+            <Link
+              href="/caja"
+              data-testid="nav-link-caja"
+              className="rounded-md px-3 py-1.5 text-[0.9375rem] font-semibold tracking-[0.01em] text-foreground hover:bg-secondary"
+            >
+              Caja y Morosos
             </Link>
           ) : null}
           {esAdmin ? (

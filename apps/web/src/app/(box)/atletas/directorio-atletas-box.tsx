@@ -8,6 +8,8 @@ import {
   CrearAtletaSchema,
   type Atleta,
   type Membresia,
+  type Moroso,
+  type PagoConRegistrador,
   type Plan
 } from "@centris/shared";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +31,8 @@ interface DirectorioAtletasBoxProps {
   atletasIniciales: Atleta[];
   planes: Plan[];
   membresias: Membresia[];
+  morosos?: Moroso[];
+  pagosPorMembresia?: Record<string, PagoConRegistrador[]>;
 }
 
 export function DirectorioAtletasBox({
@@ -37,7 +41,9 @@ export function DirectorioAtletasBox({
   esAdministrador,
   atletasIniciales,
   planes,
-  membresias
+  membresias,
+  morosos = [],
+  pagosPorMembresia = {}
 }: DirectorioAtletasBoxProps) {
   const router = useRouter();
   const [mostrarFormularioAlta, setMostrarFormularioAlta] = useState(false);
@@ -76,6 +82,11 @@ export function DirectorioAtletasBox({
       );
     });
   }, [atletasIniciales, terminoBusqueda, soloActivos]);
+
+  const atletasMorososIds = useMemo(
+    () => new Set(morosos.map((m) => m.afiliacionId)),
+    [morosos]
+  );
 
   function handleCrearAtleta(e: React.FormEvent) {
     e.preventDefault();
@@ -427,6 +438,7 @@ export function DirectorioAtletasBox({
               membresias={membresias.filter(
                 (membresia) => membresia.afiliacionId === atletaFicha.afiliacionId
               )}
+              pagosPorMembresia={pagosPorMembresia}
               esAdministrador={esAdministrador}
             />
           </CardContent>
@@ -492,9 +504,17 @@ export function DirectorioAtletasBox({
                     className="hover:bg-secondary/40 transition-colors"
                   >
                     <td className="px-4 py-3 font-medium text-foreground">
-                      <span data-testid={`atleta-nombre-${atleta.id}`}>
-                        {atleta.nombre}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span data-testid={`atleta-nombre-${atleta.id}`}>
+                          {atleta.nombre}
+                        </span>
+                        {atletasMorososIds.has(atleta.id) ||
+                        atletasMorososIds.has(atleta.afiliacionId) ? (
+                          <Badge variant="rose" data-testid="badge-atleta-moroso">
+                            Moroso
+                          </Badge>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       <span data-testid={`atleta-email-${atleta.id}`}>

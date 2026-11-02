@@ -110,4 +110,22 @@ export {
   type ActualizarHorario
 } from "./schemas/horarios.schema.js";
 
+export {
+  MEDIOS_PAGO,
+  MedioPagoSchema,
+  CrearPagoSchema,
+  AnularPagoSchema,
+  PagoSchema,
+  FiltroMorososSchema,
+  calcularSaldoMembresia,
+  determinarEstadoMoroso,
+  type MedioPago,
+  type CrearPago,
+  type AnularPago,
+  type Pago,
+  type PagoConRegistrador,
+  type FiltroMorosos,
+  type Moroso
+} from "./schemas/pagos.schema.js";
+
 
