@@ -11,12 +11,13 @@ Característica: Caja Contable de Pagos Inmutables, Anulaciones Auditables y Rep
     Cuando registra un Pago de 5000 en "EFECTIVO"
     Entonces el Saldo de la Membresía se actualiza dinámicamente a 0
     Y el Atleta deja de figurar como Moroso
+    Y el Recepcionista no dispone de controles para anular pagos ni acceder a la Auditoría de Caja
 
   Escenario: Administrador anula un pago auditable con motivo obligatorio y el saldo se recalcula
     Dado un Administrador autenticado en la ficha de un Atleta con Membresía de 30000 y un Pago de 10000
     Entonces el Saldo de la Membresía es de 20000
-    Cuando el Administrador anula el Pago de 10000 ingresando el motivo "Cobro duplicado por error"
-    Entonces el Pago figura marcado como Anulado con el motivo "Cobro duplicado por error"
+    Cuando el Administrador anula el Pago de 10000 ingresando el motivo "Pago duplicado por error"
+    Entonces el Pago figura marcado como Anulado con el motivo "Pago duplicado por error"
     Y el Saldo de la Membresía se recalcula automáticamente a 30000
     Y en la Auditoría de Caja el Pago permanece visible con su motivo de anulación
 

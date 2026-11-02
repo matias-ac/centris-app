@@ -214,6 +214,21 @@ Then(
   }
 );
 
+Then(
+  "el Recepcionista no dispone de controles para anular pagos ni acceder a la Auditoría de Caja",
+  async ({ page }) => {
+    await expect(page.getByTestId("tab-auditoria")).toHaveCount(0);
+
+    await page.goto("/atletas");
+    await page
+      .getByTestId(`btn-ficha-atleta-${E2E_PAGOS.afiliacionId}`)
+      .click();
+    const ficha = page.getByTestId("modal-ficha-atleta");
+    await expect(ficha).toBeVisible();
+    await expect(ficha.locator('[data-testid^="btn-anular-pago-"]')).toHaveCount(0);
+  }
+);
+
 Given(
   "un Administrador autenticado en la ficha de un Atleta con Membresía de {int} y un Pago de {int}",
   async ({ page }, precio: number, pagoInicial: number) => {

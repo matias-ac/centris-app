@@ -300,7 +300,7 @@ function FilaMembresia({
             value={creditosExtra}
             onChange={(e) => setCreditosExtra(e.target.value)}
             disabled={deshabilitado}
-            className="w-24 h-8 text-xs"
+            className="w-24 h-8 text-base sm:text-xs"
           />
           <Button
             type="button"
@@ -331,7 +331,7 @@ function FilaMembresia({
                 value={precio}
                 onChange={(e) => setPrecio(e.target.value)}
                 disabled={deshabilitado}
-                className="w-28 h-8 text-xs"
+                className="w-28 h-8 text-base sm:text-xs"
               />
               <Button
                 type="button"
@@ -359,7 +359,7 @@ function FilaMembresia({
                   value={fechaBaja}
                   onChange={(e) => setFechaBaja(e.target.value)}
                   disabled={deshabilitado}
-                  className="h-8 text-xs"
+                  className="h-8 text-base sm:text-xs"
                 />
                 <Button
                   type="button"
@@ -386,11 +386,11 @@ function FilaMembresia({
       {/* Sección Contable: Pagos y Caja */}
       <div className="rounded-md border border-border/70 bg-secondary/20 p-3 space-y-3" data-testid="seccion-pagos-membresia">
         <div className="flex items-center justify-between text-xs">
-          <span className="font-semibold uppercase text-muted-foreground">
+          <span className="font-semibold uppercase tracking-wider text-muted-foreground">
             Caja y Pagos
           </span>
           <span className="text-muted-foreground">
-            Total recaudado: <strong className="tabular-nums text-foreground">{formatearMoneda(totalPagado, moneda)}</strong>
+            Total pagado: <strong className="tabular-nums text-foreground">{formatearMoneda(totalPagado, moneda)}</strong>
           </span>
         </div>
 
@@ -402,7 +402,7 @@ function FilaMembresia({
         >
           <div>
             <Label htmlFor={`pago-monto-${membresia.id}`} className="text-xs">
-              Monto a cobrar
+              Monto del Pago
             </Label>
             <Input
               id={`pago-monto-${membresia.id}`}
@@ -414,12 +414,12 @@ function FilaMembresia({
               placeholder="Ej. 15000"
               required
               disabled={deshabilitado}
-              className="h-8 text-xs"
+              className="h-9 text-base sm:text-xs"
             />
           </div>
           <div>
             <Label htmlFor={`pago-medio-${membresia.id}`} className="text-xs">
-              Medio de Cobro
+              Medio de Pago
             </Label>
             <select
               id={`pago-medio-${membresia.id}`}
@@ -427,7 +427,7 @@ function FilaMembresia({
               value={medioPago}
               onChange={(e) => setMedioPago(e.target.value as "EFECTIVO" | "TRANSFERENCIA" | "OTRO")}
               disabled={deshabilitado}
-              className="h-8 w-full rounded-md border border-border bg-secondary px-2 text-xs text-foreground"
+              className="h-9 w-full rounded-md border border-border bg-secondary px-2 text-base text-foreground sm:text-xs"
             >
               <option value="EFECTIVO">EFECTIVO</option>
               <option value="TRANSFERENCIA">TRANSFERENCIA</option>
@@ -436,7 +436,7 @@ function FilaMembresia({
           </div>
           <div>
             <Label htmlFor={`pago-fecha-${membresia.id}`} className="text-xs">
-              Fecha de Cobro
+              Fecha de Pago
             </Label>
             <Input
               id={`pago-fecha-${membresia.id}`}
@@ -446,14 +446,14 @@ function FilaMembresia({
               onChange={(e) => setFechaPago(e.target.value)}
               required
               disabled={deshabilitado}
-              className="h-8 text-xs"
+              className="h-9 text-base sm:text-xs"
             />
           </div>
           <Button
             type="submit"
             data-testid="btn-registrar-pago"
             disabled={deshabilitado || !montoPago}
-            className="h-8 text-xs bg-primary text-primary-foreground font-semibold hover:bg-volt-500"
+            className="h-9 text-xs bg-primary text-primary-foreground font-semibold hover:bg-volt-500"
           >
             Registrar Pago
           </Button>
@@ -502,7 +502,7 @@ function FilaMembresia({
                             value={motivoAnulacion}
                             onChange={(e) => setMotivoAnulacion(e.target.value)}
                             data-testid="input-motivo-anulacion"
-                            className="h-7 text-xs w-44"
+                            className="h-8 w-44 text-base sm:text-xs"
                           />
                           <Button
                             type="button"

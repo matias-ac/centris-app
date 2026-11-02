@@ -141,7 +141,7 @@ export function PanelCajaMorosos({
         <Card className="border-border bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Atletas con Saldo Deudor
+              Atletas Morosos
             </CardTitle>
             <ShieldAlert className="h-4 w-4 text-amber-400" />
           </CardHeader>
@@ -214,7 +214,7 @@ export function PanelCajaMorosos({
                   ({pagoParaAnular.medioPago})
                 </p>
                 <p>
-                  <strong>Fecha de Cobro:</strong>{" "}
+                  <strong>Fecha de Pago:</strong>{" "}
                   <span className="tabular-nums">{pagoParaAnular.fechaPago}</span>
                 </p>
                 {pagoParaAnular.registradoPorNombre ? (
@@ -288,7 +288,7 @@ export function PanelCajaMorosos({
           <CardContent>
             {morososFiltrados.length === 0 ? (
               <p className="py-6 text-center text-sm text-muted-foreground" data-testid="msg-sin-morosos">
-                No hay Atletas con saldo deudor en este momento.
+                No hay Atletas Morosos en este momento.
               </p>
             ) : (
               <div className="space-y-4" data-testid="listado-morosos">
@@ -313,7 +313,7 @@ export function PanelCajaMorosos({
                         {moroso.membresiasConDeuda.map((m) => (
                           <span
                             key={m.membresiaId}
-                            className="rounded border border-border bg-card px-2 py-1 text-muted-foreground"
+                            className="rounded border border-border bg-card px-2 py-1 text-muted-foreground tabular-nums"
                           >
                             {m.nombrePlan}: Saldo{" "}
                             <strong className="text-rose-400 tabular-nums">
@@ -367,9 +367,9 @@ export function PanelCajaMorosos({
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-sm" data-testid="tabla-auditoria-caja">
-                  <thead className="border-b border-border text-xs uppercase text-muted-foreground">
+                  <thead className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
                     <tr>
-                      <th className="py-2.5 px-3">Fecha Cobro</th>
+                      <th className="py-2.5 px-3">Fecha de Pago</th>
                       <th className="py-2.5 px-3">Monto</th>
                       <th className="py-2.5 px-3">Medio</th>
                       <th className="py-2.5 px-3">Registrado Por</th>
