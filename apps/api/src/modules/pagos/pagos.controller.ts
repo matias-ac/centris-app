@@ -55,6 +55,14 @@ export class PagosController {
     return this.pagosService.listarMorosos(contexto.boxId, filtro);
   }
 
+  @Get()
+  @Roles("administrador", "recepcionista")
+  async listarPagos(
+    @ContextoBox() contexto: ContextoBoxActivo
+  ): Promise<PagoConRegistrador[]> {
+    return this.pagosService.listarPagosAuditoria(contexto.boxId);
+  }
+
   @Get("auditoria")
   @Roles("administrador")
   async listarAuditoria(

@@ -3,7 +3,12 @@
 import { AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { type Membresia, type Plan } from "@centris/shared";
+import {
+  calcularSaldoMembresia,
+  type Membresia,
+  type PagoConRegistrador,
+  type Plan
+} from "@centris/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +16,10 @@ import { Label } from "@/components/ui/label";
 import {
   ajustarCreditosExtraAction,
   ajustarPrecioMembresiaAction,
+  anularPagoAction,
   asignarMembresiaAction,
   bajaAnticipadaAction,
+  registrarPagoAction,
   type ResultadoAccion
 } from "@/lib/actions";
 
@@ -22,6 +29,7 @@ interface FichaMembresiasAtletaProps {
   afiliacionId: string;
   planes: Plan[];
   membresias: Membresia[];
+  pagos?: PagoConRegistrador[];
   esAdministrador: boolean;
 }
 
@@ -43,6 +51,7 @@ export function FichaMembresiasAtleta({
   afiliacionId,
   planes,
   membresias,
+  pagos = [],
   esAdministrador
 }: FichaMembresiasAtletaProps) {
   const router = useRouter();
@@ -51,6 +60,13 @@ export function FichaMembresiasAtleta({
   const [fechaInicio, setFechaInicio] = useState("");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const saldoTotalAtleta = membresias.reduce((acc, m) => {
+    const pagosMembresia = pagos.filter((p) => p.membresiaId === m.id);
+    return acc + calcularSaldoMembresia(m.precio, pagosMembresia);
+  }, 0);
+
+  const esMoroso = saldoTotalAtleta > 0;
 
   function ejecutar(accion: () => Promise<ResultadoAccion>) {
     setErrorMsg(null);
@@ -73,9 +89,27 @@ export function FichaMembresiasAtleta({
 
   return (
     <div className="space-y-4 border-t border-border pt-4" data-testid="seccion-membresias">
-      <h3 className="font-display text-lg uppercase tracking-tight text-foreground">
-        Membresías
-      </h3>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <h3 className="font-display text-lg uppercase tracking-tight text-foreground">
+            Membresías
+          </h3>
+          {esMoroso ? (
+            <Badge variant="rose" data-testid="badge-moroso">
+              Moroso
+            </Badge>
+          ) : null}
+        </div>
+
+        {saldoTotalAtleta > 0 ? (
+          <span className="text-xs text-rose-400">
+            Deuda Total:{" "}
+            <strong className="tabular-nums" data-testid="atleta-saldo-total">
+              {formatearPrecio(saldoTotalAtleta, moneda)}
+            </strong>
+          </span>
+        ) : null}
+      </div>
 
       {errorMsg ? (
         <div
@@ -136,13 +170,14 @@ export function FichaMembresiasAtleta({
           El Atleta no tiene Membresías asignadas.
         </p>
       ) : (
-        <ul className="space-y-3">
+        <ul className="space-y-4">
           {membresias.map((membresia) => (
             <FilaMembresia
               key={membresia.id}
               boxId={boxId}
               moneda={moneda}
               membresia={membresia}
+              pagos={pagos.filter((p) => p.membresiaId === membresia.id)}
               esAdministrador={esAdministrador}
               deshabilitado={isPending}
               ejecutar={ejecutar}
@@ -158,6 +193,7 @@ interface FilaMembresiaProps {
   boxId: string;
   moneda: string;
   membresia: Membresia;
+  pagos: PagoConRegistrador[];
   esAdministrador: boolean;
   deshabilitado: boolean;
   ejecutar: (accion: () => Promise<ResultadoAccion>) => void;
@@ -167,6 +203,7 @@ function FilaMembresia({
   boxId,
   moneda,
   membresia,
+  pagos,
   esAdministrador,
   deshabilitado,
   ejecutar
@@ -177,12 +214,41 @@ function FilaMembresia({
   const [precio, setPrecio] = useState(String(membresia.precio));
   const [fechaBaja, setFechaBaja] = useState("");
 
+  // Estados para nuevo pago
+  const saldo = calcularSaldoMembresia(membresia.precio, pagos);
+  const totalPagado = pagos
+    .filter((p) => !p.anuladoEn)
+    .reduce((acc, p) => acc + p.monto, 0);
+
+  const [montoPago, setMontoPago] = useState(saldo > 0 ? String(saldo) : "");
+  const [medioPago, setMedioPago] = useState<"EFECTIVO" | "TRANSFERENCIA" | "OTRO">("EFECTIVO");
+  const [fechaPago, setFechaPago] = useState(new Date().toISOString().slice(0, 10));
+
+  // Estado para anulación puntual
+  const [anulandoPagoId, setAnulandoPagoId] = useState<string | null>(null);
+  const [motivoAnulacion, setMotivoAnulacion] = useState("");
+
+  function handleRegistrarPago(e: React.FormEvent) {
+    e.preventDefault();
+    if (!montoPago || Number(montoPago) <= 0) return;
+
+    ejecutar(() =>
+      registrarPagoAction(boxId, {
+        membresiaId: membresia.id,
+        monto: Number(montoPago),
+        medioPago,
+        fechaPago
+      })
+    );
+    setMontoPago("");
+  }
+
   return (
     <li
       data-testid="fila-membresia"
-      className="space-y-3 rounded-md border border-border bg-card p-3 text-sm"
+      className="space-y-3 rounded-md border border-border bg-card p-4 text-sm"
     >
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-6">
         <div>
           <span className="block text-xs text-muted-foreground">Inicio</span>
           <span className="tabular-nums" data-testid="membresia-fecha-inicio">
@@ -206,11 +272,21 @@ function FilaMembresia({
         <div>
           <span className="block text-xs text-muted-foreground">Precio</span>
           <span
-            className="tabular-nums"
+            className="tabular-nums font-semibold"
             data-testid="membresia-precio"
             data-precio={membresia.precio}
           >
             {formatearPrecio(membresia.precio, moneda)}
+          </span>
+        </div>
+        <div>
+          <span className="block text-xs text-muted-foreground">Saldo</span>
+          <span
+            className={`tabular-nums font-bold ${saldo > 0 ? "text-rose-400" : "text-emerald-400"}`}
+            data-testid="membresia-saldo"
+            data-saldo={saldo}
+          >
+            {formatearPrecio(saldo, moneda)}
           </span>
         </div>
         <div>
@@ -225,91 +301,274 @@ function FilaMembresia({
         <Badge variant="rose">Baja Anticipada</Badge>
       ) : null}
 
-      <div className="flex flex-wrap items-end gap-2">
-        <Input
-          type="number"
-          aria-label="Créditos extra"
-          data-testid="input-creditos-extra"
-          value={creditosExtra}
-          onChange={(e) => setCreditosExtra(e.target.value)}
-          disabled={deshabilitado}
-          className="w-28"
-        />
-        <Button
-          type="button"
-          variant="secondary"
-          data-testid="btn-guardar-creditos-extra"
-          disabled={deshabilitado}
-          onClick={() =>
-            ejecutar(() =>
-              ajustarCreditosExtraAction(boxId, membresia.id, {
-                creditosExtra: Number(creditosExtra)
-              })
-            )
-          }
-        >
-          Ajustar créditos extra
-        </Button>
-      </div>
+      {/* Ajustes operativos (Créditos / Precio / Baja) */}
+      <div className="flex flex-wrap items-end gap-3 pt-1 border-t border-border/50">
+        <div className="flex items-end gap-2">
+          <Input
+            type="number"
+            aria-label="Créditos extra"
+            data-testid="input-creditos-extra"
+            value={creditosExtra}
+            onChange={(e) => setCreditosExtra(e.target.value)}
+            disabled={deshabilitado}
+            className="w-24 h-8 text-xs"
+          />
+          <Button
+            type="button"
+            variant="secondary"
+            data-testid="btn-guardar-creditos-extra"
+            disabled={deshabilitado}
+            onClick={() =>
+              ejecutar(() =>
+                ajustarCreditosExtraAction(boxId, membresia.id, {
+                  creditosExtra: Number(creditosExtra)
+                })
+              )
+            }
+            className="h-8 text-xs"
+          >
+            Ajustar créditos
+          </Button>
+        </div>
 
-      {esAdministrador ? (
-        <div className="flex flex-wrap items-end gap-4">
-          <div className="flex items-end gap-2">
-            <Input
-              type="number"
-              min={0}
-              aria-label="Precio de la Membresía"
-              data-testid="input-precio-membresia"
-              value={precio}
-              onChange={(e) => setPrecio(e.target.value)}
-              disabled={deshabilitado}
-              className="w-32"
-            />
-            <Button
-              type="button"
-              variant="secondary"
-              data-testid="btn-guardar-precio-membresia"
-              disabled={deshabilitado}
-              onClick={() =>
-                ejecutar(() =>
-                  ajustarPrecioMembresiaAction(boxId, membresia.id, {
-                    precio: Number(precio)
-                  })
-                )
-              }
-            >
-              Ajustar Precio
-            </Button>
-          </div>
-          {!membresia.bajaAnticipadaEn ? (
+        {esAdministrador ? (
+          <>
             <div className="flex items-end gap-2">
               <Input
-                type="date"
-                aria-label="Fin de la Vigencia tras la Baja Anticipada"
-                data-testid="input-fecha-baja"
-                value={fechaBaja}
-                onChange={(e) => setFechaBaja(e.target.value)}
+                type="number"
+                min={0}
+                aria-label="Precio de la Membresía"
+                data-testid="input-precio-membresia"
+                value={precio}
+                onChange={(e) => setPrecio(e.target.value)}
                 disabled={deshabilitado}
+                className="w-28 h-8 text-xs"
               />
               <Button
                 type="button"
-                variant="destructive"
-                data-testid="btn-baja-anticipada"
+                variant="secondary"
+                data-testid="btn-guardar-precio-membresia"
                 disabled={deshabilitado}
                 onClick={() =>
                   ejecutar(() =>
-                    bajaAnticipadaAction(boxId, membresia.id, {
-                      fechaFin: fechaBaja
+                    ajustarPrecioMembresiaAction(boxId, membresia.id, {
+                      precio: Number(precio)
                     })
                   )
                 }
+                className="h-8 text-xs"
               >
-                Baja Anticipada
+                Ajustar Precio
               </Button>
             </div>
-          ) : null}
+            {!membresia.bajaAnticipadaEn ? (
+              <div className="flex items-end gap-2">
+                <Input
+                  type="date"
+                  aria-label="Fin de la Vigencia tras la Baja Anticipada"
+                  data-testid="input-fecha-baja"
+                  value={fechaBaja}
+                  onChange={(e) => setFechaBaja(e.target.value)}
+                  disabled={deshabilitado}
+                  className="h-8 text-xs"
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  data-testid="btn-baja-anticipada"
+                  disabled={deshabilitado}
+                  onClick={() =>
+                    ejecutar(() =>
+                      bajaAnticipadaAction(boxId, membresia.id, {
+                        fechaFin: fechaBaja
+                      })
+                    )
+                  }
+                  className="h-8 text-xs"
+                >
+                  Baja Anticipada
+                </Button>
+              </div>
+            ) : null}
+          </>
+        ) : null}
+      </div>
+
+      {/* Sección Contable: Pagos y Caja */}
+      <div className="rounded-md border border-border/70 bg-secondary/20 p-3 space-y-3" data-testid="seccion-pagos-membresia">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-semibold uppercase text-muted-foreground">
+            Caja y Pagos
+          </span>
+          <span className="text-muted-foreground">
+            Total recaudado: <strong className="tabular-nums text-foreground">{formatearPrecio(totalPagado, moneda)}</strong>
+          </span>
         </div>
-      ) : null}
+
+        {/* Formulario para asentar un Pago */}
+        <form
+          onSubmit={handleRegistrarPago}
+          className="grid grid-cols-1 sm:grid-cols-4 gap-2 items-end pt-1"
+          data-testid="form-registrar-pago"
+        >
+          <div>
+            <Label htmlFor={`pago-monto-${membresia.id}`} className="text-xs">
+              Monto a cobrar
+            </Label>
+            <Input
+              id={`pago-monto-${membresia.id}`}
+              type="number"
+              min={1}
+              data-testid="input-monto-pago"
+              value={montoPago}
+              onChange={(e) => setMontoPago(e.target.value)}
+              placeholder="Ej. 15000"
+              required
+              disabled={deshabilitado}
+              className="h-8 text-xs"
+            />
+          </div>
+          <div>
+            <Label htmlFor={`pago-medio-${membresia.id}`} className="text-xs">
+              Medio de Cobro
+            </Label>
+            <select
+              id={`pago-medio-${membresia.id}`}
+              data-testid="select-medio-pago"
+              value={medioPago}
+              onChange={(e) => setMedioPago(e.target.value as "EFECTIVO" | "TRANSFERENCIA" | "OTRO")}
+              disabled={deshabilitado}
+              className="h-8 w-full rounded-md border border-border bg-secondary px-2 text-xs text-foreground"
+            >
+              <option value="EFECTIVO">EFECTIVO</option>
+              <option value="TRANSFERENCIA">TRANSFERENCIA</option>
+              <option value="OTRO">OTRO</option>
+            </select>
+          </div>
+          <div>
+            <Label htmlFor={`pago-fecha-${membresia.id}`} className="text-xs">
+              Fecha de Cobro
+            </Label>
+            <Input
+              id={`pago-fecha-${membresia.id}`}
+              type="date"
+              data-testid="input-fecha-pago"
+              value={fechaPago}
+              onChange={(e) => setFechaPago(e.target.value)}
+              required
+              disabled={deshabilitado}
+              className="h-8 text-xs"
+            />
+          </div>
+          <Button
+            type="submit"
+            data-testid="btn-registrar-pago"
+            disabled={deshabilitado || !montoPago}
+            className="h-8 text-xs bg-primary text-primary-foreground font-semibold hover:bg-volt-500"
+          >
+            Registrar Pago
+          </Button>
+        </form>
+
+        {/* Historial inmutable de Pagos */}
+        {pagos.length > 0 ? (
+          <ul className="space-y-1.5" data-testid="lista-pagos-membresia">
+            {pagos.map((pago) => {
+              const estaAnulado = pago.anuladoEn !== null;
+              return (
+                <li
+                  key={pago.id}
+                  data-testid="item-pago"
+                  className="flex flex-wrap items-center justify-between rounded border border-border bg-card p-2 text-xs"
+                >
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold tabular-nums" data-testid="pago-monto">
+                      {formatearPrecio(pago.monto, moneda)}
+                    </span>
+                    <span className="text-muted-foreground" data-testid="pago-medio">
+                      ({pago.medioPago})
+                    </span>
+                    <span className="tabular-nums text-muted-foreground" data-testid="pago-fecha">
+                      {pago.fechaPago}
+                    </span>
+                    {pago.registradoPorNombre ? (
+                      <span className="text-muted-foreground" data-testid="pago-registrado-por">
+                        por {pago.registradoPorNombre}
+                      </span>
+                    ) : null}
+                    {estaAnulado ? (
+                      <Badge variant="rose" data-testid="badge-pago-anulado">
+                        Anulado: <span data-testid="pago-motivo-anulacion">{pago.motivoAnulacion}</span>
+                      </Badge>
+                    ) : null}
+                  </div>
+
+                  {!estaAnulado && esAdministrador ? (
+                    <div className="flex items-center gap-1">
+                      {anulandoPagoId === pago.id ? (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            type="text"
+                            placeholder="Motivo de anulación..."
+                            value={motivoAnulacion}
+                            onChange={(e) => setMotivoAnulacion(e.target.value)}
+                            data-testid="input-motivo-anulacion"
+                            className="h-7 text-xs w-44"
+                          />
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            data-testid="btn-confirmar-anulacion"
+                            disabled={motivoAnulacion.trim().length < 3}
+                            onClick={() => {
+                              ejecutar(() =>
+                                anularPagoAction(boxId, pago.id, { motivoAnulacion })
+                              );
+                              setAnulandoPagoId(null);
+                              setMotivoAnulacion("");
+                            }}
+                            className="h-7 text-xs px-2 min-h-7"
+                          >
+                            Confirmar
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => {
+                              setAnulandoPagoId(null);
+                              setMotivoAnulacion("");
+                            }}
+                            className="h-7 text-xs px-2 min-h-7"
+                          >
+                            X
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          data-testid={`btn-anular-pago-${pago.id}`}
+                          onClick={() => {
+                            setAnulandoPagoId(pago.id);
+                            setMotivoAnulacion("");
+                          }}
+                          className="h-7 text-xs px-2 min-h-7"
+                        >
+                          Anular
+                        </Button>
+                      )}
+                    </div>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ul>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            No hay pagos registrados para esta Membresía.
+          </p>
+        )}
+      </div>
     </li>
   );
 }

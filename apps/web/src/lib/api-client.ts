@@ -7,6 +7,7 @@ import {
   ErrorResponseSchema,
   HorarioSchema,
   MembresiaSchema,
+  PagoSchema,
   PlanSchema,
   SesionAuthSchema,
   TipoClaseSchema,
@@ -21,19 +22,25 @@ import {
   type Afiliacion,
   type AfiliacionConBox,
   type AfiliacionConUsuario,
+  type AnularPago,
   type Atleta,
   type BajaAnticipada,
   type Box,
   type CrearAtleta,
   type CrearHorario,
   type CrearMembresia,
+  type CrearPago,
   type CrearPlanInput,
   type CrearTipoClase,
   type ErrorResponse,
   type FiltroAtletas,
+  type FiltroMorosos,
   type Horario,
   type LoginInput,
   type Membresia,
+  type Moroso,
+  type Pago,
+  type PagoConRegistrador,
   type Plan,
   type RolAfiliacion,
   type SesionAuth,
@@ -745,4 +752,160 @@ export async function eliminarHorarioApi(
   const json = await response.json();
   return { ok: true, data: json };
 }
+
+// ============================================================================
+// Caja y Pagos Inmutables
+// ============================================================================
+
+export async function registrarPagoApi(
+  accessToken: string,
+  boxId: string,
+  input: CrearPago
+): Promise<ResultadoApi<Pago>> {
+  const response = await fetch(`${API_URL}/pagos`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    body: JSON.stringify(input),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: PagoSchema.parse(json) };
+}
+
+export async function obtenerEstadoMembresiaApi(
+  accessToken: string,
+  boxId: string,
+  membresiaId: string
+): Promise<
+  ResultadoApi<{
+    membresiaId: string;
+    precio: number;
+    pagos: PagoConRegistrador[];
+    totalPagado: number;
+    saldo: number;
+    esMoroso: boolean;
+  }>
+> {
+  const response = await fetch(`${API_URL}/pagos/membresia/${membresiaId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: json };
+}
+
+export async function anularPagoApi(
+  accessToken: string,
+  boxId: string,
+  pagoId: string,
+  input: AnularPago
+): Promise<ResultadoApi<Pago>> {
+  const response = await fetch(`${API_URL}/pagos/${pagoId}/anular`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    body: JSON.stringify(input),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: PagoSchema.parse(json) };
+}
+
+export async function listarMorososApi(
+  accessToken: string,
+  boxId: string,
+  filtro?: FiltroMorosos
+): Promise<ResultadoApi<Moroso[]>> {
+  const query = new URLSearchParams();
+  if (filtro?.busqueda) {
+    query.set("busqueda", filtro.busqueda);
+  }
+  const queryString = query.toString();
+  const url = `${API_URL}/pagos/morosos${queryString ? `?${queryString}` : ""}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: json };
+}
+
+export async function listarAuditoriaPagosApi(
+  accessToken: string,
+  boxId: string
+): Promise<ResultadoApi<PagoConRegistrador[]>> {
+  const response = await fetch(`${API_URL}/pagos/auditoria`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: json };
+}
+
+export async function listarPagosApi(
+  accessToken: string,
+  boxId: string
+): Promise<ResultadoApi<PagoConRegistrador[]>> {
+  const response = await fetch(`${API_URL}/pagos`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: json };
+}
+
 

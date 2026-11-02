@@ -6,8 +6,10 @@ import { useMemo, useState, useTransition } from "react";
 import {
   ActualizarAtletaSchema,
   CrearAtletaSchema,
+  calcularSaldoMembresia,
   type Atleta,
   type Membresia,
+  type PagoConRegistrador,
   type Plan
 } from "@centris/shared";
 import { Badge } from "@/components/ui/badge";
@@ -29,6 +31,7 @@ interface DirectorioAtletasBoxProps {
   atletasIniciales: Atleta[];
   planes: Plan[];
   membresias: Membresia[];
+  pagosIniciales?: PagoConRegistrador[];
 }
 
 export function DirectorioAtletasBox({
@@ -37,7 +40,8 @@ export function DirectorioAtletasBox({
   esAdministrador,
   atletasIniciales,
   planes,
-  membresias
+  membresias,
+  pagosIniciales = []
 }: DirectorioAtletasBoxProps) {
   const router = useRouter();
   const [mostrarFormularioAlta, setMostrarFormularioAlta] = useState(false);
@@ -76,6 +80,18 @@ export function DirectorioAtletasBox({
       );
     });
   }, [atletasIniciales, terminoBusqueda, soloActivos]);
+
+  const atletasMorososIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const m of membresias) {
+      const pagosMembresia = pagosIniciales.filter((p) => p.membresiaId === m.id);
+      const saldo = calcularSaldoMembresia(m.precio, pagosMembresia);
+      if (saldo > 0) {
+        ids.add(m.afiliacionId);
+      }
+    }
+    return ids;
+  }, [membresias, pagosIniciales]);
 
   function handleCrearAtleta(e: React.FormEvent) {
     e.preventDefault();
@@ -427,6 +443,7 @@ export function DirectorioAtletasBox({
               membresias={membresias.filter(
                 (membresia) => membresia.afiliacionId === atletaFicha.afiliacionId
               )}
+              pagos={pagosIniciales}
               esAdministrador={esAdministrador}
             />
           </CardContent>
@@ -492,9 +509,17 @@ export function DirectorioAtletasBox({
                     className="hover:bg-secondary/40 transition-colors"
                   >
                     <td className="px-4 py-3 font-medium text-foreground">
-                      <span data-testid={`atleta-nombre-${atleta.id}`}>
-                        {atleta.nombre}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span data-testid={`atleta-nombre-${atleta.id}`}>
+                          {atleta.nombre}
+                        </span>
+                        {atletasMorososIds.has(atleta.id) ||
+                        atletasMorososIds.has(atleta.afiliacionId) ? (
+                          <Badge variant="rose" data-testid="badge-atleta-moroso">
+                            Moroso
+                          </Badge>
+                        ) : null}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">
                       <span data-testid={`atleta-email-${atleta.id}`}>

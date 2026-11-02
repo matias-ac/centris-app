@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   listarAtletasApi,
   listarMembresiasApi,
+  listarPagosApi,
   listarPlanesApi
 } from "@/lib/api-client";
 import { obtenerContextoOperativoWeb } from "@/lib/contexto-box";
@@ -40,17 +41,19 @@ export default async function AtletasPage() {
     );
   }
 
-  const [resAtletas, resPlanes, resMembresias] = await Promise.all([
+  const [resAtletas, resPlanes, resMembresias, resPagos] = await Promise.all([
     listarAtletasApi(sesion.accessToken, afiliacionActiva.boxId, {
       soloActivos: false
     }),
     listarPlanesApi(sesion.accessToken, afiliacionActiva.boxId),
-    listarMembresiasApi(sesion.accessToken, afiliacionActiva.boxId)
+    listarMembresiasApi(sesion.accessToken, afiliacionActiva.boxId),
+    listarPagosApi(sesion.accessToken, afiliacionActiva.boxId)
   ]);
 
   const atletas = resAtletas.ok ? resAtletas.data : [];
   const planes = resPlanes.ok ? resPlanes.data : [];
   const membresias = resMembresias.ok ? resMembresias.data : [];
+  const pagos = resPagos.ok ? resPagos.data : [];
 
   return (
     <div className="space-y-6">
@@ -61,6 +64,7 @@ export default async function AtletasPage() {
         atletasIniciales={atletas}
         planes={planes}
         membresias={membresias}
+        pagosIniciales={pagos}
       />
     </div>
   );
