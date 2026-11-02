@@ -8,11 +8,11 @@ Implementar de punta a punta el módulo contable del Box (migración de tabla in
 
 **Blocked by:** 05: Asignación de Membresías, Renovaciones, Ajustes y Baja Anticipada E2E
 
-**Status:** in-progress
+**Status:** done
 
 ## Acceptance Criteria (TDD / BDD)
 
-- [ ] **Inmutabilidad de `PAGO` y Pagos Parciales**: **Given** una `Membresía` con `Precio = $30.000`, **When** un `Recepcionista` registra un primer `Pago` en efectivo de `$15.000` y luego otro por transferencia de `$10.000`, **Then** ambos eventos quedan grabados de forma inmutable (sin endpoints ni métodos de edición o borrado físico/lógico) y el `Saldo` calculado de la Membresía es exactamente `$5.000`.
-- [ ] **Saldo derivado y estado de Moroso**: **Given** un Atleta con al menos una `Membresía` cuyo `Saldo > 0`, **When** el `Recepcionista` o `Administrador` consulta la ficha del Atleta o el reporte de `Morosos` en `apps/web`, **Then** el Atleta aparece identificado como `Moroso` con su deuda exacta calculada dinámicamente sin existir una columna `saldo` persistida que pueda desincronizarse.
-- [ ] **Anulación exclusiva de Administrador**: **Given** un `Pago` registrado por error, **When** un `Recepcionista` intenta anularlo, **Then** recibe `403 Forbidden`; **When** un `Administrador` ejecuta la `Anulación` ingresando un motivo obligatorio (validado con Zod), **Then** el Pago queda marcado con `anulado_en`, `anulado_por_usuario_id` y `motivo_anulacion`, deja de restar en el `Saldo` de la Membresía y permanece visible en el historial de auditoría de caja.
-- [ ] **Invisibilidad financiera para el Coach**: **Given** un usuario con rol exclusivo de `Coach`, **When** intenta consultar endpoints o pantallas de `Pagos`, `Saldos` o `Morosos`, **Then** recibe `403 Forbidden`.
+- [x] **Inmutabilidad de `PAGO` y Pagos Parciales**: **Given** una `Membresía` con `Precio = $30.000`, **When** un `Recepcionista` registra un primer `Pago` en efectivo de `$15.000` y luego otro por transferencia de `$10.000`, **Then** ambos eventos quedan grabados de forma inmutable (sin endpoints ni métodos de edición o borrado físico/lógico) y el `Saldo` calculado de la Membresía es exactamente `$5.000`.
+- [x] **Saldo derivado y estado de Moroso**: **Given** un Atleta con al menos una `Membresía` cuyo `Saldo > 0`, **When** el `Recepcionista` o `Administrador` consulta la ficha del Atleta o el reporte de `Morosos` en `apps/web`, **Then** el Atleta aparece identificado como `Moroso` con su deuda exacta calculada dinámicamente sin existir una columna `saldo` persistida que pueda desincronizarse.
+- [x] **Anulación exclusiva de Administrador**: **Given** un `Pago` registrado por error, **When** un `Recepcionista` intenta anularlo, **Then** recibe `403 Forbidden`; **When** un `Administrador` ejecuta la `Anulación` ingresando un motivo obligatorio (validado con Zod), **Then** el Pago queda marcado con `anulado_en`, `anulado_por_usuario_id` y `motivo_anulacion`, deja de restar en el `Saldo` de la Membresía y permanece visible en el historial de auditoría de caja.
+- [x] **Invisibilidad financiera para el Coach**: **Given** un usuario con rol exclusivo de `Coach`, **When** intenta consultar endpoints o pantallas de `Pagos`, `Saldos` o `Morosos`, **Then** recibe `403 Forbidden`.
