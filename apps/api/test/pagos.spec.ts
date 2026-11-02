@@ -320,14 +320,22 @@ describe("Seam 2 — Pagos Inmutables, Anulaciones y Reporte de Morosos (@centri
     expect(reintento.body.errorCode).toBe(ERROR_CODES.PAGO_YA_ANULADO);
   });
 
-  it("6. Coach recibe 403 Forbidden en todas las operaciones financieras", async () => {
-    // Intento de ver morosos
-    const morosos = await api.pedir("/pagos/morosos", {
+  it("6. Coach y Atleta reciben 403 Forbidden en operaciones financieras de caja", async () => {
+    // Intento de ver morosos como coach
+    const morososCoach = await api.pedir("/pagos/morosos", {
       method: "GET",
       token: tokenCoachNorte,
       boxId: IDS.boxNorte
     });
-    expect(morosos.status).toBe(403);
+    expect(morososCoach.status).toBe(403);
+
+    // Intento de ver morosos como atleta
+    const morososAtleta = await api.pedir("/pagos/morosos", {
+      method: "GET",
+      token: tokenAtletaNorte,
+      boxId: IDS.boxNorte
+    });
+    expect(morososAtleta.status).toBe(403);
 
     // Intento de registrar pago
     const registrar = await api.pedir("/pagos", {
