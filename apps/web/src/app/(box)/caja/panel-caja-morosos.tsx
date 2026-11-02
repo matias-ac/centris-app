@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { anularPagoAction } from "@/lib/actions";
+import { formatearMoneda } from "@/lib/utils";
 
 interface PanelCajaMorososProps {
   boxId: string;
@@ -18,18 +19,6 @@ interface PanelCajaMorososProps {
   esAdministrador: boolean;
   morososIniciales: Moroso[];
   pagosIniciales: PagoConRegistrador[];
-}
-
-function formatearMonto(monto: number, moneda: string): string {
-  try {
-    return new Intl.NumberFormat("es-AR", {
-      style: "currency",
-      currency: moneda,
-      maximumFractionDigits: 0
-    }).format(monto);
-  } catch {
-    return `$ ${monto.toLocaleString("es-AR")}`;
-  }
 }
 
 export function PanelCajaMorosos({
@@ -141,7 +130,7 @@ export function PanelCajaMorosos({
               className="font-display text-3xl font-bold uppercase tracking-tight text-rose-400 tabular-nums"
               data-testid="total-deuda-acumulada"
             >
-              {formatearMonto(totalDeudaAcumulada, moneda)}
+              {formatearMoneda(totalDeudaAcumulada, moneda)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Suma de saldos pendientes en Membresías no anuladas
@@ -220,7 +209,7 @@ export function PanelCajaMorosos({
                 <p>
                   <strong>Monto del Pago:</strong>{" "}
                   <span className="tabular-nums font-semibold">
-                    {formatearMonto(pagoParaAnular.monto, moneda)}
+                    {formatearMoneda(pagoParaAnular.monto, moneda)}
                   </span>{" "}
                   ({pagoParaAnular.medioPago})
                 </p>
@@ -328,9 +317,9 @@ export function PanelCajaMorosos({
                           >
                             {m.nombrePlan}: Saldo{" "}
                             <strong className="text-rose-400 tabular-nums">
-                              {formatearMonto(m.saldo, moneda)}
+                              {formatearMoneda(m.saldo, moneda)}
                             </strong>{" "}
-                            (Precio {formatearMonto(m.precio, moneda)} − Pagado {formatearMonto(m.totalPagado, moneda)})
+                            (Precio {formatearMoneda(m.precio, moneda)} − Pagado {formatearMoneda(m.totalPagado, moneda)})
                           </span>
                         ))}
                       </div>
@@ -343,7 +332,7 @@ export function PanelCajaMorosos({
                           className="font-display text-xl font-bold uppercase text-rose-400 tabular-nums"
                           data-testid="moroso-total-deuda"
                         >
-                          {formatearMonto(moroso.totalDeuda, moneda)}
+                          {formatearMoneda(moroso.totalDeuda, moneda)}
                         </span>
                       </div>
 
@@ -395,7 +384,7 @@ export function PanelCajaMorosos({
                         <tr key={pago.id} data-testid="fila-auditoria-pago" className="hover:bg-secondary/40">
                           <td className="py-3 px-3 tabular-nums">{pago.fechaPago}</td>
                           <td className="py-3 px-3 tabular-nums font-semibold">
-                            {formatearMonto(pago.monto, moneda)}
+                            {formatearMoneda(pago.monto, moneda)}
                           </td>
                           <td className="py-3 px-3">{pago.medioPago}</td>
                           <td className="py-3 px-3 text-muted-foreground">

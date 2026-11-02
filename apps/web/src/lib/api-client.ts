@@ -887,25 +887,3 @@ export async function listarAuditoriaPagosApi(
   return { ok: true, data: json };
 }
 
-export async function listarPagosApi(
-  accessToken: string,
-  boxId: string
-): Promise<ResultadoApi<PagoConRegistrador[]>> {
-  const response = await fetch(`${API_URL}/pagos`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "X-Box-Id": boxId
-    },
-    cache: "no-store"
-  });
-
-  if (!response.ok) {
-    return { ok: false, error: await parsearErrorHttp(response) };
-  }
-
-  const json = await response.json();
-  return { ok: true, data: json };
-}
-
-

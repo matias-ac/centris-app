@@ -249,6 +249,13 @@ describe("Seam 2 — Pagos Inmutables, Anulaciones y Reporte de Morosos (@centri
     });
 
     expect(intentoAnulacion.status).toBe(403);
+
+    const intentoAuditoria = await api.pedir("/pagos/auditoria", {
+      method: "GET",
+      token: tokenRecepNorte,
+      boxId: IDS.boxNorte
+    });
+    expect(intentoAuditoria.status).toBe(403);
   });
 
   it("4. Administrador anula el segundo pago ($10.000); el saldo recalculado pasa a ser $15.000", async () => {

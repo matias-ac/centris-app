@@ -22,6 +22,7 @@ import {
   registrarPagoAction,
   type ResultadoAccion
 } from "@/lib/actions";
+import { formatearMoneda } from "@/lib/utils";
 
 interface FichaMembresiasAtletaProps {
   boxId: string;
@@ -29,20 +30,8 @@ interface FichaMembresiasAtletaProps {
   afiliacionId: string;
   planes: Plan[];
   membresias: Membresia[];
-  pagos?: PagoConRegistrador[];
+  pagosPorMembresia?: Record<string, PagoConRegistrador[]>;
   esAdministrador: boolean;
-}
-
-function formatearPrecio(monto: number, moneda: string): string {
-  try {
-    return new Intl.NumberFormat("es-AR", {
-      style: "currency",
-      currency: moneda,
-      maximumFractionDigits: 0
-    }).format(monto);
-  } catch {
-    return `$ ${monto.toLocaleString("es-AR")}`;
-  }
 }
 
 export function FichaMembresiasAtleta({
@@ -51,7 +40,7 @@ export function FichaMembresiasAtleta({
   afiliacionId,
   planes,
   membresias,
-  pagos = [],
+  pagosPorMembresia = {},
   esAdministrador
 }: FichaMembresiasAtletaProps) {
   const router = useRouter();
@@ -62,7 +51,7 @@ export function FichaMembresiasAtleta({
   const [isPending, startTransition] = useTransition();
 
   const saldoTotalAtleta = membresias.reduce((acc, m) => {
-    const pagosMembresia = pagos.filter((p) => p.membresiaId === m.id);
+    const pagosMembresia = pagosPorMembresia[m.id] ?? [];
     return acc + calcularSaldoMembresia(m.precio, pagosMembresia);
   }, 0);
 
@@ -105,7 +94,7 @@ export function FichaMembresiasAtleta({
           <span className="text-xs text-rose-400">
             Deuda Total:{" "}
             <strong className="tabular-nums" data-testid="atleta-saldo-total">
-              {formatearPrecio(saldoTotalAtleta, moneda)}
+              {formatearMoneda(saldoTotalAtleta, moneda)}
             </strong>
           </span>
         ) : null}
@@ -138,7 +127,7 @@ export function FichaMembresiasAtleta({
           >
             {planesActivos.map((plan) => (
               <option key={plan.id} value={plan.id}>
-                {plan.nombre} — {formatearPrecio(plan.precioBase, moneda)}
+                {plan.nombre} — {formatearMoneda(plan.precioBase, moneda)}
               </option>
             ))}
           </select>
@@ -177,7 +166,7 @@ export function FichaMembresiasAtleta({
               boxId={boxId}
               moneda={moneda}
               membresia={membresia}
-              pagos={pagos.filter((p) => p.membresiaId === membresia.id)}
+              pagos={pagosPorMembresia[membresia.id] ?? []}
               esAdministrador={esAdministrador}
               deshabilitado={isPending}
               ejecutar={ejecutar}
@@ -276,7 +265,7 @@ function FilaMembresia({
             data-testid="membresia-precio"
             data-precio={membresia.precio}
           >
-            {formatearPrecio(membresia.precio, moneda)}
+            {formatearMoneda(membresia.precio, moneda)}
           </span>
         </div>
         <div>
@@ -286,7 +275,7 @@ function FilaMembresia({
             data-testid="membresia-saldo"
             data-saldo={saldo}
           >
-            {formatearPrecio(saldo, moneda)}
+            {formatearMoneda(saldo, moneda)}
           </span>
         </div>
         <div>
@@ -401,7 +390,7 @@ function FilaMembresia({
             Caja y Pagos
           </span>
           <span className="text-muted-foreground">
-            Total recaudado: <strong className="tabular-nums text-foreground">{formatearPrecio(totalPagado, moneda)}</strong>
+            Total recaudado: <strong className="tabular-nums text-foreground">{formatearMoneda(totalPagado, moneda)}</strong>
           </span>
         </div>
 
@@ -483,7 +472,7 @@ function FilaMembresia({
                 >
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="font-semibold tabular-nums" data-testid="pago-monto">
-                      {formatearPrecio(pago.monto, moneda)}
+                      {formatearMoneda(pago.monto, moneda)}
                     </span>
                     <span className="text-muted-foreground" data-testid="pago-medio">
                       ({pago.medioPago})

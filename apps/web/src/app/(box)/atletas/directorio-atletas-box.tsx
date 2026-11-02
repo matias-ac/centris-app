@@ -6,9 +6,9 @@ import { useMemo, useState, useTransition } from "react";
 import {
   ActualizarAtletaSchema,
   CrearAtletaSchema,
-  calcularSaldoMembresia,
   type Atleta,
   type Membresia,
+  type Moroso,
   type PagoConRegistrador,
   type Plan
 } from "@centris/shared";
@@ -31,7 +31,8 @@ interface DirectorioAtletasBoxProps {
   atletasIniciales: Atleta[];
   planes: Plan[];
   membresias: Membresia[];
-  pagosIniciales?: PagoConRegistrador[];
+  morosos?: Moroso[];
+  pagosPorMembresia?: Record<string, PagoConRegistrador[]>;
 }
 
 export function DirectorioAtletasBox({
@@ -41,7 +42,8 @@ export function DirectorioAtletasBox({
   atletasIniciales,
   planes,
   membresias,
-  pagosIniciales = []
+  morosos = [],
+  pagosPorMembresia = {}
 }: DirectorioAtletasBoxProps) {
   const router = useRouter();
   const [mostrarFormularioAlta, setMostrarFormularioAlta] = useState(false);
@@ -81,17 +83,10 @@ export function DirectorioAtletasBox({
     });
   }, [atletasIniciales, terminoBusqueda, soloActivos]);
 
-  const atletasMorososIds = useMemo(() => {
-    const ids = new Set<string>();
-    for (const m of membresias) {
-      const pagosMembresia = pagosIniciales.filter((p) => p.membresiaId === m.id);
-      const saldo = calcularSaldoMembresia(m.precio, pagosMembresia);
-      if (saldo > 0) {
-        ids.add(m.afiliacionId);
-      }
-    }
-    return ids;
-  }, [membresias, pagosIniciales]);
+  const atletasMorososIds = useMemo(
+    () => new Set(morosos.map((m) => m.afiliacionId)),
+    [morosos]
+  );
 
   function handleCrearAtleta(e: React.FormEvent) {
     e.preventDefault();
@@ -443,7 +438,7 @@ export function DirectorioAtletasBox({
               membresias={membresias.filter(
                 (membresia) => membresia.afiliacionId === atletaFicha.afiliacionId
               )}
-              pagos={pagosIniciales}
+              pagosPorMembresia={pagosPorMembresia}
               esAdministrador={esAdministrador}
             />
           </CardContent>
