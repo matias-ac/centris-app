@@ -61,8 +61,6 @@ export interface Moroso {
   usuarioId: string;
   nombre: string;
   email: string;
-  dni?: string | null;
-  telefono?: string | null;
   totalDeuda: number;
   membresiasConDeuda: Array<{
     membresiaId: string;
