@@ -29,6 +29,13 @@
       "when": 1761600000000,
       "tag": "0007_tipos_y_horarios",
       "breakpoints": false
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1761686400000,
+      "tag": "0006_pagos_inmutables",
+      "breakpoints": false
     }
   ]
 }

@@ -5,3 +5,4 @@ export { planes } from "./planes.schema.js";
 export { membresias } from "./membresias.schema.js";
 export { tiposClase } from "./tipos-clase.schema.js";
 export { horarios } from "./horarios.schema.js";
+export { pagos } from "./pagos.schema.js";
