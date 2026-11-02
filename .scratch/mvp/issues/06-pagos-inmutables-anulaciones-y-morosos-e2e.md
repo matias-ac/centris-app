@@ -8,7 +8,7 @@ Implementar de punta a punta el módulo contable del Box (migración de tabla in
 
 **Blocked by:** 05: Asignación de Membresías, Renovaciones, Ajustes y Baja Anticipada E2E
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 ## Acceptance Criteria (TDD / BDD)
 
