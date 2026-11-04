@@ -5,7 +5,7 @@ import {
   type CrearHorario,
   type Horario
 } from "@centris/shared";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
 import { DomainException } from "../../common/errors/domain.exception.js";
 import {
   DatabaseService,
@@ -14,7 +14,9 @@ import {
 } from "../../database/database.service.js";
 import {
   afiliaciones,
+  clases,
   horarios,
+  reservas,
   tiposClase,
   usuarios
 } from "../../database/schema/index.js";
@@ -318,6 +320,56 @@ export class HorariosService {
         );
       }
 
+      // Criterio 2: Al modificar el Horario recurrente, solo se actualizan las Clases futuras sin Reservas activas (ADR 0002)
+      const ahora = new Date();
+      const clasesFuturas = await tx
+        .select({ id: clases.id })
+        .from(clases)
+        .leftJoin(
+          reservas,
+          and(
+            eq(clases.id, reservas.claseId),
+            eq(clases.boxId, reservas.boxId),
+            eq(reservas.estado, "CONFIRMADA")
+          )
+        )
+        .where(
+          and(
+            eq(clases.boxId, boxId),
+            eq(clases.horarioId, horarioId),
+            gt(clases.inicio, ahora),
+            isNull(clases.deletedAt)
+          )
+        )
+        .groupBy(clases.id)
+        .having(sql`COALESCE(COUNT(${reservas.id}), 0) = 0`);
+
+      const idsClasesAfectadas = clasesFuturas.map((c) => c.id);
+
+      if (idsClasesAfectadas.length > 0) {
+        const updatesClases: Partial<typeof clases.$inferInsert> = {
+          updatedAt: new Date()
+        };
+        if (input.cuposDefault !== undefined) updatesClases.cupos = input.cuposDefault;
+        if (input.coachAfiliacionId !== undefined) updatesClases.coachAfiliacionId = input.coachAfiliacionId;
+        if (input.tipoClaseId !== undefined) updatesClases.tipoClaseId = input.tipoClaseId;
+        if (input.activo === false) {
+          updatesClases.deletedAt = new Date();
+        }
+
+        if (Object.keys(updatesClases).length > 1) {
+          await tx
+            .update(clases)
+            .set(updatesClases)
+            .where(
+              and(
+                eq(clases.boxId, boxId),
+                inArray(clases.id, idsClasesAfectadas)
+              )
+            );
+        }
+      }
+
       return mapearHorario(actualizado);
     });
   }
@@ -356,6 +408,43 @@ export class HorariosService {
           updatedAt: new Date()
         })
         .where(eq(horarios.id, horarioId));
+
+      // Dar de baja Clases futuras sin reservas activas
+      const ahora = new Date();
+      const clasesFuturas = await tx
+        .select({ id: clases.id })
+        .from(clases)
+        .leftJoin(
+          reservas,
+          and(
+            eq(clases.id, reservas.claseId),
+            eq(clases.boxId, reservas.boxId),
+            eq(reservas.estado, "CONFIRMADA")
+          )
+        )
+        .where(
+          and(
+            eq(clases.boxId, boxId),
+            eq(clases.horarioId, horarioId),
+            gt(clases.inicio, ahora),
+            isNull(clases.deletedAt)
+          )
+        )
+        .groupBy(clases.id)
+        .having(sql`COALESCE(COUNT(${reservas.id}), 0) = 0`);
+
+      const idsClasesAfectadas = clasesFuturas.map((c) => c.id);
+      if (idsClasesAfectadas.length > 0) {
+        await tx
+          .update(clases)
+          .set({ deletedAt: new Date(), updatedAt: new Date() })
+          .where(
+            and(
+              eq(clases.boxId, boxId),
+              inArray(clases.id, idsClasesAfectadas)
+            )
+          );
+      }
 
       return { success: true, id: horarioId };
     });
