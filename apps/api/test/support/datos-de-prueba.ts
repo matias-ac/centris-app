@@ -84,6 +84,14 @@ export class DatosDePrueba {
     const boxIds = this.datos.boxes.map((b) => b.id);
     const usuarioIds = this.datos.usuarios.map((u) => u.id);
     await this.pool.query(
+      `DELETE FROM reservas WHERE box_id = ANY($1::uuid[])`,
+      [boxIds]
+    );
+    await this.pool.query(
+      `DELETE FROM clases WHERE box_id = ANY($1::uuid[])`,
+      [boxIds]
+    );
+    await this.pool.query(
       `DELETE FROM horarios WHERE box_id = ANY($1::uuid[])`,
       [boxIds]
     );
