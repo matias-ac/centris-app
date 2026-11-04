@@ -1,10 +1,115 @@
 import { describe, expect, it } from "vitest";
-import { calcularInstantesClase } from "../src/index.js";
+import {
+  calcularInstantesClase,
+  ClaseSchema,
+  EditarClaseSchema,
+  FiltroClasesSchema
+} from "../src/index.js";
 
 const BUENOS_AIRES = "America/Argentina/Buenos_Aires";
 const NUEVA_YORK = "America/New_York";
 
+const UUID_CLASE = "77777777-7777-4777-8777-777777777777";
+const UUID_BOX = "55555555-5555-4555-8555-555555555555";
+const UUID_HORARIO = "66666666-6666-4666-8666-666666666666";
+const UUID_TIPO_CLASE = "33333333-3333-4333-8333-333333333333";
+const UUID_COACH = "44444444-4444-4444-8444-444444444444";
+
+describe("Seam 1 — Esquemas Zod de Clases y edición puntual (@centris/shared)", () => {
+  describe("ClaseSchema", () => {
+    const claseValida = {
+      id: UUID_CLASE,
+      boxId: UUID_BOX,
+      horarioId: UUID_HORARIO,
+      tipoClaseId: UUID_TIPO_CLASE,
+      coachAfiliacionId: UUID_COACH,
+      inicio: "2026-11-09T10:00:00.000Z",
+      fin: "2026-11-09T11:00:00.000Z",
+      cupos: 12,
+      canceladaEn: null,
+      createdAt: "2026-11-01T00:00:00.000Z",
+      updatedAt: "2026-11-01T00:00:00.000Z",
+      deletedAt: null
+    };
+
+    it("valida una Clase materializada desde un Horario", () => {
+      expect(ClaseSchema.safeParse(claseValida).success).toBe(true);
+    });
+
+    it("admite una Clase sin Horario de origen (horarioId nulo)", () => {
+      expect(
+        ClaseSchema.safeParse({ ...claseValida, horarioId: null }).success
+      ).toBe(true);
+    });
+
+    it("rechaza una Clase con cupos menores a 1", () => {
+      expect(ClaseSchema.safeParse({ ...claseValida, cupos: 0 }).success).toBe(
+        false
+      );
+    });
+  });
+
+  describe("EditarClaseSchema", () => {
+    it("acepta cambiar solo el Coach por un suplente", () => {
+      const parseado = EditarClaseSchema.safeParse({
+        coachAfiliacionId: UUID_COACH
+      });
+      expect(parseado.success).toBe(true);
+    });
+
+    it("acepta cambiar solo los Cupos y coacciona strings numéricos", () => {
+      const parseado = EditarClaseSchema.safeParse({ cupos: "15" });
+      expect(parseado.success).toBe(true);
+      if (parseado.success) {
+        expect(parseado.data.cupos).toBe(15);
+      }
+    });
+
+    it("acepta mover la Clase con un nuevo inicio ISO con offset y una duración", () => {
+      const parseado = EditarClaseSchema.safeParse({
+        inicio: "2026-11-13T19:30:00-03:00",
+        duracionMinutos: 75
+      });
+      expect(parseado.success).toBe(true);
+    });
+
+    it("rechaza una edición vacía", () => {
+      expect(EditarClaseSchema.safeParse({}).success).toBe(false);
+    });
+
+    it("rechaza cupos menores a 1 y duración menor a 1 minuto", () => {
+      expect(EditarClaseSchema.safeParse({ cupos: 0 }).success).toBe(false);
+      expect(EditarClaseSchema.safeParse({ duracionMinutos: 0 }).success).toBe(
+        false
+      );
+    });
+
+    it("rechaza un inicio que no es un instante ISO válido", () => {
+      expect(
+        EditarClaseSchema.safeParse({ inicio: "mañana a las 7" }).success
+      ).toBe(false);
+    });
+  });
+
+  describe("FiltroClasesSchema", () => {
+    it("acepta un rango de fechas calendario locales", () => {
+      expect(
+        FiltroClasesSchema.safeParse({ desde: "2026-11-09", hasta: "2026-11-15" })
+          .success
+      ).toBe(true);
+    });
+
+    it("rechaza un rango invertido", () => {
+      expect(
+        FiltroClasesSchema.safeParse({ desde: "2026-11-15", hasta: "2026-11-09" })
+          .success
+      ).toBe(false);
+    });
+  });
+});
+
 describe("Seam 1 — Cálculo de instantes de una Clase en la zona horaria del Box (@centris/shared)", () => {
+
   describe("calcularInstantesClase", () => {
     it("convierte lunes 07:00 hora local de Buenos Aires (UTC-3) a 10:00 UTC y fin a 11:00 UTC", () => {
       const { inicio, fin } = calcularInstantesClase({
