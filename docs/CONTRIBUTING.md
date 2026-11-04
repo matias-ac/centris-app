@@ -33,11 +33,19 @@ Todos los mensajes de commit siguen el estándar **Conventional Commits** en **e
 - **`docs`**: Cambios exclusivos en documentación (`docs/`, `GLOSSARY.md`, `AGENTS.md`, `README.md`).
 - **`chore`**: Configuración de tooling, dependencias, scripts de Docker o CI/CD.
 
-### Ejemplos de commits atómicos dentro de un Ticket
-Durante la ejecución de `/implement` (que conduce `/tdd` un criterio `- [ ]` a la vez), se recomienda realizar un commit por cada criterio de aceptación completado:
-1. `feat(planes): crear tabla planes con force rls y esquema zod`
-2. `feat(planes): implementar abm de planes para administrador y lectura para recepcionista`
-3. `test(planes): verificar aislamiento rls de planes entre boxes distintos`
+### Granularidad y ejemplos de commits atómicos dentro de un Ticket
+Dado que cada Ticket E2E (*Vertical Slice*) abarca entre 2.000 y 3.000 líneas a través de todas las capas del monorepo, **no se debe acumular todo un criterio de aceptación (ni todo el ticket) en un único commit**. Durante la ejecución de `/implement` y `/tdd`, se deben realizar **commits atómicos incrementales por cada unidad cohesiva y verificable**:
+
+1. `docs(<alcance>): marcar ticket <NN> como in-progress` *(al iniciar la rama)*
+2. `test(<alcance>): agregar tests unitarios para esquemas zod y reglas de <alcance>`
+3. `feat(<alcance>): implementar esquemas zod y contratos de dominio en shared`
+4. `feat(<alcance>): crear tabla <tabla> con force rls, fk compuestas y migracion sql`
+5. `test(<alcance>): agregar tests de integracion para servicio y rls de <alcance>`
+6. `feat(<alcance>): implementar modulo nestjs con rls y guards para <alcance>`
+7. `feat(<alcance>): integrar cliente api, server actions y ui de <alcance>`
+8. `test(<alcance>): agregar escenarios e2e bdd para <alcance>`
+9. `refactor(<alcance>): aplicar mejoras de code-review en <alcance>`
+10. `docs(<alcance>): marcar ticket <NN> como done` *(al cerrar todos los criterios y verificaciones)*
 
 ---
 

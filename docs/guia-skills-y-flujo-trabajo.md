@@ -101,7 +101,7 @@ Para trabajar con GitHub y Pull Requests de forma ordenada y trazable, podés ap
 * **Rama**: Creás una rama por cada archivo en `.scratch/mvp/issues/`, por ejemplo:
   * `feat/01-monorepo-postgres-rls-foundation`
   * `feat/02-auth-selector-box-y-roles-e2e`
-* **Subdivisión interna mediante Commits**: Dentro de esa rama, cada vez que completás uno de los 4 o 5 criterios de aceptación (`- [ ]`) con `/tdd`, realizás un **commit atómico** (siguiendo *Conventional Commits*).
+* **Subdivisión interna mediante Commits Atómicos**: Dentro de esa rama, a medida que avanzás en los criterios de aceptación (`- [ ]`) con `/tdd`, realizás **múltiples commits atómicos incrementales** por cada unidad lógica y verificable (contratos Zod, migración + RLS, cada paso `test`/`feat` del backend, integración UI, escenarios E2E BDD y mejoras de `/code-review`), siguiendo las convenciones de [`docs/CONTRIBUTING.md`](./CONTRIBUTING.md).
 * **Pull Request**: Al completar los criterios del ticket y pasar `/code-review`, abrís **1 Pull Request** hacia `main`.
 * **Ventaja**: Tus profesores (y cualquier revisor) verán 12 Pull Requests limpios donde cada PR entrega un módulo E2E funcional, y dentro de cada PR verán los commits paso a paso de cada ciclo TDD.
 
