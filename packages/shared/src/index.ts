@@ -111,6 +111,12 @@ export {
 } from "./schemas/horarios.schema.js";
 
 export {
+  calcularInstantesClase,
+  type EntradaInstantesClase,
+  type InstantesClase
+} from "./schemas/clases.schema.js";
+
+export {
   MEDIOS_PAGO,
   MedioPagoSchema,
   CrearPagoSchema,
