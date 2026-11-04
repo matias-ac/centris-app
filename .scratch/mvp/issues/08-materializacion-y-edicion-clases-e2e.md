@@ -8,7 +8,7 @@ Implementar de punta a punta la generación y gestión de `Clases` concretas a p
 
 **Blocked by:** 07: Tipos de Clase y Grilla de Horarios Recurrentes E2E
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 ## Acceptance Criteria (TDD / BDD)
 
