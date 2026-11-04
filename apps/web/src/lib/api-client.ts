@@ -4,6 +4,7 @@ import {
   AfiliacionSchema,
   AtletaSchema,
   BoxSchema,
+  ClaseSchema,
   ErrorResponseSchema,
   HorarioSchema,
   MembresiaSchema,
@@ -26,14 +27,17 @@ import {
   type Atleta,
   type BajaAnticipada,
   type Box,
+  type Clase,
   type CrearAtleta,
   type CrearHorario,
   type CrearMembresia,
   type CrearPago,
   type CrearPlanInput,
   type CrearTipoClase,
+  type EditarClase,
   type ErrorResponse,
   type FiltroAtletas,
+  type FiltroClases,
   type FiltroMorosos,
   type Horario,
   type LoginInput,
@@ -886,4 +890,104 @@ export async function listarAuditoriaPagosApi(
   const json = await response.json();
   return { ok: true, data: json };
 }
+
+export async function listarClasesApi(
+  accessToken: string,
+  boxId: string,
+  filtro?: FiltroClases
+): Promise<ResultadoApi<Clase[]>> {
+  const query = new URLSearchParams();
+  if (filtro?.desde) query.set("desde", filtro.desde);
+  if (filtro?.hasta) query.set("hasta", filtro.hasta);
+  const queryString = query.toString();
+  const url = `${API_URL}/clases${queryString ? `?${queryString}` : ""}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: z.array(ClaseSchema).parse(json) };
+}
+
+export async function obtenerClaseApi(
+  accessToken: string,
+  boxId: string,
+  claseId: string
+): Promise<ResultadoApi<Clase>> {
+  const response = await fetch(`${API_URL}/clases/${claseId}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: ClaseSchema.parse(json) };
+}
+
+export async function editarClaseApi(
+  accessToken: string,
+  boxId: string,
+  claseId: string,
+  input: EditarClase
+): Promise<ResultadoApi<Clase>> {
+  const response = await fetch(`${API_URL}/clases/${claseId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    body: JSON.stringify(input),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: ClaseSchema.parse(json) };
+}
+
+export async function materializarClasesApi(
+  accessToken: string,
+  boxId: string,
+  fechaReferencia?: string
+): Promise<ResultadoApi<{ clasesCreadas: number }>> {
+  const response = await fetch(`${API_URL}/clases/materializar`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    body: JSON.stringify({ fechaReferencia }),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: json };
+}
+
 

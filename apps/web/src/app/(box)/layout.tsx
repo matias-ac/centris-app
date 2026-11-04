@@ -90,7 +90,14 @@ export default async function BoxLayout({
             data-testid="nav-link-horarios"
             className="rounded-md px-3 py-1.5 text-[0.9375rem] font-semibold tracking-[0.01em] text-foreground hover:bg-secondary"
           >
-            Horarios y Clases
+            Horarios recurrentes
+          </Link>
+          <Link
+            href="/clases"
+            data-testid="nav-link-clases"
+            className="rounded-md px-3 py-1.5 text-[0.9375rem] font-semibold tracking-[0.01em] text-foreground hover:bg-secondary"
+          >
+            Calendario de Clases
           </Link>
           {puedeVerPlanes ? (
             <Link
