@@ -2,8 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   calcularInstantesClase,
   ClaseSchema,
+  diaSemanaIso,
   EditarClaseSchema,
-  FiltroClasesSchema
+  FiltroClasesSchema,
+  obtenerFechaLocal,
+  sumarDiasAFecha
 } from "../src/index.js";
 
 const BUENOS_AIRES = "America/Argentina/Buenos_Aires";
@@ -166,6 +169,25 @@ describe("Seam 1 — Cálculo de instantes de una Clase en la zona horaria del B
           timezone: "Marte/Olympus"
         })
       ).toThrow();
+    });
+  });
+
+  describe("Utilidades de calendario local para materialización", () => {
+    it("diaSemanaIso devuelve 1 para lunes y 7 para domingo", () => {
+      expect(diaSemanaIso("2026-11-09")).toBe(1); // Lunes
+      expect(diaSemanaIso("2026-11-15")).toBe(7); // Domingo
+      expect(diaSemanaIso("2026-11-13")).toBe(5); // Viernes
+    });
+
+    it("obtenerFechaLocal convierte un instante UTC a fecha calendario en la zona horaria del Box", () => {
+      // 2026-11-09 01:30 UTC es todavía domingo 2026-11-08 22:30 en Buenos Aires (UTC-3)
+      const instante = new Date("2026-11-09T01:30:00.000Z");
+      expect(obtenerFechaLocal(instante, BUENOS_AIRES)).toBe("2026-11-08");
+    });
+
+    it("sumarDiasAFecha suma días respetando el calendario ISO", () => {
+      expect(sumarDiasAFecha("2026-11-09", 7)).toBe("2026-11-16");
+      expect(sumarDiasAFecha("2026-11-28", 3)).toBe("2026-12-01");
     });
   });
 });
