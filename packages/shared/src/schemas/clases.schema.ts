@@ -145,3 +145,33 @@ export function calcularInstantesClase(
   const fin = new Date(instanteInicio + entrada.duracionMinutos * MS_POR_MINUTO);
   return { inicio, fin };
 }
+
+/** Devuelve el día de la semana ISO (1 = Lunes, ..., 7 = Domingo). */
+export function diaSemanaIso(fechaLocal: string): number {
+  const diaUtc = new Date(`${fechaLocal}T00:00:00.000Z`).getUTCDay();
+  return diaUtc === 0 ? 7 : diaUtc;
+}
+
+/** Obtiene la fecha calendario `YYYY-MM-DD` de un instante en la zona horaria del Box. */
+export function obtenerFechaLocal(instante: Date, timezone: string): string {
+  if (!esTimezoneIanaValida(timezone)) {
+    throw new Error(`Zona horaria IANA inválida: ${timezone}`);
+  }
+  const partes = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).formatToParts(instante);
+  const anio = partes.find((p) => p.type === "year")?.value;
+  const mes = partes.find((p) => p.type === "month")?.value;
+  const dia = partes.find((p) => p.type === "day")?.value;
+  return `${anio}-${mes}-${dia}`;
+}
+
+/** Suma días a una fecha calendario `YYYY-MM-DD`. */
+export function sumarDiasAFecha(fecha: string, dias: number): string {
+  const ms = new Date(`${fecha}T00:00:00.000Z`).getTime() + dias * 86_400_000;
+  return new Date(ms).toISOString().slice(0, 10);
+}
+
