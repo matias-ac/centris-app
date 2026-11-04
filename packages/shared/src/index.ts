@@ -111,7 +111,13 @@ export {
 } from "./schemas/horarios.schema.js";
 
 export {
+  ClaseSchema,
+  EditarClaseSchema,
+  FiltroClasesSchema,
   calcularInstantesClase,
+  type Clase,
+  type EditarClase,
+  type FiltroClases,
   type EntradaInstantesClase,
   type InstantesClase
 } from "./schemas/clases.schema.js";
