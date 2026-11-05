@@ -8,10 +8,10 @@ Implementar de punta a punta la generación y gestión de `Clases` concretas a p
 
 **Blocked by:** 07: Tipos de Clase y Grilla de Horarios Recurrentes E2E
 
-**Status:** in-progress
+**Status:** done
 
 ## Acceptance Criteria (TDD / BDD)
 
-- [ ] **Materialización exacta en zona horaria IANA del Box**: **Given** un Box con `timezone = 'America/Argentina/Buenos_Aires'` (`UTC-3`) y un `Horario` para el lunes a las `07:00` de `60` minutos, **When** corre el proceso de materialización de Clases, **Then** se inserta de forma idempotente la fila en `CLASE` con `inicio = 'YYYY-MM-DD 10:00:00+00'` (`07:00-03`) y `fin = 'YYYY-MM-DD 11:00:00+00'`, ejecutando dentro de una transacción con `SET LOCAL app.box_id`.
-- [ ] **Independencia entre `Clase` materializada y `Horario`**: **Given** una `Clase` ya generada para el viernes a las `19:00`, **When** un `Administrador` cambia el `Coach` por un suplente o un `Recepcionista`/`Administrador` incrementa los `Cupos` de esa Clase puntual desde `apps/web`, **Then** el `Horario` recurrente no se altera; **When** se modifica el `Horario` recurrente, **Then** solo se actualizan o regeneran las Clases futuras que no tengan Reservas activas.
-- [ ] **Invariante de reducción de Cupos**: **Given** una `Clase` que ya cuenta con $N$ Reservas confirmadas, **When** se intenta editar `clase.cupos` a un valor menor que $N$, **Then** la validación transaccional rechaza el cambio.
+- [x] **Materialización exacta en zona horaria IANA del Box**: **Given** un Box con `timezone = 'America/Argentina/Buenos_Aires'` (`UTC-3`) y un `Horario` para el lunes a las `07:00` de `60` minutos, **When** corre el proceso de materialización de Clases, **Then** se inserta de forma idempotente la fila en `CLASE` con `inicio = 'YYYY-MM-DD 10:00:00+00'` (`07:00-03`) y `fin = 'YYYY-MM-DD 11:00:00+00'`, ejecutando dentro de una transacción con `SET LOCAL app.box_id`.
+- [x] **Independencia entre `Clase` materializada y `Horario`**: **Given** una `Clase` ya generada para el viernes a las `19:00`, **When** un `Administrador` cambia el `Coach` por un suplente o un `Recepcionista`/`Administrador` incrementa los `Cupos` de esa Clase puntual desde `apps/web`, **Then** el `Horario` recurrente no se altera; **When** se modifica el `Horario` recurrente, **Then** solo se actualizan o regeneran las Clases futuras que no tengan Reservas activas.
+- [x] **Invariante de reducción de Cupos**: **Given** una `Clase` que ya cuenta con $N$ Reservas confirmadas, **When** se intenta editar `clase.cupos` a un valor menor que $N$, **Then** la validación transaccional rechaza el cambio.
