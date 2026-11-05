@@ -36,6 +36,13 @@
       "when": 1761686400000,
       "tag": "0006_pagos_inmutables",
       "breakpoints": false
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1761772800000,
+      "tag": "0008_clases_y_reservas",
+      "breakpoints": false
     }
   ]
 }

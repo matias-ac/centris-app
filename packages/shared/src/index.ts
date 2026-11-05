@@ -111,6 +111,21 @@ export {
 } from "./schemas/horarios.schema.js";
 
 export {
+  ClaseSchema,
+  EditarClaseSchema,
+  FiltroClasesSchema,
+  calcularInstantesClase,
+  diaSemanaIso,
+  obtenerFechaLocal,
+  sumarDiasAFecha,
+  type Clase,
+  type EditarClase,
+  type FiltroClases,
+  type EntradaInstantesClase,
+  type InstantesClase
+} from "./schemas/clases.schema.js";
+
+export {
   MEDIOS_PAGO,
   MedioPagoSchema,
   CrearPagoSchema,

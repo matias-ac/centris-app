@@ -13,6 +13,7 @@ import { SaludModule } from "./modules/salud/salud.module.js";
 import { TiposClaseModule } from "./modules/tipos-clase/tipos-clase.module.js";
 import { HorariosModule } from "./modules/horarios/horarios.module.js";
 import { PagosModule } from "./modules/pagos/pagos.module.js";
+import { ClasesModule } from "./modules/clases/clases.module.js";
 
 @Module({
   imports: [
@@ -26,7 +27,8 @@ import { PagosModule } from "./modules/pagos/pagos.module.js";
     SaludModule,
     TiposClaseModule,
     HorariosModule,
-    PagosModule
+    PagosModule,
+    ClasesModule
   ],
   providers: [
     {

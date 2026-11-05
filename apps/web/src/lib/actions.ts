@@ -21,6 +21,7 @@ import {
   CrearPagoSchema,
   CrearPlanSchema,
   CrearTipoClaseSchema,
+  EditarClaseSchema,
   ERROR_CODES,
   LoginSchema,
   type ActualizarAtleta,
@@ -37,6 +38,7 @@ import {
   type CrearPago,
   type CrearPlanInput,
   type CrearTipoClase,
+  type EditarClase,
   type RolAfiliacion,
   type SesionAuth
 } from "@centris/shared";
@@ -57,12 +59,14 @@ import {
   crearHorarioApi,
   crearPlanApi,
   crearTipoClaseApi,
+  editarClaseApi,
   eliminarAfiliacionApi,
   eliminarAtletaApi,
   eliminarHorarioApi,
   eliminarPlanApi,
   eliminarTipoClaseApi,
   iniciarSesionApi,
+  materializarClasesApi,
   obtenerMisAfiliacionesApi,
   registrarPagoApi,
   type ResultadoApi
@@ -720,5 +724,32 @@ export async function anularPagoAction(
     (token, datos) => anularPagoApi(token, boxId, pagoId, datos)
   );
 }
+
+// ============================================================================
+// Clases y Materialización Actions
+// ============================================================================
+
+export async function editarClaseAction(
+  boxId: string,
+  claseId: string,
+  input: EditarClase
+): Promise<ResultadoAccion> {
+  return ejecutarAccionConValidacion(
+    EditarClaseSchema,
+    input,
+    "Datos de edición de Clase inválidos.",
+    (token, datos) => editarClaseApi(token, boxId, claseId, datos)
+  );
+}
+
+export async function materializarClasesAction(
+  boxId: string,
+  fechaReferencia?: string
+): Promise<ResultadoAccion> {
+  return ejecutarAccionAutenticada((token) =>
+    materializarClasesApi(token, boxId, fechaReferencia)
+  );
+}
+
 
 

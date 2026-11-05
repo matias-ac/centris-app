@@ -6,3 +6,5 @@ export { membresias } from "./membresias.schema.js";
 export { tiposClase } from "./tipos-clase.schema.js";
 export { horarios } from "./horarios.schema.js";
 export { pagos } from "./pagos.schema.js";
+export { clases } from "./clases.schema.js";
+export { reservas } from "./reservas.schema.js";
