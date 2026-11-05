@@ -76,6 +76,7 @@ export class ClasesService {
         and(
           eq(afiliaciones.id, coachAfiliacionId),
           eq(afiliaciones.boxId, boxId),
+          eq(afiliaciones.activo, true),
           isNull(afiliaciones.deletedAt)
         )
       );
@@ -264,7 +265,8 @@ export class ClasesService {
             eq(clases.boxId, boxId),
             isNull(clases.deletedAt)
           )
-        );
+        )
+        .for("update");
 
       if (!existente) {
         throw new DomainException(
@@ -334,7 +336,7 @@ export class ClasesService {
       await tx
         .update(clases)
         .set(updates)
-        .where(eq(clases.id, claseId));
+        .where(and(eq(clases.id, claseId), eq(clases.boxId, boxId)));
     });
 
     return this.obtenerClasePorId(boxId, claseId);
