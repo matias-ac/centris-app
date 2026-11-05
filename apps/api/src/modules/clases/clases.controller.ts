@@ -8,6 +8,7 @@ import {
   Post,
   Query
 } from "@nestjs/common";
+import { z } from "zod";
 import {
   EditarClaseSchema,
   FiltroClasesSchema,
@@ -21,6 +22,13 @@ import { Roles } from "../../common/decorators/roles.decorator.js";
 import { validarConZod } from "../../common/pipes/zod-validation.pipe.js";
 import { ClasesService } from "./clases.service.js";
 import { MaterializacionClasesService } from "./materializacion-clases.service.js";
+
+const MaterializarClasesBodySchema = z
+  .object({
+    fechaReferencia: z.string().datetime().optional()
+  })
+  .optional()
+  .default({});
 
 @Controller("clases")
 export class ClasesController {
@@ -69,10 +77,11 @@ export class ClasesController {
   @Roles("administrador")
   async materializarClases(
     @ContextoBox() contexto: ContextoBoxActivo,
-    @Body() body: { fechaReferencia?: string }
+    @Body() body: unknown
   ): Promise<{ clasesCreadas: number }> {
-    const fechaReferencia = body?.fechaReferencia
-      ? new Date(body.fechaReferencia)
+    const input = validarConZod(MaterializarClasesBodySchema, body);
+    const fechaReferencia = input.fechaReferencia
+      ? new Date(input.fechaReferencia)
       : undefined;
     return this.materializacionService.materializarClasesParaBox(
       contexto.boxId,

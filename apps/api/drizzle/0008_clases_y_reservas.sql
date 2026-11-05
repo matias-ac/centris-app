@@ -132,3 +132,5 @@ CREATE POLICY "reservas_delete_policy" ON "reservas"
   USING (
     box_id = NULLIF(current_setting('app.box_id', true), '')::uuid
   );
+
+CREATE UNIQUE INDEX IF NOT EXISTS "uq_reserva_activa" ON "reservas" ("box_id", "clase_id", "afiliacion_id") WHERE "estado" = 'CONFIRMADA';

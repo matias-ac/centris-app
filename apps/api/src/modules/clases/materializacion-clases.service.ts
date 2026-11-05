@@ -25,7 +25,7 @@ export class MaterializacionClasesService {
   async materializarClases(opciones?: {
     fechaReferencia?: Date;
   }): Promise<{ boxesProcesados: number; clasesCreadas: number }> {
-    const cajasActivas = await this.db.client
+    const boxesActivos = await this.db.client
       .select({
         id: boxes.id,
         timezone: boxes.timezone,
@@ -35,13 +35,13 @@ export class MaterializacionClasesService {
       .where(isNull(boxes.deletedAt));
 
     let totalCreadas = 0;
-    for (const box of cajasActivas) {
+    for (const box of boxesActivos) {
       const res = await this.materializarClasesParaBox(box.id, opciones);
       totalCreadas += res.clasesCreadas;
     }
 
     return {
-      boxesProcesados: cajasActivas.length,
+      boxesProcesados: boxesActivos.length,
       clasesCreadas: totalCreadas
     };
   }

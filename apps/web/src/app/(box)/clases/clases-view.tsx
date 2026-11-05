@@ -193,7 +193,7 @@ export function ClasesView({
                       data-testid="select-coach-suplente"
                       value={coachSeleccionado}
                       onChange={(e) => setCoachSeleccionado(e.target.value)}
-                      className="mt-1 block w-full rounded-md border border-border bg-secondary px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                      className="mt-1 block w-full rounded-md border border-border bg-secondary px-3 py-2 text-base md:text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     >
                       {coaches.map((c) => (
                         <option key={c.id} value={c.id}>
@@ -223,7 +223,7 @@ export function ClasesView({
                   />
                   <p className="mt-1 text-xs text-muted-foreground">
                     Reservas confirmadas actuales:{" "}
-                    <span className="font-mono font-semibold">
+                    <span className="font-mono font-semibold tabular-nums">
                       {claseEnEdicion.reservasConfirmadas ?? 0}
                     </span>
                   </p>

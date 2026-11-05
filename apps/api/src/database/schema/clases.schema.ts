@@ -1,3 +1,4 @@
+import { sql } from "drizzle-orm";
 import {
   foreignKey,
   integer,
@@ -5,6 +6,7 @@ import {
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid
 } from "drizzle-orm/pg-core";
 import { afiliaciones } from "./afiliaciones.schema.js";
@@ -42,6 +44,9 @@ export const clases = pgTable(
   },
   (table) => [
     unique("uq_clases_box_id").on(table.boxId, table.id),
+    uniqueIndex("uq_clases_horario_inicio")
+      .on(table.boxId, table.horarioId, table.inicio)
+      .where(sql`deleted_at IS NULL AND horario_id IS NOT NULL`),
     foreignKey({
       name: "fk_clases_horario",
       columns: [table.boxId, table.horarioId],

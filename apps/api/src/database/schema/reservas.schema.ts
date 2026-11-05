@@ -1,9 +1,11 @@
+import { sql } from "drizzle-orm";
 import {
   foreignKey,
   pgTable,
   text,
   timestamp,
   unique,
+  uniqueIndex,
   uuid
 } from "drizzle-orm/pg-core";
 import { afiliaciones } from "./afiliaciones.schema.js";
@@ -43,6 +45,9 @@ export const reservas = pgTable(
   },
   (table) => [
     unique("uq_reservas_box_id").on(table.boxId, table.id),
+    uniqueIndex("uq_reserva_activa")
+      .on(table.boxId, table.claseId, table.afiliacionId)
+      .where(sql`estado = 'CONFIRMADA'`),
     foreignKey({
       name: "fk_reservas_clase",
       columns: [table.boxId, table.claseId],

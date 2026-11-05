@@ -347,26 +347,42 @@ export class HorariosService {
       const idsClasesAfectadas = clasesFuturas.map((c) => c.id);
 
       if (idsClasesAfectadas.length > 0) {
-        const updatesClases: Partial<typeof clases.$inferInsert> = {
-          updatedAt: new Date()
-        };
-        if (input.cuposDefault !== undefined) updatesClases.cupos = input.cuposDefault;
-        if (input.coachAfiliacionId !== undefined) updatesClases.coachAfiliacionId = input.coachAfiliacionId;
-        if (input.tipoClaseId !== undefined) updatesClases.tipoClaseId = input.tipoClaseId;
-        if (input.activo === false) {
-          updatesClases.deletedAt = new Date();
-        }
+        const cambioEstructuraCalendario =
+          input.diaSemana !== undefined ||
+          input.horaInicio !== undefined ||
+          input.duracionMinutos !== undefined;
 
-        if (Object.keys(updatesClases).length > 1) {
+        if (cambioEstructuraCalendario || input.activo === false) {
+          // Si cambia día, hora o duración (o se desactiva), las ocurrencias futuras sin reservas
+          // se dan de baja para que puedan regenerarse con la nueva configuración temporal
           await tx
             .update(clases)
-            .set(updatesClases)
+            .set({ deletedAt: new Date(), updatedAt: new Date() })
             .where(
               and(
                 eq(clases.boxId, boxId),
                 inArray(clases.id, idsClasesAfectadas)
               )
             );
+        } else {
+          const updatesClases: Partial<typeof clases.$inferInsert> = {
+            updatedAt: new Date()
+          };
+          if (input.cuposDefault !== undefined) updatesClases.cupos = input.cuposDefault;
+          if (input.coachAfiliacionId !== undefined) updatesClases.coachAfiliacionId = input.coachAfiliacionId;
+          if (input.tipoClaseId !== undefined) updatesClases.tipoClaseId = input.tipoClaseId;
+
+          if (Object.keys(updatesClases).length > 1) {
+            await tx
+              .update(clases)
+              .set(updatesClases)
+              .where(
+                and(
+                  eq(clases.boxId, boxId),
+                  inArray(clases.id, idsClasesAfectadas)
+                )
+              );
+          }
         }
       }
 
