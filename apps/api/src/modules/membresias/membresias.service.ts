@@ -8,7 +8,7 @@ import {
   type CrearMembresia,
   type Membresia
 } from "@centris/shared";
-import { and, asc, eq, isNull } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { DomainException } from "../../common/errors/domain.exception.js";
 import {
   DatabaseService,
@@ -17,8 +17,11 @@ import {
 } from "../../database/database.service.js";
 import {
   afiliaciones,
+  boxes,
+  clases,
   membresias,
-  planes
+  planes,
+  reservas
 } from "../../database/schema/index.js";
 
 function mapearMembresia(fila: typeof membresias.$inferSelect): Membresia {
@@ -219,8 +222,10 @@ export class MembresiasService {
   }
 
   /**
-   * Baja Anticipada (solo Administrador): acorta la Vigencia al día indicado y
-   * registra quién y cuándo la ejecutó. Solo puede acortar, sin quedar antes del inicio.
+   * Baja Anticipada (solo Administrador): acorta la Vigencia al día indicado,
+   * registra quién y cuándo la ejecutó y cancela en cascada dentro de la misma
+   * transacción todas las Reservas confirmadas cuyas Clases caigan en fecha local
+   * del Box posterior a la nueva `fecha_fin`, liberando sus Cupos (ADR 0003, ADR 0005).
    */
   async bajaAnticipada(
     boxId: string,
@@ -229,7 +234,15 @@ export class MembresiasService {
     input: BajaAnticipada
   ): Promise<Membresia> {
     exigirUuidMembresia(membresiaId);
+
+    const [box] = await this.db.client
+      .select({ timezone: boxes.timezone })
+      .from(boxes)
+      .where(eq(boxes.id, boxId));
+    const timezone = box?.timezone ?? "America/Argentina/Buenos_Aires";
+
     return this.db.withBoxTransaction(boxId, async (tx) => {
+      // 1. BLOQUEO CANÓNICO #1: Bloquear la Membresía (SELECT ... FOR UPDATE)
       const [actual] = await tx
         .select()
         .from(membresias)
@@ -265,7 +278,65 @@ export class MembresiasService {
         );
       }
 
+      // 2. Buscar Reservas confirmadas de esta Membresía para Clases posteriores a la nueva fecha_fin
+      const reservasFuturas = await tx
+        .select({
+          reservaId: reservas.id,
+          claseId: reservas.claseId
+        })
+        .from(reservas)
+        .innerJoin(
+          clases,
+          and(
+            eq(reservas.claseId, clases.id),
+            eq(reservas.boxId, clases.boxId)
+          )
+        )
+        .where(
+          and(
+            eq(reservas.boxId, boxId),
+            eq(reservas.membresiaId, membresiaId),
+            eq(reservas.estado, "CONFIRMADA"),
+            sql`(${clases.inicio} AT TIME ZONE ${timezone})::date > ${input.fechaFin}::date`
+          )
+        );
+
       const ahora = new Date();
+
+      if (reservasFuturas.length > 0) {
+        const claseIdsFuturas = [
+          ...new Set(reservasFuturas.map((r) => r.claseId))
+        ].sort();
+        const reservaIdsFuturas = reservasFuturas.map((r) => r.reservaId);
+
+        // BLOQUEO CANÓNICO #2: Bloquear las Clases afectadas (Membresía -> Clase)
+        await tx
+          .select({ id: clases.id })
+          .from(clases)
+          .where(
+            and(
+              eq(clases.boxId, boxId),
+              inArray(clases.id, claseIdsFuturas)
+            )
+          )
+          .orderBy(asc(clases.id))
+          .for("update");
+
+        await tx
+          .update(reservas)
+          .set({
+            estado: "CANCELADA",
+            canceladaEn: ahora,
+            updatedAt: ahora
+          })
+          .where(
+            and(
+              eq(reservas.boxId, boxId),
+              inArray(reservas.id, reservaIdsFuturas)
+            )
+          );
+      }
+
       const [actualizada] = await tx
         .update(membresias)
         .set({

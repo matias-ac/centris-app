@@ -1,12 +1,13 @@
 import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import {
   ERROR_CODES,
+  type CancelarClase,
   type Clase,
   type EditarClase,
   type FiltroClases,
   type RolAfiliacion
 } from "@centris/shared";
-import { and, asc, eq, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { DomainException } from "../../common/errors/domain.exception.js";
 import {
   DatabaseService,
@@ -17,6 +18,7 @@ import {
   afiliaciones,
   boxes,
   clases,
+  membresias,
   reservas,
   tiposClase,
   usuarios
@@ -49,6 +51,8 @@ function mapearClase(
     fin: fila.fin.toISOString(),
     cupos: fila.cupos,
     canceladaEn: fila.canceladaEn ? fila.canceladaEn.toISOString() : null,
+    canceladaPorUsuarioId: fila.canceladaPorUsuarioId,
+    motivoCancelacion: fila.motivoCancelacion,
     createdAt: fila.createdAt.toISOString(),
     updatedAt: fila.updatedAt.toISOString(),
     deletedAt: fila.deletedAt ? fila.deletedAt.toISOString() : null,
@@ -337,6 +341,114 @@ export class ClasesService {
         .update(clases)
         .set(updates)
         .where(and(eq(clases.id, claseId), eq(clases.boxId, boxId)));
+    });
+
+    return this.obtenerClasePorId(boxId, claseId);
+  }
+
+  /**
+   * Cancela una Clase puntual por decisión del Administrador del Box (ADR 0003, PRD §4.3.4):
+   * - Adquiere bloqueos en el orden canónico (Membresías afectadas -> Clase).
+   * - Marca la Clase como cancelada (`cancelada_en`, `cancelada_por_usuario_id`, `motivo_cancelacion`).
+   * - Pasa todas sus Reservas confirmadas a `CANCELADA_POR_BOX` en la misma transacción,
+   *   restituyendo el 100% de los Créditos incluso dentro de la Ventana de Cancelación.
+   */
+  async cancelarClase(
+    boxId: string,
+    claseId: string,
+    usuarioId: string,
+    input: CancelarClase
+  ): Promise<Clase> {
+    validarUuid(boxId, "boxId");
+    validarUuid(claseId, "id");
+
+    await this.db.withBoxTransaction(boxId, async (tx) => {
+      // 1. Identificar las Membresías con Reserva confirmada en la Clase y bloquearlas en orden canónico (Membresía -> Clase)
+      const reservasActivas = await tx
+        .select({ membresiaId: reservas.membresiaId })
+        .from(reservas)
+        .where(
+          and(
+            eq(reservas.boxId, boxId),
+            eq(reservas.claseId, claseId),
+            eq(reservas.estado, "CONFIRMADA")
+          )
+        );
+
+      const membresiaIds = [
+        ...new Set(reservasActivas.map((r) => r.membresiaId))
+      ].sort();
+
+      if (membresiaIds.length > 0) {
+        await tx
+          .select({ id: membresias.id })
+          .from(membresias)
+          .where(
+            and(
+              eq(membresias.boxId, boxId),
+              inArray(membresias.id, membresiaIds)
+            )
+          )
+          .orderBy(asc(membresias.id))
+          .for("update");
+      }
+
+      // 2. Bloquear la fila de CLASE (SELECT ... FOR UPDATE)
+      const [existente] = await tx
+        .select()
+        .from(clases)
+        .where(
+          and(
+            eq(clases.id, claseId),
+            eq(clases.boxId, boxId),
+            isNull(clases.deletedAt)
+          )
+        )
+        .for("update");
+
+      if (!existente) {
+        throw new DomainException(
+          ERROR_CODES.VALIDACION_FALLIDA,
+          "Clase no encontrada en el Box activo.",
+          HttpStatus.NOT_FOUND,
+          { id: ["Clase inexistente en este Box"] }
+        );
+      }
+
+      if (existente.canceladaEn !== null) {
+        throw new DomainException(
+          ERROR_CODES.CLASE_CANCELADA,
+          "La Clase seleccionada ya se encuentra cancelada.",
+          HttpStatus.CONFLICT
+        );
+      }
+
+      const ahora = new Date();
+
+      await tx
+        .update(clases)
+        .set({
+          canceladaEn: ahora,
+          canceladaPorUsuarioId: usuarioId,
+          motivoCancelacion: input.motivoCancelacion ?? null,
+          updatedAt: ahora
+        })
+        .where(and(eq(clases.id, claseId), eq(clases.boxId, boxId)));
+
+      await tx
+        .update(reservas)
+        .set({
+          estado: "CANCELADA_POR_BOX",
+          canceladaEn: ahora,
+          updatedAt: ahora
+        })
+        .where(
+          and(
+            eq(reservas.boxId, boxId),
+            eq(reservas.claseId, claseId),
+            eq(reservas.estado, "CONFIRMADA")
+          )
+        );
     });
 
     return this.obtenerClasePorId(boxId, claseId);

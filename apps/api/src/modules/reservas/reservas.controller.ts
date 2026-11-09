@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Inject, Post, Query } from "@nestjs/common";
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Param,
+  Post,
+  Query
+} from "@nestjs/common";
 import {
   CrearReservaSchema,
   FiltroReservasSchema,
@@ -40,5 +50,15 @@ export class ReservasController {
   ): Promise<Reserva> {
     const input = validarConZod(CrearReservaSchema, body);
     return this.reservasService.crearReserva(contexto, usuario.id, input);
+  }
+
+  @Post(":id/cancelar")
+  @HttpCode(HttpStatus.OK)
+  @Roles("administrador", "recepcionista", "atleta")
+  async cancelarReserva(
+    @ContextoBox() contexto: ContextoBoxActivo,
+    @Param("id") id: string
+  ): Promise<Reserva> {
+    return this.reservasService.cancelarReserva(contexto, id);
   }
 }
