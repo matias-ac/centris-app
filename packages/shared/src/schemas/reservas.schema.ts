@@ -222,3 +222,67 @@ export function calcularDisponibilidadCreditos(
       disponible && creditosRestantesPeriodo === 0 && creditosExtraRestantes > 0
   };
 }
+
+export interface EntradaEvaluarVentanaCancelacion {
+  claseInicio: Date | string;
+  ahora: Date | string;
+  ventanaCancelacionMinutos: number;
+}
+
+export interface ResultadoVentanaCancelacion {
+  permitida: boolean;
+  esTardia: boolean;
+  estadoResultante: "CANCELADA" | "CANCELADA_TARDIA" | null;
+  devuelveCredito: boolean;
+}
+
+const MS_POR_MINUTO_VENTANA = 60_000;
+
+/**
+ * Evalúa el efecto de cancelar una Reserva en el instante `ahora` respecto a `claseInicio`
+ * y la `Ventana de Cancelación` configurada en el Box (PRD §4.4.2, GLOSSARY.md):
+ * - Si `ahora > claseInicio`: la Clase ya comenzó; no se admite cancelación (`permitida = false`).
+ * - Si `ahora <= claseInicio - ventanaCancelacionMinutos`: cancelación en término (`CANCELADA`, devuelve Crédito).
+ * - Si `ahora` cae en `(claseInicio - ventanaCancelacionMinutos, claseInicio]`: Cancelación Tardía
+ *   (`CANCELADA_TARDIA`, libera el Cupo pero no devuelve el Crédito).
+ */
+export function evaluarVentanaCancelacion(
+  entrada: EntradaEvaluarVentanaCancelacion
+): ResultadoVentanaCancelacion {
+  const inicioMs =
+    typeof entrada.claseInicio === "string"
+      ? new Date(entrada.claseInicio).getTime()
+      : entrada.claseInicio.getTime();
+  const ahoraMs =
+    typeof entrada.ahora === "string"
+      ? new Date(entrada.ahora).getTime()
+      : entrada.ahora.getTime();
+
+  if (ahoraMs > inicioMs) {
+    return {
+      permitida: false,
+      esTardia: true,
+      estadoResultante: null,
+      devuelveCredito: false
+    };
+  }
+
+  const limiteSinPenalidadMs =
+    inicioMs - entrada.ventanaCancelacionMinutos * MS_POR_MINUTO_VENTANA;
+
+  if (ahoraMs <= limiteSinPenalidadMs) {
+    return {
+      permitida: true,
+      esTardia: false,
+      estadoResultante: "CANCELADA",
+      devuelveCredito: true
+    };
+  }
+
+  return {
+    permitida: true,
+    esTardia: true,
+    estadoResultante: "CANCELADA_TARDIA",
+    devuelveCredito: false
+  };
+}

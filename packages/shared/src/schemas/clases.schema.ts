@@ -14,6 +14,8 @@ export const ClaseSchema = z.object({
   fin: InstanteSchema,
   cupos: z.number().int().min(1, "Los cupos deben ser al menos 1"),
   canceladaEn: InstanteSchema.nullable(),
+  canceladaPorUsuarioId: z.string().uuid().nullable().optional(),
+  motivoCancelacion: z.string().nullable().optional(),
   createdAt: InstanteSchema,
   updatedAt: InstanteSchema,
   deletedAt: InstanteSchema.nullable().optional(),
@@ -53,6 +55,17 @@ export const EditarClaseSchema = z
   });
 
 export type EditarClase = z.infer<typeof EditarClaseSchema>;
+
+export const CancelarClaseSchema = z.object({
+  motivoCancelacion: z
+    .string()
+    .trim()
+    .min(1, "El motivo de cancelación no puede estar vacío")
+    .max(500, "El motivo de cancelación no puede superar los 500 caracteres")
+    .optional()
+});
+
+export type CancelarClase = z.infer<typeof CancelarClaseSchema>;
 
 export const FiltroClasesSchema = z
   .object({
