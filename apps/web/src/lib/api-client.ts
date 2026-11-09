@@ -28,6 +28,7 @@ import {
   type Atleta,
   type BajaAnticipada,
   type Box,
+  type CancelarClase,
   type Clase,
   type CrearAtleta,
   type CrearHorario,
@@ -1047,6 +1048,53 @@ export async function crearReservaApi(
 
   const json = await response.json();
   return { ok: true, data: ReservaSchema.parse(json) };
+}
+
+export async function cancelarReservaApi(
+  accessToken: string,
+  boxId: string,
+  reservaId: string
+): Promise<ResultadoApi<Reserva>> {
+  const response = await fetch(`${API_URL}/reservas/${reservaId}/cancelar`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: ReservaSchema.parse(json) };
+}
+
+export async function cancelarClaseApi(
+  accessToken: string,
+  boxId: string,
+  claseId: string,
+  input: CancelarClase
+): Promise<ResultadoApi<Clase>> {
+  const response = await fetch(`${API_URL}/clases/${claseId}/cancelar`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    body: JSON.stringify(input),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: ClaseSchema.parse(json) };
 }
 
 

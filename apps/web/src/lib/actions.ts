@@ -11,6 +11,7 @@ import {
   AjustarCreditosExtraSchema,
   AjustarPrecioMembresiaSchema,
   BajaAnticipadaSchema,
+  CancelarClaseSchema,
   CrearMembresiaSchema,
   CrearAtletaSchema,
   ActualizarAtletaSchema,
@@ -33,6 +34,7 @@ import {
   type AjustarPrecioMembresia,
   type AnularPago,
   type BajaAnticipada,
+  type CancelarClase,
   type CrearAtleta,
   type CrearHorario,
   type CrearMembresia,
@@ -54,6 +56,8 @@ import {
   anularPagoApi,
   asignarMembresiaApi,
   bajaAnticipadaApi,
+  cancelarClaseApi,
+  cancelarReservaApi,
   actualizarConfiguracionBoxApi,
   actualizarPlanApi,
   actualizarRolesAfiliacionApi,
@@ -767,6 +771,28 @@ export async function crearReservaAction(
     input,
     "Datos de la Reserva inválidos.",
     (token, datos) => crearReservaApi(token, boxId, datos)
+  );
+}
+
+export async function cancelarReservaAction(
+  boxId: string,
+  reservaId: string
+): Promise<ResultadoAccion> {
+  return ejecutarAccionAutenticada((token) =>
+    cancelarReservaApi(token, boxId, reservaId)
+  );
+}
+
+export async function cancelarClaseAction(
+  boxId: string,
+  claseId: string,
+  input: CancelarClase
+): Promise<ResultadoAccion> {
+  return ejecutarAccionConValidacion(
+    CancelarClaseSchema,
+    input,
+    "Datos de cancelación de Clase inválidos.",
+    (token, datos) => cancelarClaseApi(token, boxId, claseId, datos)
   );
 }
 
