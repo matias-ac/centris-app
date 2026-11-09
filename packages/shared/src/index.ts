@@ -143,4 +143,25 @@ export {
   type Moroso
 } from "./schemas/pagos.schema.js";
 
+export {
+  ESTADOS_RESERVA,
+  ESTADOS_RESERVA_QUE_CONSUMEN_CREDITO,
+  EstadoReservaSchema,
+  ReservaSchema,
+  CrearReservaSchema,
+  FiltroReservasSchema,
+  obtenerRangoPeriodoSemanal,
+  obtenerPeriodoSemanalDeInstante,
+  calcularDisponibilidadCreditos,
+  type EstadoReserva,
+  type Reserva,
+  type CrearReserva,
+  type FiltroReservas,
+  type RangoPeriodoSemanal,
+  type PeriodoSemanalInstante,
+  type EntradaDisponibilidadCreditos,
+  type ResultadoDisponibilidadCreditos
+} from "./schemas/reservas.schema.js";
+
+
 

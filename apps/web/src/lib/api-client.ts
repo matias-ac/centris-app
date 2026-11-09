@@ -10,6 +10,7 @@ import {
   MembresiaSchema,
   PagoSchema,
   PlanSchema,
+  ReservaSchema,
   SesionAuthSchema,
   TipoClaseSchema,
   type ActivarCuentaInput,
@@ -33,12 +34,14 @@ import {
   type CrearMembresia,
   type CrearPago,
   type CrearPlanInput,
+  type CrearReserva,
   type CrearTipoClase,
   type EditarClase,
   type ErrorResponse,
   type FiltroAtletas,
   type FiltroClases,
   type FiltroMorosos,
+  type FiltroReservas,
   type Horario,
   type LoginInput,
   type Membresia,
@@ -46,6 +49,7 @@ import {
   type Pago,
   type PagoConRegistrador,
   type Plan,
+  type Reserva,
   type RolAfiliacion,
   type SesionAuth,
   type TipoClase
@@ -989,5 +993,61 @@ export async function materializarClasesApi(
   const json = await response.json();
   return { ok: true, data: json };
 }
+
+export async function listarReservasApi(
+  accessToken: string,
+  boxId: string,
+  filtro?: FiltroReservas
+): Promise<ResultadoApi<Reserva[]>> {
+  const query = new URLSearchParams();
+  if (filtro?.afiliacionId) query.set("afiliacionId", filtro.afiliacionId);
+  if (filtro?.claseId) query.set("claseId", filtro.claseId);
+  if (filtro?.estado) query.set("estado", filtro.estado);
+  if (filtro?.desde) query.set("desde", filtro.desde);
+  if (filtro?.hasta) query.set("hasta", filtro.hasta);
+  const queryString = query.toString();
+  const url = `${API_URL}/reservas${queryString ? `?${queryString}` : ""}`;
+
+  const response = await fetch(url, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: z.array(ReservaSchema).parse(json) };
+}
+
+export async function crearReservaApi(
+  accessToken: string,
+  boxId: string,
+  input: CrearReserva
+): Promise<ResultadoApi<Reserva>> {
+  const response = await fetch(`${API_URL}/reservas`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    body: JSON.stringify(input),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: ReservaSchema.parse(json) };
+}
+
 
 

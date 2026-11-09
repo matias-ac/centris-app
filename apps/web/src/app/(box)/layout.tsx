@@ -37,6 +37,11 @@ export default async function BoxLayout({
     "administrador",
     "recepcionista"
   ]);
+  const puedeReservar = tieneAlgunRol(afiliacionActiva.roles, [
+    "atleta",
+    "administrador",
+    "recepcionista"
+  ]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -99,6 +104,15 @@ export default async function BoxLayout({
           >
             Calendario de Clases
           </Link>
+          {puedeReservar ? (
+            <Link
+              href="/reservas"
+              data-testid="nav-link-reservas"
+              className="rounded-md px-3 py-1.5 text-[0.9375rem] font-semibold tracking-[0.01em] text-foreground hover:bg-secondary"
+            >
+              Mis Reservas
+            </Link>
+          ) : null}
           {puedeVerPlanes ? (
             <Link
               href="/planes"

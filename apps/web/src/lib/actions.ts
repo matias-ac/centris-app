@@ -20,6 +20,7 @@ import {
   CrearHorarioSchema,
   CrearPagoSchema,
   CrearPlanSchema,
+  CrearReservaSchema,
   CrearTipoClaseSchema,
   EditarClaseSchema,
   ERROR_CODES,
@@ -37,6 +38,7 @@ import {
   type CrearMembresia,
   type CrearPago,
   type CrearPlanInput,
+  type CrearReserva,
   type CrearTipoClase,
   type EditarClase,
   type RolAfiliacion,
@@ -58,6 +60,7 @@ import {
   crearAtletaApi,
   crearHorarioApi,
   crearPlanApi,
+  crearReservaApi,
   crearTipoClaseApi,
   editarClaseApi,
   eliminarAfiliacionApi,
@@ -750,6 +753,23 @@ export async function materializarClasesAction(
     materializarClasesApi(token, boxId, fechaReferencia)
   );
 }
+
+// ============================================================================
+// Reservas Actions
+// ============================================================================
+
+export async function crearReservaAction(
+  boxId: string,
+  input: CrearReserva
+): Promise<ResultadoAccion> {
+  return ejecutarAccionConValidacion(
+    CrearReservaSchema,
+    input,
+    "Datos de la Reserva inválidos.",
+    (token, datos) => crearReservaApi(token, boxId, datos)
+  );
+}
+
 
 
 
