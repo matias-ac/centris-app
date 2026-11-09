@@ -28,11 +28,7 @@ export class ReservasController {
     @Query() query: unknown
   ): Promise<Reserva[]> {
     const filtro = validarConZod(FiltroReservasSchema, query);
-    return this.reservasService.listarReservas(
-      contexto.boxId,
-      contexto,
-      filtro
-    );
+    return this.reservasService.listarReservas(contexto, filtro);
   }
 
   @Post()
@@ -43,11 +39,6 @@ export class ReservasController {
     @Body() body: unknown
   ): Promise<Reserva> {
     const input = validarConZod(CrearReservaSchema, body);
-    return this.reservasService.crearReserva(
-      contexto.boxId,
-      contexto,
-      usuario.id,
-      input
-    );
+    return this.reservasService.crearReserva(contexto, usuario.id, input);
   }
 }

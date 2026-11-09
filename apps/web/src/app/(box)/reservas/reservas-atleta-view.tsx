@@ -56,6 +56,12 @@ function formatearFecha(isoString: string | Date, timezone: string): string {
   }).format(d);
 }
 
+const ETIQUETA_MODALIDAD: Record<Membresia["modalidadCreditos"], string> = {
+  SEMANAL: "Semanal",
+  VIGENCIA_TOTAL: "Vigencia total",
+  ILIMITADO: "Ilimitado"
+};
+
 export function ReservasAtletaView({
   boxId,
   timezone,
@@ -70,6 +76,7 @@ export function ReservasAtletaView({
     null
   );
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [errorCode, setErrorCode] = useState<string | null>(null);
   const [exitoMsg, setExitoMsg] = useState<string | null>(null);
 
   const hoyLocal = obtenerFechaLocal(new Date(), timezone);
@@ -102,6 +109,7 @@ export function ReservasAtletaView({
 
   function handleReservar(claseId: string) {
     setErrorMsg(null);
+    setErrorCode(null);
     setExitoMsg(null);
     setClaseReservandoId(claseId);
 
@@ -110,6 +118,7 @@ export function ReservasAtletaView({
       setClaseReservandoId(null);
 
       if (!res.ok) {
+        setErrorCode(res.errorCode ?? null);
         setErrorMsg(res.message ?? "No se pudo confirmar la Reserva.");
       } else {
         setExitoMsg("Reserva confirmada exitosamente.");
@@ -138,6 +147,7 @@ export function ReservasAtletaView({
       {errorMsg ? (
         <div
           data-testid="alerta-error-reserva"
+          data-error-code={errorCode ?? ""}
           role="alert"
           className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive"
         >
@@ -189,7 +199,8 @@ export function ReservasAtletaView({
                   {membresiaVigente.fechaInicio} al {membresiaVigente.fechaFin}
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
-                  Modalidad: {membresiaVigente.modalidadCreditos}
+                  Modalidad:{" "}
+                  {ETIQUETA_MODALIDAD[membresiaVigente.modalidadCreditos]}
                 </p>
               </div>
 
@@ -239,7 +250,8 @@ export function ReservasAtletaView({
       {/* Sección Mis Reservas Confirmadas */}
       <section data-testid="seccion-mis-reservas" className="space-y-3">
         <h2 className="font-display text-xl font-semibold uppercase tracking-tight text-foreground">
-          Mis Reservas Confirmadas ({reservasConfirmadas.length})
+          Mis Reservas Confirmadas (
+          <span className="tabular-nums">{reservasConfirmadas.length}</span>)
         </h2>
 
         {reservasConfirmadas.length === 0 ? (
@@ -273,7 +285,7 @@ export function ReservasAtletaView({
                     {reserva.claseInicio && reserva.claseFin ? (
                       <p className="text-xs capitalize tabular-nums text-muted-foreground">
                         {formatearFecha(reserva.claseInicio, timezone)} ·{" "}
-                        <span className="font-mono font-semibold text-foreground">
+                        <span className="font-sans font-semibold tabular-nums text-foreground">
                           {formatearHora(reserva.claseInicio, timezone)} -{" "}
                           {formatearHora(reserva.claseFin, timezone)}
                         </span>
@@ -333,7 +345,7 @@ export function ReservasAtletaView({
                     </div>
                     <CardTitle className="mt-2 flex items-center gap-2 font-display text-xl text-foreground">
                       <Clock className="h-4 w-4 text-primary" />
-                      <span className="font-mono tabular-nums">
+                      <span className="tabular-nums">
                         {horaInicio} - {horaFin}
                       </span>
                     </CardTitle>
@@ -352,7 +364,7 @@ export function ReservasAtletaView({
                         <Users className="h-4 w-4 text-muted-foreground" />
                         <span
                           data-testid={`cupos-disponibles-clase-${clase.id}`}
-                          className="font-mono font-medium tabular-nums text-foreground"
+                          className="font-sans font-medium tabular-nums text-foreground"
                         >
                           {confirmadas} / {clase.cupos}
                         </span>

@@ -98,10 +98,10 @@ export class ReservasService {
   ) {}
 
   async listarReservas(
-    boxId: string,
     contexto: ContextoBoxActivo,
     filtro?: FiltroReservas
   ): Promise<Reserva[]> {
+    const boxId = contexto.boxId;
     validarUuid(boxId, "boxId");
 
     const esStaff =
@@ -219,6 +219,43 @@ export class ReservasService {
     });
   }
 
+  private validarClaseEnVentanaReserva<
+    T extends { inicio: Date; canceladaEn: Date | null }
+  >(
+    clase: T | undefined,
+    timezone: string,
+    anticipacionReservaDias: number,
+    fechaMaximaReserva: string
+  ): { clase: T; fechaLocal: string } {
+    if (!clase) {
+      throw new DomainException(
+        ERROR_CODES.VALIDACION_FALLIDA,
+        "Clase no encontrada en el Box activo.",
+        HttpStatus.NOT_FOUND,
+        { claseId: ["Clase inexistente en este Box"] }
+      );
+    }
+
+    if (clase.canceladaEn !== null) {
+      throw new DomainException(
+        ERROR_CODES.CLASE_CANCELADA,
+        "No es posible reservar una Clase que fue cancelada por el Box.",
+        HttpStatus.CONFLICT
+      );
+    }
+
+    const fechaLocal = obtenerFechaLocal(clase.inicio, timezone);
+    if (fechaLocal > fechaMaximaReserva) {
+      throw new DomainException(
+        ERROR_CODES.FUERA_DE_ANTICIPACION,
+        `La Clase solicitada (${fechaLocal}) supera el horizonte de Anticipación de Reserva (${anticipacionReservaDias} días).`,
+        HttpStatus.UNPROCESSABLE_ENTITY
+      );
+    }
+
+    return { clase, fechaLocal };
+  }
+
   /**
    * Motor transaccional de alta de Reserva con bloqueo pesimista en orden canónico:
    * 1. Bloqueo `SELECT ... FOR UPDATE` sobre `membresias` (serializa al Atleta).
@@ -226,11 +263,11 @@ export class ReservasService {
    * Desacoplado del estado de Pago / Saldo (ADR 0003, ADR 0005, ADR 0006).
    */
   async crearReserva(
-    boxId: string,
     contexto: ContextoBoxActivo,
     usuarioId: string,
     input: CrearReserva
   ): Promise<Reserva> {
+    const boxId = contexto.boxId;
     validarUuid(boxId, "boxId");
     validarUuid(input.claseId, "claseId");
 
@@ -318,40 +355,18 @@ export class ReservasService {
             )
           );
 
-        if (!clasePrevia) {
-          throw new DomainException(
-            ERROR_CODES.VALIDACION_FALLIDA,
-            "Clase no encontrada en el Box activo.",
-            HttpStatus.NOT_FOUND,
-            { claseId: ["Clase inexistente en este Box"] }
-          );
-        }
-
-        if (clasePrevia.canceladaEn !== null) {
-          throw new DomainException(
-            ERROR_CODES.CLASE_CANCELADA,
-            "No es posible reservar una Clase que fue cancelada por el Box.",
-            HttpStatus.CONFLICT
-          );
-        }
-
-        const fechaLocalClaseInicial = obtenerFechaLocal(
-          clasePrevia.inicio,
-          box.timezone
-        );
         const hoyLocal = obtenerFechaLocal(new Date(), box.timezone);
         const fechaMaximaReserva = sumarDiasAFecha(
           hoyLocal,
           box.anticipacionReservaDias
         );
-
-        if (fechaLocalClaseInicial > fechaMaximaReserva) {
-          throw new DomainException(
-            ERROR_CODES.FUERA_DE_ANTICIPACION,
-            `La Clase solicitada (${fechaLocalClaseInicial}) supera el horizonte de Anticipación de Reserva (${box.anticipacionReservaDias} días).`,
-            HttpStatus.UNPROCESSABLE_ENTITY
+        const { fechaLocal: fechaLocalClaseInicial } =
+          this.validarClaseEnVentanaReserva(
+            clasePrevia,
+            box.timezone,
+            box.anticipacionReservaDias,
+            fechaMaximaReserva
           );
-        }
 
         // 3. BLOQUEO CANÓNICO #1: Bloquear la fila de MEMBRESIA del Atleta (SELECT ... FOR UPDATE)
         //    Esto serializa todas las peticiones concurrentes del mismo Atleta.
@@ -379,7 +394,7 @@ export class ReservasService {
 
         // 4. BLOQUEO CANÓNICO #2: Bloquear la fila de CLASE (SELECT ... FOR UPDATE)
         //    Esto serializa la contienda por Cupos sobre la Clase.
-        const [claseBloqueada] = await tx
+        const [claseEnCurso] = await tx
           .select()
           .from(clases)
           .where(
@@ -391,35 +406,13 @@ export class ReservasService {
           )
           .for("update");
 
-        if (!claseBloqueada) {
-          throw new DomainException(
-            ERROR_CODES.VALIDACION_FALLIDA,
-            "Clase no encontrada en el Box activo.",
-            HttpStatus.NOT_FOUND,
-            { claseId: ["Clase inexistente en este Box"] }
+        const { clase: claseBloqueada, fechaLocal: fechaLocalClase } =
+          this.validarClaseEnVentanaReserva(
+            claseEnCurso,
+            box.timezone,
+            box.anticipacionReservaDias,
+            fechaMaximaReserva
           );
-        }
-
-        if (claseBloqueada.canceladaEn !== null) {
-          throw new DomainException(
-            ERROR_CODES.CLASE_CANCELADA,
-            "No es posible reservar una Clase que fue cancelada por el Box.",
-            HttpStatus.CONFLICT
-          );
-        }
-
-        const fechaLocalClase = obtenerFechaLocal(
-          claseBloqueada.inicio,
-          box.timezone
-        );
-
-        if (fechaLocalClase > fechaMaximaReserva) {
-          throw new DomainException(
-            ERROR_CODES.FUERA_DE_ANTICIPACION,
-            `La Clase solicitada (${fechaLocalClase}) supera el horizonte de Anticipación de Reserva (${box.anticipacionReservaDias} días).`,
-            HttpStatus.UNPROCESSABLE_ENTITY
-          );
-        }
 
         if (
           fechaLocalClase < membresiaBloqueada.fechaInicio ||

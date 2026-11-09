@@ -451,6 +451,10 @@ Then(
   async ({ page }) => {
     const alertaError = page.getByTestId("alerta-error-reserva");
     await expect(alertaError).toBeVisible({ timeout: 10000 });
+    await expect(alertaError).toHaveAttribute(
+      "data-error-code",
+      "SUPERPOSICION_HORARIA"
+    );
     await expect(alertaError).toContainText(/superpone|superpuesto/i);
   }
 );

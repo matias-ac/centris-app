@@ -165,12 +165,12 @@ export function calcularDisponibilidadCreditos(
     };
   }
 
-  const cupoBase = creditosPorPeriodo ?? 0;
+  const creditosBase = creditosPorPeriodo ?? 0;
 
   if (modalidadCreditos === "VIGENCIA_TOTAL") {
     const consumidos = fechasClasesConsumidas.length;
-    const creditosRestantesPeriodo = Math.max(0, cupoBase - consumidos);
-    const extraUsados = Math.max(0, consumidos - cupoBase);
+    const creditosRestantesPeriodo = Math.max(0, creditosBase - consumidos);
+    const extraUsados = Math.max(0, consumidos - creditosBase);
     const creditosExtraRestantes = Math.max(0, creditosExtra - extraUsados);
     const disponible =
       creditosRestantesPeriodo > 0 || creditosExtraRestantes > 0;
@@ -193,8 +193,8 @@ export function calcularDisponibilidadCreditos(
 
   let extraUsadosEnVigencia = 0;
   for (const cantidadSemana of consumosPorSemana.values()) {
-    if (cantidadSemana > cupoBase) {
-      extraUsadosEnVigencia += cantidadSemana - cupoBase;
+    if (cantidadSemana > creditosBase) {
+      extraUsadosEnVigencia += cantidadSemana - creditosBase;
     }
   }
 
@@ -205,7 +205,7 @@ export function calcularDisponibilidadCreditos(
 
   const creditosRestantesPeriodo = Math.max(
     0,
-    cupoBase - consumidosEnSemanaObjetivo
+    creditosBase - consumidosEnSemanaObjetivo
   );
   const creditosExtraRestantes = Math.max(
     0,

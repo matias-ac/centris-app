@@ -44,9 +44,14 @@ export default async function ReservasPage() {
   const misReservas = resReservas.ok ? resReservas.data : [];
   const membresias = resMembresias.ok ? resMembresias.data : [];
 
+  const membresiasActivasOFuturas = membresias.filter(
+    (m) => m.fechaFin >= hoy
+  );
   const membresiaVigente =
-    membresias.find((m) => m.fechaInicio <= hoy && m.fechaFin >= hoy) ??
-    membresias[membresias.length - 1] ??
+    membresiasActivasOFuturas.find(
+      (m) => m.fechaInicio <= hoy && m.fechaFin >= hoy
+    ) ??
+    membresiasActivasOFuturas[0] ??
     null;
 
   return (

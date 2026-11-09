@@ -141,14 +141,14 @@ describe("Seam 1 — Esquemas Zod y cálculo de Período y Créditos de Reservas
     });
 
     it("suma creditos_por_periodo + creditos_extra para toda la Vigencia en modalidad VIGENCIA_TOTAL", () => {
-      const conCupoBase = calcularDisponibilidadCreditos({
+      const conCreditosBase = calcularDisponibilidadCreditos({
         modalidadCreditos: "VIGENCIA_TOTAL",
         creditosPorPeriodo: 2,
         creditosExtra: 1,
         fechasClasesConsumidas: ["2026-11-02", "2026-11-04"],
         fechaClaseObjetivo: "2026-11-10"
       });
-      expect(conCupoBase).toEqual({
+      expect(conCreditosBase).toEqual({
         disponible: true,
         creditosRestantesPeriodo: 0,
         creditosExtraRestantes: 1,
