@@ -225,7 +225,7 @@ export function ClasesView({
       {claseEnEdicion ? (
         <Card className="border-primary/40 bg-card">
           <CardHeader>
-            <CardTitle className="text-lg text-foreground">
+            <CardTitle className="text-lg tabular-nums text-foreground">
               Editar Clase Puntual ({formatearFecha(claseEnEdicion.inicio, timezone)})
             </CardTitle>
           </CardHeader>
@@ -302,7 +302,7 @@ export function ClasesView({
       {claseEnCancelacion ? (
         <Card className="border-rose-500/40 bg-card">
           <CardHeader>
-            <CardTitle className="text-lg text-foreground">
+            <CardTitle className="text-lg tabular-nums text-foreground">
               Cancelar Clase por el Box (
               {formatearFecha(claseEnCancelacion.inicio, timezone)})
             </CardTitle>
@@ -402,7 +402,7 @@ export function ClasesView({
                         </Badge>
                       ) : null}
                     </div>
-                    <span className="text-xs capitalize text-muted-foreground">
+                    <span className="text-xs capitalize tabular-nums text-muted-foreground">
                       {fechaLabel}
                     </span>
                   </div>

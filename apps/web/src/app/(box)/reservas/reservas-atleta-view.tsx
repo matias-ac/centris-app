@@ -61,6 +61,26 @@ function formatearFecha(isoString: string | Date, timezone: string): string {
   }).format(d);
 }
 
+function HorarioReservaTexto({
+  inicio,
+  fin,
+  timezone
+}: {
+  inicio?: string | Date;
+  fin?: string | Date;
+  timezone: string;
+}) {
+  if (!inicio || !fin) return null;
+  return (
+    <p className="text-xs capitalize tabular-nums text-muted-foreground">
+      {formatearFecha(inicio, timezone)} ·{" "}
+      <span className="font-sans font-semibold tabular-nums text-foreground">
+        {formatearHora(inicio, timezone)} - {formatearHora(fin, timezone)}
+      </span>
+    </p>
+  );
+}
+
 const ETIQUETA_MODALIDAD: Record<Membresia["modalidadCreditos"], string> = {
   SEMANAL: "Semanal",
   VIGENCIA_TOTAL: "Vigencia total",
@@ -200,7 +220,7 @@ export function ReservasAtletaView({
         ahora: new Date(),
         ventanaCancelacionMinutos
       });
-      if (evaluacion.esTardia) {
+      if (evaluacion.permitida && evaluacion.esTardia) {
         setClaseAdvirtiendoTardiaId(reserva.claseId);
         return;
       }
@@ -369,15 +389,11 @@ export function ReservasAtletaView({
                             {reserva.tipoClaseNombre ?? "Clase"}
                           </span>
                         </div>
-                        {reserva.claseInicio && reserva.claseFin ? (
-                          <p className="text-xs capitalize tabular-nums text-muted-foreground">
-                            {formatearFecha(reserva.claseInicio, timezone)} ·{" "}
-                            <span className="font-sans font-semibold tabular-nums text-foreground">
-                              {formatearHora(reserva.claseInicio, timezone)} -{" "}
-                              {formatearHora(reserva.claseFin, timezone)}
-                            </span>
-                          </p>
-                        ) : null}
+                        <HorarioReservaTexto
+                          inicio={reserva.claseInicio}
+                          fin={reserva.claseFin}
+                          timezone={timezone}
+                        />
                       </div>
 
                       {!mostrandoAdvertenciaTardia ? (
@@ -486,15 +502,11 @@ export function ReservasAtletaView({
                         {reserva.tipoClaseNombre ?? "Clase"}
                       </span>
                     </div>
-                    {reserva.claseInicio && reserva.claseFin ? (
-                      <p className="text-xs capitalize tabular-nums text-muted-foreground">
-                        {formatearFecha(reserva.claseInicio, timezone)} ·{" "}
-                        <span className="font-sans font-semibold tabular-nums text-foreground">
-                          {formatearHora(reserva.claseInicio, timezone)} -{" "}
-                          {formatearHora(reserva.claseFin, timezone)}
-                        </span>
-                      </p>
-                    ) : null}
+                    <HorarioReservaTexto
+                      inicio={reserva.claseInicio}
+                      fin={reserva.claseFin}
+                      timezone={timezone}
+                    />
                     <p className="text-xs text-muted-foreground">
                       {infoEstado.detalle}
                     </p>

@@ -271,6 +271,7 @@ describe("Seam 1 — Esquemas Zod y cálculo de Período y Créditos de Reservas
       });
 
       expect(resultado.permitida).toBe(false);
+      expect(resultado.esTardia).toBe(false);
       expect(resultado.estadoResultante).toBeNull();
     });
 

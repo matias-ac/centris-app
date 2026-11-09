@@ -573,9 +573,13 @@ export class ReservasService {
     validarUuid(boxId, "boxId");
     validarUuid(reservaId, "id");
 
-    const esAdminORecep =
-      contexto.roles.includes("administrador") ||
-      contexto.roles.includes("recepcionista");
+    if (!contexto.roles.includes("atleta")) {
+      throw new DomainException(
+        ERROR_CODES.ACCESO_DENEGADO_ROL,
+        "Solo un Atleta puede autogestionar la cancelación de su Reserva.",
+        HttpStatus.FORBIDDEN
+      );
+    }
 
     const [box] = await this.db.client
       .select({
@@ -607,10 +611,7 @@ export class ReservasService {
         );
       }
 
-      if (
-        !esAdminORecep &&
-        reservaPrevia.afiliacionId !== contexto.afiliacionId
-      ) {
+      if (reservaPrevia.afiliacionId !== contexto.afiliacionId) {
         throw new DomainException(
           ERROR_CODES.ACCESO_DENEGADO_ROL,
           "Un Atleta solo puede cancelar sus propias Reservas.",

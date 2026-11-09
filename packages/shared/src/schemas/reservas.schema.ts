@@ -261,7 +261,7 @@ export function evaluarVentanaCancelacion(
   if (ahoraMs > inicioMs) {
     return {
       permitida: false,
-      esTardia: true,
+      esTardia: false,
       estadoResultante: null,
       devuelveCredito: false
     };

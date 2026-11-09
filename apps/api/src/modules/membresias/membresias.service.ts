@@ -238,8 +238,17 @@ export class MembresiasService {
     const [box] = await this.db.client
       .select({ timezone: boxes.timezone })
       .from(boxes)
-      .where(eq(boxes.id, boxId));
-    const timezone = box?.timezone ?? "America/Argentina/Buenos_Aires";
+      .where(and(eq(boxes.id, boxId), isNull(boxes.deletedAt)));
+
+    if (!box) {
+      throw new DomainException(
+        ERROR_CODES.BOX_NO_SELECCIONADO,
+        "El Box seleccionado no existe o fue desactivado.",
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    const timezone = box.timezone;
 
     return this.db.withBoxTransaction(boxId, async (tx) => {
       // 1. BLOQUEO CANÓNICO #1: Bloquear la Membresía (SELECT ... FOR UPDATE)

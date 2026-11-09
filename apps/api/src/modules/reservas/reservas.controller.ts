@@ -54,7 +54,7 @@ export class ReservasController {
 
   @Post(":id/cancelar")
   @HttpCode(HttpStatus.OK)
-  @Roles("administrador", "recepcionista", "atleta")
+  @Roles("atleta")
   async cancelarReserva(
     @ContextoBox() contexto: ContextoBoxActivo,
     @Param("id") id: string
