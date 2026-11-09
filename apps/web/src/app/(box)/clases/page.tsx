@@ -43,6 +43,11 @@ export default async function ClasesPage() {
         (a) => a.roles.includes("coach") && a.activo
       )
     : [];
+  const atletas = resAfiliaciones.ok
+    ? resAfiliaciones.data.filter(
+        (a) => a.roles.includes("atleta") && a.activo
+      )
+    : [];
 
   return (
     <div className="space-y-6">
@@ -53,6 +58,7 @@ export default async function ClasesPage() {
         esRecep={esRecep}
         clasesIniciales={clases}
         coaches={coaches}
+        atletas={atletas}
         fechaDesdeInicial={hoy}
         fechaHastaInicial={hasta}
       />
