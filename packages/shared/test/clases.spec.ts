@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   calcularInstantesClase,
+  CancelarClaseSchema,
   ClaseSchema,
   diaSemanaIso,
   EditarClaseSchema,
@@ -106,6 +107,24 @@ describe("Seam 1 — Esquemas Zod de Clases y edición puntual (@centris/shared)
       expect(
         FiltroClasesSchema.safeParse({ desde: "2026-11-15", hasta: "2026-11-09" })
           .success
+      ).toBe(false);
+    });
+  });
+
+  describe("CancelarClaseSchema y campos de cancelación en ClaseSchema (Ticket 10)", () => {
+    it("acepta cancelar una Clase con motivo opcional o sin motivo", () => {
+      const conMotivo = CancelarClaseSchema.safeParse({
+        motivoCancelacion: "Corte de suministro eléctrico en el Box"
+      });
+      expect(conMotivo.success).toBe(true);
+
+      const sinMotivo = CancelarClaseSchema.safeParse({});
+      expect(sinMotivo.success).toBe(true);
+    });
+
+    it("rechaza un motivo de cancelación compuesto solo por espacios en blanco", () => {
+      expect(
+        CancelarClaseSchema.safeParse({ motivoCancelacion: "   " }).success
       ).toBe(false);
     });
   });
