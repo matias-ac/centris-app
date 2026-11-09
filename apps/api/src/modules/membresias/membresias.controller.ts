@@ -35,13 +35,18 @@ export class MembresiasController {
   ) {}
 
   @Get()
-  @Roles("administrador", "recepcionista")
+  @Roles("administrador", "recepcionista", "atleta")
   async listarMembresias(
     @ContextoBox() contexto: ContextoBoxActivo,
     @Query() query: unknown
   ): Promise<Membresia[]> {
     const filtro = validarConZod(FiltroMembresiasSchema, query);
-    return this.membresiasService.listarMembresias(contexto.boxId, filtro);
+    const esAdminORecep =
+      contexto.roles.includes("administrador") ||
+      contexto.roles.includes("recepcionista");
+    return this.membresiasService.listarMembresias(contexto.boxId, {
+      afiliacionId: esAdminORecep ? filtro.afiliacionId : contexto.afiliacionId
+    });
   }
 
   @Post()
