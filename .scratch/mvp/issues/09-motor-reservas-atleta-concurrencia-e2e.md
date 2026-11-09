@@ -10,7 +10,7 @@ Implementar de punta a punta el motor de `Reservas` con integridad garantizada e
 - 05: Asignación de Membresías, Renovaciones, Ajustes y Baja Anticipada E2E
 - 08: Materialización de Clases en Zona Horaria del Box y Edición Manual de Clases E2E
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 ## Acceptance Criteria (TDD / BDD)
 
