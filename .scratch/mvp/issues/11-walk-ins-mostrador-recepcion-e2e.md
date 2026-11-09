@@ -8,7 +8,7 @@ Implementar de punta a punta la operativa de recepción para Atletas espontáneo
 
 **Blocked by:** 09: Motor Transaccional de Reservas del Atleta y Control de Concurrencia E2E
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 ## Acceptance Criteria (TDD / BDD)
 
