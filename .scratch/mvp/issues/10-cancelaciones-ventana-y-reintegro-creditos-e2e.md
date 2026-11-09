@@ -8,7 +8,7 @@ Implementar de punta a punta todos los flujos de cancelación de `Reservas` y `C
 
 **Blocked by:** 09: Motor Transaccional de Reservas del Atleta y Control de Concurrencia E2E
 
-**Status:** ready-for-agent
+**Status:** in-progress
 
 ## Acceptance Criteria (TDD / BDD)
 
