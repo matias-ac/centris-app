@@ -113,6 +113,7 @@ export {
 export {
   ClaseSchema,
   EditarClaseSchema,
+  CancelarClaseSchema,
   FiltroClasesSchema,
   calcularInstantesClase,
   diaSemanaIso,
@@ -120,6 +121,7 @@ export {
   sumarDiasAFecha,
   type Clase,
   type EditarClase,
+  type CancelarClase,
   type FiltroClases,
   type EntradaInstantesClase,
   type InstantesClase
@@ -153,6 +155,7 @@ export {
   obtenerRangoPeriodoSemanal,
   obtenerPeriodoSemanalDeInstante,
   calcularDisponibilidadCreditos,
+  evaluarVentanaCancelacion,
   type EstadoReserva,
   type Reserva,
   type CrearReserva,
@@ -160,7 +163,9 @@ export {
   type RangoPeriodoSemanal,
   type PeriodoSemanalInstante,
   type EntradaDisponibilidadCreditos,
-  type ResultadoDisponibilidadCreditos
+  type ResultadoDisponibilidadCreditos,
+  type EntradaEvaluarVentanaCancelacion,
+  type ResultadoVentanaCancelacion
 } from "./schemas/reservas.schema.js";
 
 

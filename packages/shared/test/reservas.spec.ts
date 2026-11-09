@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   CrearReservaSchema,
   ESTADOS_RESERVA,
+  ESTADOS_RESERVA_QUE_CONSUMEN_CREDITO,
   FiltroReservasSchema,
   ReservaSchema,
   calcularDisponibilidadCreditos,
+  evaluarVentanaCancelacion,
   obtenerPeriodoSemanalDeInstante,
   obtenerRangoPeriodoSemanal
 } from "../src/index.js";
@@ -206,6 +208,80 @@ describe("Seam 1 — Esquemas Zod y cálculo de Período y Créditos de Reservas
         creditosExtraRestantes: 0,
         usaCreditoExtra: false
       });
+    });
+  });
+
+  describe("Ventana de Cancelación, Cancelación Tardía y reintegro de Créditos (Ticket 10)", () => {
+    const inicioClase = new Date("2026-11-10T20:00:00.000Z");
+
+    it("clasifica como CANCELADA (en término, devuelve Crédito) cuando se cancela 125 min antes con ventana de 120 min", () => {
+      const ahora125MinAntes = new Date("2026-11-10T17:55:00.000Z");
+      const resultado = evaluarVentanaCancelacion({
+        claseInicio: inicioClase,
+        ahora: ahora125MinAntes,
+        ventanaCancelacionMinutos: 120
+      });
+
+      expect(resultado).toEqual({
+        permitida: true,
+        esTardia: false,
+        estadoResultante: "CANCELADA",
+        devuelveCredito: true
+      });
+    });
+
+    it("clasifica como CANCELADA en el borde exacto de la Ventana de Cancelación (120 min antes)", () => {
+      const ahora120MinAntes = new Date("2026-11-10T18:00:00.000Z");
+      const resultado = evaluarVentanaCancelacion({
+        claseInicio: inicioClase,
+        ahora: ahora120MinAntes,
+        ventanaCancelacionMinutos: 120
+      });
+
+      expect(resultado).toEqual({
+        permitida: true,
+        esTardia: false,
+        estadoResultante: "CANCELADA",
+        devuelveCredito: true
+      });
+    });
+
+    it("clasifica como CANCELADA_TARDIA (no devuelve Crédito) cuando se cancela 90 min antes con ventana de 120 min", () => {
+      const ahora90MinAntes = new Date("2026-11-10T18:30:00.000Z");
+      const resultado = evaluarVentanaCancelacion({
+        claseInicio: inicioClase,
+        ahora: ahora90MinAntes,
+        ventanaCancelacionMinutos: 120
+      });
+
+      expect(resultado).toEqual({
+        permitida: true,
+        esTardia: true,
+        estadoResultante: "CANCELADA_TARDIA",
+        devuelveCredito: false
+      });
+    });
+
+    it("rechaza la cancelación por el Atleta cuando la Clase ya inició", () => {
+      const despuesDeInicio = new Date("2026-11-10T20:01:00.000Z");
+      const resultado = evaluarVentanaCancelacion({
+        claseInicio: inicioClase,
+        ahora: despuesDeInicio,
+        ventanaCancelacionMinutos: 120
+      });
+
+      expect(resultado.permitida).toBe(false);
+      expect(resultado.esTardia).toBe(false);
+      expect(resultado.estadoResultante).toBeNull();
+    });
+
+    it("solo CONFIRMADA y CANCELADA_TARDIA mantienen el Crédito consumido; CANCELADA y CANCELADA_POR_BOX lo restituyen", () => {
+      expect(ESTADOS_RESERVA_QUE_CONSUMEN_CREDITO).toContain("CONFIRMADA");
+      expect(ESTADOS_RESERVA_QUE_CONSUMEN_CREDITO).toContain("CANCELADA_TARDIA");
+      expect(ESTADOS_RESERVA_QUE_CONSUMEN_CREDITO).not.toContain("CANCELADA");
+      expect(ESTADOS_RESERVA_QUE_CONSUMEN_CREDITO).not.toContain(
+        "CANCELADA_POR_BOX"
+      );
     });
   });
 });

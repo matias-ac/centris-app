@@ -2,6 +2,7 @@
 
 import {
   AlertCircle,
+  Ban,
   Calendar,
   CheckCircle,
   Clock,
@@ -17,7 +18,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { editarClaseAction, materializarClasesAction } from "@/lib/actions";
+import {
+  cancelarClaseAction,
+  editarClaseAction,
+  materializarClasesAction
+} from "@/lib/actions";
 
 interface ClasesViewProps {
   boxId: string;
@@ -65,16 +70,58 @@ export function ClasesView({
   const [claseEnEdicion, setClaseEnEdicion] = useState<Clase | null>(null);
   const [coachSeleccionado, setCoachSeleccionado] = useState("");
   const [cuposEdicion, setCuposEdicion] = useState("");
+  const [claseEnCancelacion, setClaseEnCancelacion] = useState<Clase | null>(
+    null
+  );
+  const [motivoCancelacion, setMotivoCancelacion] = useState("");
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [exitoMsg, setExitoMsg] = useState<string | null>(null);
 
   function abrirEdicion(clase: Clase) {
+    setClaseEnCancelacion(null);
     setClaseEnEdicion(clase);
     setCoachSeleccionado(clase.coachAfiliacionId);
     setCuposEdicion(clase.cupos.toString());
     setErrorMsg(null);
     setExitoMsg(null);
+  }
+
+  function abrirCancelacion(clase: Clase) {
+    setClaseEnEdicion(null);
+    setClaseEnCancelacion(clase);
+    setMotivoCancelacion("");
+    setErrorMsg(null);
+    setExitoMsg(null);
+  }
+
+  function handleConfirmarCancelacionClase(e: React.FormEvent) {
+    e.preventDefault();
+    if (!claseEnCancelacion) return;
+
+    setErrorMsg(null);
+    setExitoMsg(null);
+
+    const motivoLimpio = motivoCancelacion.trim();
+    const payload = motivoLimpio ? { motivoCancelacion: motivoLimpio } : {};
+
+    startTransition(async () => {
+      const res = await cancelarClaseAction(
+        boxId,
+        claseEnCancelacion.id,
+        payload
+      );
+      if (!res.ok) {
+        setErrorMsg(res.message ?? "Error al cancelar la Clase.");
+      } else {
+        setExitoMsg(
+          "Clase cancelada por el Box: se reintegraron los Créditos a todos los Atletas inscriptos."
+        );
+        setClaseEnCancelacion(null);
+        setMotivoCancelacion("");
+        router.refresh();
+      }
+    });
   }
 
   function handleMaterializar() {
@@ -178,7 +225,7 @@ export function ClasesView({
       {claseEnEdicion ? (
         <Card className="border-primary/40 bg-card">
           <CardHeader>
-            <CardTitle className="text-lg text-foreground">
+            <CardTitle className="text-lg tabular-nums text-foreground">
               Editar Clase Puntual ({formatearFecha(claseEnEdicion.inicio, timezone)})
             </CardTitle>
           </CardHeader>
@@ -252,6 +299,67 @@ export function ClasesView({
         </Card>
       ) : null}
 
+      {claseEnCancelacion ? (
+        <Card className="border-rose-500/40 bg-card">
+          <CardHeader>
+            <CardTitle className="text-lg tabular-nums text-foreground">
+              Cancelar Clase por el Box (
+              {formatearFecha(claseEnCancelacion.inicio, timezone)})
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form
+              onSubmit={handleConfirmarCancelacionClase}
+              className="space-y-4"
+            >
+              <p className="text-sm text-muted-foreground">
+                Al cancelar esta Clase, todas sus Reservas confirmadas (
+                <span className="font-semibold tabular-nums text-foreground">
+                  {claseEnCancelacion.reservasConfirmadas ?? 0}
+                </span>
+                ) pasarán a{" "}
+                <span className="font-semibold text-foreground">
+                  Cancelada por el Box
+                </span>{" "}
+                y los Atletas recuperarán el 100% de sus Créditos.
+              </p>
+              <div>
+                <Label htmlFor="motivo-cancelacion-clase">
+                  Motivo de cancelación (opcional)
+                </Label>
+                <Input
+                  id="motivo-cancelacion-clase"
+                  data-testid="input-motivo-cancelacion-clase"
+                  type="text"
+                  placeholder="Ej: Corte de suministro eléctrico"
+                  value={motivoCancelacion}
+                  onChange={(e) => setMotivoCancelacion(e.target.value)}
+                  className="mt-1 text-base"
+                />
+              </div>
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => setClaseEnCancelacion(null)}
+                  disabled={isPending}
+                >
+                  Volver
+                </Button>
+                <Button
+                  type="submit"
+                  variant="destructive"
+                  data-testid="btn-confirmar-cancelar-clase"
+                  disabled={isPending}
+                >
+                  Confirmar Cancelación de Clase
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {/* Grilla / Listado de Clases */}
       {clasesIniciales.length === 0 ? (
         <Card className="border-dashed">
@@ -280,10 +388,21 @@ export function ClasesView({
               >
                 <CardHeader className="pb-3">
                   <div className="flex items-center justify-between gap-2">
-                    <Badge variant="zinc" className="font-semibold uppercase tracking-wider">
-                      {clase.tipoClaseNombre ?? "Clase"}
-                    </Badge>
-                    <span className="text-xs capitalize text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="zinc" className="font-semibold uppercase tracking-wider">
+                        {clase.tipoClaseNombre ?? "Clase"}
+                      </Badge>
+                      {clase.canceladaEn !== null ? (
+                        <Badge
+                          variant="rose"
+                          data-testid={`badge-clase-cancelada-${clase.id}`}
+                          className="uppercase tracking-wider"
+                        >
+                          Clase Cancelada
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <span className="text-xs capitalize tabular-nums text-muted-foreground">
                       {fechaLabel}
                     </span>
                   </div>
@@ -315,16 +434,39 @@ export function ClasesView({
                     </div>
                   </div>
 
-                  {esAdmin || esRecep ? (
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      data-testid={`btn-editar-clase-${clase.id}`}
-                      onClick={() => abrirEdicion(clase)}
-                      className="w-full text-xs px-2.5 py-1.5 min-h-8"
+                  {clase.canceladaEn !== null && clase.motivoCancelacion ? (
+                    <p
+                      data-testid={`motivo-cancelacion-clase-${clase.id}`}
+                      className="text-xs text-rose-400"
                     >
-                      Editar Clase
-                    </Button>
+                      Motivo: {clase.motivoCancelacion}
+                    </p>
+                  ) : null}
+
+                  {clase.canceladaEn === null && (esAdmin || esRecep) ? (
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        data-testid={`btn-editar-clase-${clase.id}`}
+                        onClick={() => abrirEdicion(clase)}
+                        className="flex-1 text-xs px-2.5 py-1.5 min-h-8"
+                      >
+                        Editar Clase
+                      </Button>
+                      {esAdmin ? (
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          data-testid={`btn-abrir-cancelar-clase-${clase.id}`}
+                          onClick={() => abrirCancelacion(clase)}
+                          className="text-xs px-2.5 py-1.5 min-h-8"
+                        >
+                          <Ban className="mr-1 h-3.5 w-3.5" />
+                          Cancelar Clase
+                        </Button>
+                      ) : null}
+                    </div>
                   ) : null}
                 </CardContent>
               </Card>

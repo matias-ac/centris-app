@@ -2,6 +2,8 @@ import {
   Body,
   Controller,
   Get,
+  HttpCode,
+  HttpStatus,
   Inject,
   Param,
   Patch,
@@ -10,13 +12,16 @@ import {
 } from "@nestjs/common";
 import { z } from "zod";
 import {
+  CancelarClaseSchema,
   EditarClaseSchema,
   FiltroClasesSchema,
   type Clase
 } from "@centris/shared";
 import {
   ContextoBox,
-  type ContextoBoxActivo
+  UsuarioActual,
+  type ContextoBoxActivo,
+  type UsuarioAutenticado
 } from "../../common/decorators/contexto.decorator.js";
 import { Roles } from "../../common/decorators/roles.decorator.js";
 import { validarConZod } from "../../common/pipes/zod-validation.pipe.js";
@@ -86,6 +91,24 @@ export class ClasesController {
     return this.materializacionService.materializarClasesParaBox(
       contexto.boxId,
       { fechaReferencia }
+    );
+  }
+
+  @Post(":id/cancelar")
+  @HttpCode(HttpStatus.OK)
+  @Roles("administrador")
+  async cancelarClase(
+    @ContextoBox() contexto: ContextoBoxActivo,
+    @UsuarioActual() usuario: UsuarioAutenticado,
+    @Param("id") id: string,
+    @Body() body: unknown
+  ): Promise<Clase> {
+    const input = validarConZod(CancelarClaseSchema, body ?? {});
+    return this.clasesService.cancelarClase(
+      contexto.boxId,
+      id,
+      usuario.id,
+      input
     );
   }
 }

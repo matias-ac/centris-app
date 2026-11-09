@@ -20,6 +20,8 @@ export default async function ReservasPage() {
   const timezone =
     afiliacionActiva.box.timezone ?? "America/Argentina/Buenos_Aires";
   const anticipacionDias = afiliacionActiva.box.anticipacionReservaDias ?? 7;
+  const ventanaCancelacionMinutos =
+    afiliacionActiva.box.ventanaCancelacionMinutos ?? 120;
   const hoy = obtenerFechaLocal(new Date(), timezone);
   const hasta = sumarDiasAFecha(hoy, anticipacionDias);
 
@@ -59,6 +61,7 @@ export default async function ReservasPage() {
       boxId={afiliacionActiva.boxId}
       timezone={timezone}
       anticipacionReservaDias={anticipacionDias}
+      ventanaCancelacionMinutos={ventanaCancelacionMinutos}
       clasesDisponibles={clases}
       misReservas={misReservas}
       membresiaVigente={membresiaVigente}

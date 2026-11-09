@@ -3,6 +3,7 @@ import {
   ERROR_CODES,
   ESTADOS_RESERVA_QUE_CONSUMEN_CREDITO,
   calcularDisponibilidadCreditos,
+  evaluarVentanaCancelacion,
   obtenerFechaLocal,
   sumarDiasAFecha,
   type CrearReserva,
@@ -556,5 +557,156 @@ export class ReservasService {
       }
       throw error;
     }
+  }
+
+  /**
+   * Cancela una Reserva confirmada respetando el orden canónico de bloqueo (Membresía -> Clase)
+   * y evaluando la `Ventana de Cancelación` del Box (ADR 0003, PRD §4.4.2):
+   * - Antes del límite: `CANCELADA` (libera Cupo y devuelve Crédito al Período).
+   * - Dentro de la ventana: `CANCELADA_TARDIA` (libera Cupo sin devolver Crédito).
+   */
+  async cancelarReserva(
+    contexto: ContextoBoxActivo,
+    reservaId: string
+  ): Promise<Reserva> {
+    const boxId = contexto.boxId;
+    validarUuid(boxId, "boxId");
+    validarUuid(reservaId, "id");
+
+    if (!contexto.roles.includes("atleta")) {
+      throw new DomainException(
+        ERROR_CODES.ACCESO_DENEGADO_ROL,
+        "Solo un Atleta puede autogestionar la cancelación de su Reserva.",
+        HttpStatus.FORBIDDEN
+      );
+    }
+
+    const [box] = await this.db.client
+      .select({
+        ventanaCancelacionMinutos: boxes.ventanaCancelacionMinutos
+      })
+      .from(boxes)
+      .where(and(eq(boxes.id, boxId), isNull(boxes.deletedAt)));
+
+    if (!box) {
+      throw new DomainException(
+        ERROR_CODES.BOX_NO_SELECCIONADO,
+        "El Box seleccionado no existe o fue desactivado.",
+        HttpStatus.BAD_REQUEST
+      );
+    }
+
+    return this.db.withBoxTransaction(boxId, async (tx) => {
+      const [reservaPrevia] = await tx
+        .select()
+        .from(reservas)
+        .where(and(eq(reservas.boxId, boxId), eq(reservas.id, reservaId)));
+
+      if (!reservaPrevia) {
+        throw new DomainException(
+          ERROR_CODES.VALIDACION_FALLIDA,
+          "Reserva no encontrada en el Box activo.",
+          HttpStatus.NOT_FOUND,
+          { id: ["Reserva inexistente en este Box"] }
+        );
+      }
+
+      if (reservaPrevia.afiliacionId !== contexto.afiliacionId) {
+        throw new DomainException(
+          ERROR_CODES.ACCESO_DENEGADO_ROL,
+          "Un Atleta solo puede cancelar sus propias Reservas.",
+          HttpStatus.FORBIDDEN
+        );
+      }
+
+      // 1. BLOQUEO CANÓNICO #1: Bloquear la Membresía (SELECT ... FOR UPDATE)
+      await tx
+        .select({ id: membresias.id })
+        .from(membresias)
+        .where(
+          and(
+            eq(membresias.boxId, boxId),
+            eq(membresias.id, reservaPrevia.membresiaId)
+          )
+        )
+        .for("update");
+
+      // 2. BLOQUEO CANÓNICO #2: Bloquear la Clase (SELECT ... FOR UPDATE)
+      const [claseBloqueada] = await tx
+        .select()
+        .from(clases)
+        .where(
+          and(
+            eq(clases.boxId, boxId),
+            eq(clases.id, reservaPrevia.claseId),
+            isNull(clases.deletedAt)
+          )
+        )
+        .for("update");
+
+      if (!claseBloqueada) {
+        throw new DomainException(
+          ERROR_CODES.VALIDACION_FALLIDA,
+          "Clase asociada a la Reserva no encontrada en el Box activo.",
+          HttpStatus.NOT_FOUND,
+          { claseId: ["Clase inexistente"] }
+        );
+      }
+
+      // 3. Revalidar estado de la Reserva bajo bloqueo
+      const [reservaBloqueada] = await tx
+        .select()
+        .from(reservas)
+        .where(and(eq(reservas.boxId, boxId), eq(reservas.id, reservaId)))
+        .for("update");
+
+      if (!reservaBloqueada || reservaBloqueada.estado !== "CONFIRMADA") {
+        throw new DomainException(
+          ERROR_CODES.VALIDACION_FALLIDA,
+          "Solo se pueden cancelar Reservas que se encuentren en estado CONFIRMADA.",
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          { estado: ["La Reserva ya no se encuentra confirmada"] }
+        );
+      }
+
+      const ahora = new Date();
+      const evaluacion = evaluarVentanaCancelacion({
+        claseInicio: claseBloqueada.inicio,
+        ahora,
+        ventanaCancelacionMinutos: box.ventanaCancelacionMinutos
+      });
+
+      if (!evaluacion.permitida || !evaluacion.estadoResultante) {
+        throw new DomainException(
+          ERROR_CODES.VALIDACION_FALLIDA,
+          "No es posible cancelar una Reserva cuya Clase ya ha comenzado.",
+          HttpStatus.UNPROCESSABLE_ENTITY,
+          { claseId: ["La Clase ya inició"] }
+        );
+      }
+
+      const [actualizada] = await tx
+        .update(reservas)
+        .set({
+          estado: evaluacion.estadoResultante,
+          canceladaEn: ahora,
+          updatedAt: ahora
+        })
+        .where(and(eq(reservas.boxId, boxId), eq(reservas.id, reservaId)))
+        .returning();
+
+      if (!actualizada) {
+        throw new DomainException(
+          ERROR_CODES.ERROR_INTERNO,
+          "No se pudo actualizar el estado de la Reserva.",
+          HttpStatus.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      return mapearReserva(actualizada, {
+        claseInicio: claseBloqueada.inicio,
+        claseFin: claseBloqueada.fin
+      });
+    });
   }
 }
