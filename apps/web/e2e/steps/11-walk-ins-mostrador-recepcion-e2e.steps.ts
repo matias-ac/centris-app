@@ -302,7 +302,7 @@ Then(
 
 Given(
   "una Clase con Cupos agotados en {string} en Box Centris Norte",
-  async ({ page }, _cuposStr: string) => {
+  async ({}, _cuposStr: string) => {
     await limpiarDatosE2EWalkins();
 
     const { coachAfiliacionId, atletaAlDiaAfiliacionId } =
@@ -455,7 +455,7 @@ Then(
 
 Given(
   "un Atleta que no dispone de Créditos libres en su Membresía para la fecha de la Clase",
-  async ({ page }, _unused?: unknown) => {
+  async ({}, _unused?: unknown) => {
     await limpiarDatosE2EWalkins();
 
     const { coachAfiliacionId, atletaAlDiaAfiliacionId, atletaAlDiaUsuarioId } =
