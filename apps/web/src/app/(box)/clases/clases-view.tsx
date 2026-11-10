@@ -8,11 +8,18 @@ import {
   Clock,
   Dumbbell,
   RefreshCw,
+  UserPlus,
   Users
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import type { AfiliacionConUsuario, Clase } from "@centris/shared";
+import {
+  ERROR_CODES,
+  type AfiliacionConUsuario,
+  type Atleta,
+  type Clase
+} from "@centris/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -20,6 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   cancelarClaseAction,
+  crearReservaAction,
   editarClaseAction,
   materializarClasesAction
 } from "@/lib/actions";
@@ -31,6 +39,7 @@ interface ClasesViewProps {
   esRecep: boolean;
   clasesIniciales: Clase[];
   coaches: AfiliacionConUsuario[];
+  atletas?: Atleta[];
   fechaDesdeInicial: string;
   fechaHastaInicial: string;
 }
@@ -62,7 +71,8 @@ export function ClasesView({
   esAdmin,
   esRecep,
   clasesIniciales,
-  coaches
+  coaches,
+  atletas = []
 }: ClasesViewProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -75,10 +85,18 @@ export function ClasesView({
   );
   const [motivoCancelacion, setMotivoCancelacion] = useState("");
 
+  const [claseEnWalkin, setClaseEnWalkin] = useState<Clase | null>(null);
+  const [atletaSeleccionado, setAtletaSeleccionado] = useState("");
+  const [errorWalkin, setErrorWalkin] = useState<{
+    message: string;
+    errorCode?: string;
+  } | null>(null);
+
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [exitoMsg, setExitoMsg] = useState<string | null>(null);
 
   function abrirEdicion(clase: Clase) {
+    setClaseEnWalkin(null);
     setClaseEnCancelacion(null);
     setClaseEnEdicion(clase);
     setCoachSeleccionado(clase.coachAfiliacionId);
@@ -88,11 +106,52 @@ export function ClasesView({
   }
 
   function abrirCancelacion(clase: Clase) {
+    setClaseEnWalkin(null);
     setClaseEnEdicion(null);
     setClaseEnCancelacion(clase);
     setMotivoCancelacion("");
     setErrorMsg(null);
     setExitoMsg(null);
+  }
+
+  function abrirWalkin(clase: Clase) {
+    setClaseEnEdicion(null);
+    setClaseEnCancelacion(null);
+    setClaseEnWalkin(clase);
+    setAtletaSeleccionado("");
+    setErrorWalkin(null);
+    setErrorMsg(null);
+    setExitoMsg(null);
+  }
+
+  function handleConfirmarWalkin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!claseEnWalkin || !atletaSeleccionado) return;
+
+    setErrorWalkin(null);
+    setErrorMsg(null);
+    setExitoMsg(null);
+
+    startTransition(async () => {
+      const res = await crearReservaAction(boxId, {
+        claseId: claseEnWalkin.id,
+        afiliacionId: atletaSeleccionado
+      });
+
+      if (!res.ok) {
+        setErrorWalkin({
+          message: res.message ?? "Error al registrar el walk-in.",
+          errorCode: res.errorCode
+        });
+      } else {
+        setExitoMsg(
+          "Walk-in registrado exitosamente en recepción. Reserva confirmada."
+        );
+        setClaseEnWalkin(null);
+        setAtletaSeleccionado("");
+        router.refresh();
+      }
+    });
   }
 
   function handleConfirmarCancelacionClase(e: React.FormEvent) {
@@ -360,6 +419,116 @@ export function ClasesView({
         </Card>
       ) : null}
 
+      {/* Modal/Formulario de Anotación de Walk-in por Mostrador */}
+      {claseEnWalkin ? (
+        <Card className="border-primary/40 bg-card" data-testid="form-walkin">
+          <CardHeader>
+            <CardTitle className="text-lg tabular-nums text-foreground">
+              Anotar Walk-in en Mostrador — {claseEnWalkin.tipoClaseNombre ?? "Clase"} ({formatearFecha(claseEnWalkin.inicio, timezone)} {formatearHora(claseEnWalkin.inicio, timezone)})
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Inscribí en el acto a un Atleta espontáneo en la Clase creando una Reserva ordinaria a nombre del operador.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleConfirmarWalkin} className="space-y-4">
+              <div>
+                <Label htmlFor="select-atleta-walkin">Seleccionar Atleta</Label>
+                <select
+                  id="select-atleta-walkin"
+                  data-testid="select-atleta-walkin"
+                  value={atletaSeleccionado}
+                  onChange={(e) => {
+                    setAtletaSeleccionado(e.target.value);
+                    setErrorWalkin(null);
+                  }}
+                  className="mt-1 block w-full rounded-md border border-border bg-secondary px-3 py-2 text-base md:text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  required
+                >
+                  <option value="">-- Seleccioná un Atleta --</option>
+                  {atletas.map((a) => (
+                    <option key={a.id} value={a.id}>
+                      {a.nombre} ({a.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {errorWalkin ? (
+                <div
+                  data-testid="alerta-error-walkin"
+                  className="space-y-2 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive"
+                >
+                  <div className="flex items-center gap-2 font-medium">
+                    <AlertCircle className="h-4 w-4 shrink-0" />
+                    <span>{errorWalkin.message}</span>
+                  </div>
+
+                  {errorWalkin.errorCode === ERROR_CODES.CUPO_AGOTADO ? (
+                    <div className="pt-1">
+                      <p className="text-xs text-destructive/80 mb-2">
+                        La Clase no dispone de Cupos libres. Para permitir el ingreso, podés aumentar el Cupo de la Clase.
+                      </p>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        data-testid="btn-guia-editar-cupo"
+                        onClick={() => {
+                          const claseParaEditar = claseEnWalkin;
+                          setClaseEnWalkin(null);
+                          setErrorWalkin(null);
+                          abrirEdicion(claseParaEditar);
+                        }}
+                        className="text-xs px-2.5 py-1.5 min-h-8"
+                      >
+                        Editar Cupo de la Clase
+                      </Button>
+                    </div>
+                  ) : null}
+
+                  {errorWalkin.errorCode === ERROR_CODES.SIN_CREDITOS_DISPONIBLES ||
+                  errorWalkin.errorCode === ERROR_CODES.MEMBRESIA_NO_VIGENTE ? (
+                    <div className="pt-1">
+                      <p className="text-xs text-destructive/80 mb-2">
+                        El Atleta no dispone de Créditos o no posee una Membresía vigente para este período.
+                      </p>
+                      <Link
+                        href="/atletas"
+                        data-testid="link-regularizar-atleta"
+                        className="inline-flex items-center justify-center rounded-md text-xs font-medium border border-border bg-secondary px-3 py-1.5 text-foreground hover:bg-secondary/80 transition-colors"
+                      >
+                        Ir a Directorio de Atletas para regularizar Membresía / Créditos
+                      </Link>
+                    </div>
+                  ) : null}
+                </div>
+              ) : null}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={() => {
+                    setClaseEnWalkin(null);
+                    setErrorWalkin(null);
+                  }}
+                  disabled={isPending}
+                >
+                  Volver
+                </Button>
+                <Button
+                  type="submit"
+                  data-testid="btn-confirmar-walkin"
+                  disabled={isPending || !atletaSeleccionado}
+                >
+                  {isPending ? "Inscribiendo..." : "Confirmar Walk-in"}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      ) : null}
+
       {/* Grilla / Listado de Clases */}
       {clasesIniciales.length === 0 ? (
         <Card className="border-dashed">
@@ -444,13 +613,22 @@ export function ClasesView({
                   ) : null}
 
                   {clase.canceladaEn === null && (esAdmin || esRecep) ? (
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        data-testid={`btn-walkin-clase-${clase.id}`}
+                        onClick={() => abrirWalkin(clase)}
+                        className="flex-1 text-xs px-2.5 py-1.5 min-h-8"
+                      >
+                        <UserPlus className="mr-1 h-3.5 w-3.5" />
+                        Anotar Walk-in
+                      </Button>
                       <Button
                         type="button"
                         variant="secondary"
                         data-testid={`btn-editar-clase-${clase.id}`}
                         onClick={() => abrirEdicion(clase)}
-                        className="flex-1 text-xs px-2.5 py-1.5 min-h-8"
+                        className="text-xs px-2.5 py-1.5 min-h-8"
                       >
                         Editar Clase
                       </Button>

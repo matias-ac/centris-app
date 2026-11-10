@@ -28,6 +28,10 @@ const IDS = {
   afiliacionAdminNorte: "d2000000-0000-4000-8000-000000000091",
   afiliacionCoachNorte: "d2000000-0000-4000-8000-000000000092",
   afiliacionAdminSur: "d2000000-0000-4000-8000-000000000093",
+  usuarioRecepNorte: "d1000000-0000-4000-8000-000000000094",
+  afiliacionRecepNorte: "d2000000-0000-4000-8000-000000000094",
+  usuarioCoachRecepNorte: "d1000000-0000-4000-8000-000000000095",
+  afiliacionCoachRecepNorte: "d2000000-0000-4000-8000-000000000095",
   tipoClaseNorte: "d3000000-0000-4000-8000-000000000091",
   tipoClaseSur: "d3000000-0000-4000-8000-000000000092"
 } as const;
@@ -107,10 +111,41 @@ const ATLETAS_CANCEL_BOX_10 = Array.from({ length: 10 }, (_, idx) => {
   };
 });
 
+// Atletas dedicados para Ticket 11 (Walk-ins en Mostrador por Recepción y Administración)
+const ATLETA_WALKIN_1 = {
+  usuarioId: "d1600000-0000-4000-8000-000000000001",
+  afiliacionId: "d2600000-0000-4000-8000-000000000001",
+  email: "atleta.walkin.1@test.centris.dev",
+  nombre: "Atleta Walkin Uno"
+};
+
+const ATLETA_WALKIN_2 = {
+  usuarioId: "d1600000-0000-4000-8000-000000000002",
+  afiliacionId: "d2600000-0000-4000-8000-000000000002",
+  email: "atleta.walkin.2@test.centris.dev",
+  nombre: "Atleta Walkin Dos"
+};
+
+const ATLETA_WALKIN_CUPO = {
+  usuarioId: "d1600000-0000-4000-8000-000000000003",
+  afiliacionId: "d2600000-0000-4000-8000-000000000003",
+  email: "atleta.walkin.cupo@test.centris.dev",
+  nombre: "Atleta Walkin Cupo"
+};
+
+const ATLETA_WALKIN_SIN_CRED = {
+  usuarioId: "d1600000-0000-4000-8000-000000000004",
+  afiliacionId: "d2600000-0000-4000-8000-000000000004",
+  email: "atleta.walkin.sincred@test.centris.dev",
+  nombre: "Atleta Walkin Sin Creditos"
+};
+
 describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y RLS (@centris/api)", () => {
   let api: ApiDePrueba;
   let tokenAdminNorte: string;
   let tokenCoachNorte: string;
+  let tokenRecepNorte: string;
+  let tokenCoachRecepNorte: string;
   let tokenAdminSur: string;
   const tokensAtletasConcurrencia: string[] = [];
   let tokenAtletaCreditos: string;
@@ -135,7 +170,11 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
     ATLETA_VENTANA,
     ATLETA_BAJA_CASCADA,
     ...ATLETAS_FCFS_16,
-    ...ATLETAS_CANCEL_BOX_10
+    ...ATLETAS_CANCEL_BOX_10,
+    ATLETA_WALKIN_1,
+    ATLETA_WALKIN_2,
+    ATLETA_WALKIN_CUPO,
+    ATLETA_WALKIN_SIN_CRED
   ];
 
   const datos = new DatosDePrueba({
@@ -154,6 +193,18 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
         id: IDS.usuarioCoachNorte,
         email: "coach.reservas.norte@test.centris.dev",
         nombre: "Coach Norte Reservas",
+        contrasena: PASSWORD
+      },
+      {
+        id: IDS.usuarioRecepNorte,
+        email: "recep.reservas.norte@test.centris.dev",
+        nombre: "Recep Norte Reservas",
+        contrasena: PASSWORD
+      },
+      {
+        id: IDS.usuarioCoachRecepNorte,
+        email: "coach.recep.reservas.norte@test.centris.dev",
+        nombre: "Coach Recep Norte Reservas",
         contrasena: PASSWORD
       },
       {
@@ -181,6 +232,18 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
         boxId: IDS.boxNorte,
         usuarioId: IDS.usuarioCoachNorte,
         roles: ["coach"]
+      },
+      {
+        id: IDS.afiliacionRecepNorte,
+        boxId: IDS.boxNorte,
+        usuarioId: IDS.usuarioRecepNorte,
+        roles: ["recepcionista"]
+      },
+      {
+        id: IDS.afiliacionCoachRecepNorte,
+        boxId: IDS.boxNorte,
+        usuarioId: IDS.usuarioCoachRecepNorte,
+        roles: ["coach", "recepcionista"]
       },
       {
         id: IDS.afiliacionAdminSur,
@@ -287,6 +350,8 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
 
     tokenAdminNorte = await login("admin.reservas.norte@test.centris.dev");
     tokenCoachNorte = await login("coach.reservas.norte@test.centris.dev");
+    tokenRecepNorte = await login("recep.reservas.norte@test.centris.dev");
+    tokenCoachRecepNorte = await login("coach.recep.reservas.norte@test.centris.dev");
     tokenAdminSur = await login("admin.reservas.sur@test.centris.dev");
 
     for (const atleta of ATLETAS_CONCURRENCIA) {
@@ -1115,5 +1180,270 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
       boxId: IDS.boxNorte
     });
     expect(clase2Despues.body.reservasConfirmadas).toBe(0);
+  });
+
+  it("Ticket 11 — Criterio 1: Permisos estrictos para Walk-ins (Coach exclusivo recibe 403; Recepcionista, Administrador y rol combinado crean Reserva registrando creada_por_usuario_id)", async () => {
+    const hoyLocal = obtenerFechaLocal(new Date(), TIMEZONE_BA);
+    const mananaLocal = sumarDiasAFecha(hoyLocal, 1);
+
+    // Asignar Membresías activas a ATLETA_WALKIN_1 y ATLETA_WALKIN_2
+    const resMem1 = await api.pedir<Membresia>("/membresias", {
+      method: "POST",
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        afiliacionId: ATLETA_WALKIN_1.afiliacionId,
+        planId: planIlimitadoId,
+        fechaInicio: hoyLocal
+      }
+    });
+    expect(resMem1.status).toBe(201);
+
+    const resMem2 = await api.pedir<Membresia>("/membresias", {
+      method: "POST",
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        afiliacionId: ATLETA_WALKIN_2.afiliacionId,
+        planId: planIlimitadoId,
+        fechaInicio: hoyLocal
+      }
+    });
+    expect(resMem2.status).toBe(201);
+
+    const claseWalkinId = await insertarClaseDirecta({
+      fechaLocal: mananaLocal,
+      horaInicio: "18:00",
+      cupos: 15
+    });
+
+    // 1. Coach con rol exclusivo intenta registrar un walk-in -> 403 Forbidden
+    const resCoach = await api.pedir<ErrorResponse>("/reservas", {
+      method: "POST",
+      token: tokenCoachNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        claseId: claseWalkinId,
+        afiliacionId: ATLETA_WALKIN_1.afiliacionId
+      }
+    });
+    expect(resCoach.status).toBe(403);
+    expect(resCoach.body.errorCode).toBe(ERROR_CODES.ACCESO_DENEGADO_ROL);
+
+    // 2. Recepcionista inscribe a ATLETA_WALKIN_1 -> 201 Created y creadaPorUsuarioId = usuarioRecepNorte
+    const resRecep = await api.pedir<Reserva>("/reservas", {
+      method: "POST",
+      token: tokenRecepNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        claseId: claseWalkinId,
+        afiliacionId: ATLETA_WALKIN_1.afiliacionId
+      }
+    });
+    expect(resRecep.status).toBe(201);
+    expect(resRecep.body.estado).toBe("CONFIRMADA");
+    expect(resRecep.body.afiliacionId).toBe(ATLETA_WALKIN_1.afiliacionId);
+    expect(resRecep.body.creadaPorUsuarioId).toBe(IDS.usuarioRecepNorte);
+
+    // 3. Usuario combinado ['coach', 'recepcionista'] inscribe a ATLETA_WALKIN_2 -> 201 Created y creadaPorUsuarioId = usuarioCoachRecepNorte
+    const resCoachRecep = await api.pedir<Reserva>("/reservas", {
+      method: "POST",
+      token: tokenCoachRecepNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        claseId: claseWalkinId,
+        afiliacionId: ATLETA_WALKIN_2.afiliacionId
+      }
+    });
+    expect(resCoachRecep.status).toBe(201);
+    expect(resCoachRecep.body.estado).toBe("CONFIRMADA");
+    expect(resCoachRecep.body.afiliacionId).toBe(ATLETA_WALKIN_2.afiliacionId);
+    expect(resCoachRecep.body.creadaPorUsuarioId).toBe(IDS.usuarioCoachRecepNorte);
+  });
+
+  it("Ticket 11 — Criterio 2: Cupo estricto sin sobrecupo automático (20/20 rechaza con CUPO_AGOTADO; tras editar Clase a 21 cupos se confirma 21/21)", async () => {
+    const hoyLocal = obtenerFechaLocal(new Date(), TIMEZONE_BA);
+    const mananaLocal = sumarDiasAFecha(hoyLocal, 1);
+
+    // Asignar Membresía a ATLETA_WALKIN_CUPO
+    const resMem = await api.pedir<Membresia>("/membresias", {
+      method: "POST",
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        afiliacionId: ATLETA_WALKIN_CUPO.afiliacionId,
+        planId: planIlimitadoId,
+        fechaInicio: hoyLocal
+      }
+    });
+    expect(resMem.status).toBe(201);
+    const membresiaId = resMem.body.id;
+
+    // Crear Clase con 20 cupos
+    const claseLlenaId = await insertarClaseDirecta({
+      fechaLocal: mananaLocal,
+      horaInicio: "19:00",
+      cupos: 20
+    });
+
+    // Simular que la clase ya tiene 20 reservas confirmadas (20/20) con 20 atletas distintos
+    const veinteAtletas = [...ATLETAS_CONCURRENCIA, ...ATLETAS_CANCEL_BOX_10];
+    for (let i = 0; i < 20; i++) {
+      await datos.consultar(
+        `INSERT INTO reservas (box_id, clase_id, afiliacion_id, membresia_id, creada_por_usuario_id, estado)
+         VALUES ($1, $2, $3, $4, $5, 'CONFIRMADA')`,
+        [
+          IDS.boxNorte,
+          claseLlenaId,
+          veinteAtletas[i]!.afiliacionId,
+          membresiaId,
+          IDS.usuarioAdminNorte
+        ]
+      );
+    }
+
+    // El Recepcionista intenta anotar el walk-in en la clase 20/20 -> Rechazo con CUPO_AGOTADO (409)
+    const resRechazo = await api.pedir<ErrorResponse>("/reservas", {
+      method: "POST",
+      token: tokenRecepNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        claseId: claseLlenaId,
+        afiliacionId: ATLETA_WALKIN_CUPO.afiliacionId
+      }
+    });
+    expect(resRechazo.status).toBe(409);
+    expect(resRechazo.body.errorCode).toBe(ERROR_CODES.CUPO_AGOTADO);
+
+    // El Recepcionista edita primero la entidad Clase aumentando cupos a 21 (PATCH /clases/:id)
+    const resEdicion = await api.pedir<Clase>(`/clases/${claseLlenaId}`, {
+      method: "PATCH",
+      token: tokenRecepNorte,
+      boxId: IDS.boxNorte,
+      body: { cupos: 21 }
+    });
+    expect(resEdicion.status).toBe(200);
+    expect(resEdicion.body.cupos).toBe(21);
+
+    // Vuelve a confirmar el walk-in -> Se registra exitosamente (21/21)
+    const resExito = await api.pedir<Reserva>("/reservas", {
+      method: "POST",
+      token: tokenRecepNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        claseId: claseLlenaId,
+        afiliacionId: ATLETA_WALKIN_CUPO.afiliacionId
+      }
+    });
+    expect(resExito.status).toBe(201);
+    expect(resExito.body.estado).toBe("CONFIRMADA");
+    expect(resExito.body.creadaPorUsuarioId).toBe(IDS.usuarioRecepNorte);
+
+    // La Clase ahora refleja 21/21
+    const claseConsultada = await api.pedir<Clase>(`/clases/${claseLlenaId}`, {
+      token: tokenRecepNorte,
+      boxId: IDS.boxNorte
+    });
+    expect(claseConsultada.body.cupos).toBe(21);
+    expect(claseConsultada.body.reservasConfirmadas).toBe(21);
+  });
+
+  it("Ticket 11 — Criterio 3: Créditos estrictos sin deuda de Créditos (Atleta sin Créditos/Membresía rechaza con SIN_CREDITOS_DISPONIBLES; tras sumar creditos_extra se inscribe exitosamente)", async () => {
+    const hoyLocal = obtenerFechaLocal(new Date(), TIMEZONE_BA);
+    const pasadoMananaLocal = sumarDiasAFecha(hoyLocal, 2);
+
+    const claseWalkinCreditosId = await insertarClaseDirecta({
+      fechaLocal: pasadoMananaLocal,
+      horaInicio: "11:00",
+      cupos: 15
+    });
+
+    // 1. Atleta sin Membresía vigente intenta ser inscripto por mostrador -> 422 MEMBRESIA_NO_VIGENTE
+    const resSinMembresia = await api.pedir<ErrorResponse>("/reservas", {
+      method: "POST",
+      token: tokenRecepNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        claseId: claseWalkinCreditosId,
+        afiliacionId: ATLETA_WALKIN_SIN_CRED.afiliacionId
+      }
+    });
+    expect(resSinMembresia.status).toBe(422);
+    expect(resSinMembresia.body.errorCode).toBe(ERROR_CODES.MEMBRESIA_NO_VIGENTE);
+
+    // Asignar Membresía semanal de 1 Crédito (planSemanal1Id)
+    const resMem = await api.pedir<Membresia>("/membresias", {
+      method: "POST",
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        afiliacionId: ATLETA_WALKIN_SIN_CRED.afiliacionId,
+        planId: planSemanal1Id,
+        fechaInicio: hoyLocal
+      }
+    });
+    expect(resMem.status).toBe(201);
+    const membresiaId = resMem.body.id;
+
+    // Consumir el único Crédito semanal asignándole una Reserva previa en otra clase
+    const clasePreviaId = await insertarClaseDirecta({
+      fechaLocal: hoyLocal,
+      horaInicio: "09:00",
+      cupos: 15
+    });
+    const resConsumo = await api.pedir<Reserva>("/reservas", {
+      method: "POST",
+      token: tokenRecepNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        claseId: clasePreviaId,
+        afiliacionId: ATLETA_WALKIN_SIN_CRED.afiliacionId
+      }
+    });
+    expect(resConsumo.status).toBe(201);
+
+    // Ahora el Atleta tiene 0 Créditos restantes en el Período semanal
+    // El Recepcionista intenta anotar el walk-in en la segunda clase -> 422 SIN_CREDITOS_DISPONIBLES
+    const resSinCreditos = await api.pedir<ErrorResponse>("/reservas", {
+      method: "POST",
+      token: tokenRecepNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        claseId: claseWalkinCreditosId,
+        afiliacionId: ATLETA_WALKIN_SIN_CRED.afiliacionId
+      }
+    });
+    expect(resSinCreditos.status).toBe(422);
+    expect(resSinCreditos.body.errorCode).toBe(ERROR_CODES.SIN_CREDITOS_DISPONIBLES);
+
+    // El Recepcionista le suma 1 crédito extra antes de inscribirlo (PATCH /membresias/:id/creditos-extra)
+    const resAjuste = await api.pedir<Membresia>(
+      `/membresias/${membresiaId}/creditos-extra`,
+      {
+        method: "PATCH",
+        token: tokenRecepNorte,
+        boxId: IDS.boxNorte,
+        body: {
+          creditosExtra: 1,
+          motivo: "Walk-in espontáneo en mostrador"
+        }
+      }
+    );
+    expect(resAjuste.status).toBe(200);
+    expect(resAjuste.body.creditosExtra).toBe(1);
+
+    // Vuelve a confirmar el walk-in -> Reserva confirmada con éxito
+    const resExito = await api.pedir<Reserva>("/reservas", {
+      method: "POST",
+      token: tokenRecepNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        claseId: claseWalkinCreditosId,
+        afiliacionId: ATLETA_WALKIN_SIN_CRED.afiliacionId
+      }
+    });
+    expect(resExito.status).toBe(201);
+    expect(resExito.body.estado).toBe("CONFIRMADA");
+    expect(resExito.body.creadaPorUsuarioId).toBe(IDS.usuarioRecepNorte);
   });
 });

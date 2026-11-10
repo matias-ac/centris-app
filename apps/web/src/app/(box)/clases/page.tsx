@@ -6,6 +6,7 @@ import {
 } from "@centris/shared";
 import {
   listarAfiliacionesBoxApi,
+  listarAtletasApi,
   listarClasesApi
 } from "@/lib/api-client";
 import { obtenerContextoOperativoWeb } from "@/lib/contexto-box";
@@ -27,13 +28,16 @@ export default async function ClasesPage() {
   const hoy = obtenerFechaLocal(new Date(), timezone);
   const hasta = sumarDiasAFecha(hoy, 14);
 
-  const [resClases, resAfiliaciones] = await Promise.all([
+  const [resClases, resAfiliaciones, resAtletas] = await Promise.all([
     listarClasesApi(sesion.accessToken, afiliacionActiva.boxId, {
       desde: hoy,
       hasta
     }),
-    esAdmin || esRecep
+    esAdmin
       ? listarAfiliacionesBoxApi(sesion.accessToken, afiliacionActiva.boxId)
+      : Promise.resolve({ ok: true as const, data: [] }),
+    esAdmin || esRecep
+      ? listarAtletasApi(sesion.accessToken, afiliacionActiva.boxId, { soloActivos: true })
       : Promise.resolve({ ok: true as const, data: [] })
   ]);
 
@@ -43,6 +47,7 @@ export default async function ClasesPage() {
         (a) => a.roles.includes("coach") && a.activo
       )
     : [];
+  const atletas = resAtletas.ok ? resAtletas.data : [];
 
   return (
     <div className="space-y-6">
@@ -53,6 +58,7 @@ export default async function ClasesPage() {
         esRecep={esRecep}
         clasesIniciales={clases}
         coaches={coaches}
+        atletas={atletas}
         fechaDesdeInicial={hoy}
         fechaHastaInicial={hasta}
       />
