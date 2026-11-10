@@ -7,6 +7,10 @@ import {
   ReservaSchema,
   calcularDisponibilidadCreditos,
   evaluarVentanaCancelacion,
+  evaluarVentanaCorreccionAsistencia,
+  esAusenciaConsolidada,
+  HORAS_VENTANA_CORRECCION_ASISTENCIA,
+  RegistrarAsistenciaSchema,
   obtenerPeriodoSemanalDeInstante,
   obtenerRangoPeriodoSemanal
 } from "../src/index.js";
@@ -282,6 +286,105 @@ describe("Seam 1 — Esquemas Zod y cálculo de Período y Créditos de Reservas
       expect(ESTADOS_RESERVA_QUE_CONSUMEN_CREDITO).not.toContain(
         "CANCELADA_POR_BOX"
       );
+    });
+  });
+
+  describe("Ventana de Corrección de Asistencia (24 hs) y Consolidación de Ausencias (Ticket 12)", () => {
+    const finClase = new Date("2026-11-10T19:00:00.000Z");
+
+    it("expone la constante de 24 horas para la Ventana de Corrección de Asistencia", () => {
+      expect(HORAS_VENTANA_CORRECCION_ASISTENCIA).toBe(24);
+    });
+
+    it("valida RegistrarAsistenciaSchema permitiendo { presente: true } o { presente: false }", () => {
+      expect(RegistrarAsistenciaSchema.safeParse({ presente: true }).success).toBe(true);
+      expect(RegistrarAsistenciaSchema.safeParse({ presente: false }).success).toBe(true);
+      expect(RegistrarAsistenciaSchema.safeParse({ presente: "true" }).success).toBe(false);
+      expect(RegistrarAsistenciaSchema.safeParse({}).success).toBe(false);
+    });
+
+    it("permite marcar o rectificar Asistencia dentro de las 24 hs posteriores a finClase", () => {
+      // 5 horas después de finalizar
+      const cincoHorasDespues = new Date("2026-11-11T00:00:00.000Z");
+      const res = evaluarVentanaCorreccionAsistencia({
+        claseFin: finClase,
+        ahora: cincoHorasDespues
+      });
+      expect(res.dentroDeVentana).toBe(true);
+      expect(res.expirada).toBe(false);
+    });
+
+    it("permite marcar o rectificar Asistencia exactamente a las 24 horas de finClase", () => {
+      const exactamente24Hs = new Date("2026-11-11T19:00:00.000Z");
+      const res = evaluarVentanaCorreccionAsistencia({
+        claseFin: finClase,
+        ahora: exactamente24Hs
+      });
+      expect(res.dentroDeVentana).toBe(true);
+      expect(res.expirada).toBe(false);
+    });
+
+    it("rechaza la operación cuando pasaron más de 24 horas desde finClase", () => {
+      const masDe24Hs = new Date("2026-11-11T19:00:01.000Z");
+      const res = evaluarVentanaCorreccionAsistencia({
+        claseFin: finClase,
+        ahora: masDe24Hs
+      });
+      expect(res.dentroDeVentana).toBe(false);
+      expect(res.expirada).toBe(true);
+    });
+
+    it("identifica como Ausencia consolidada toda Reserva confirmada sin presente pasadas las 24 hs", () => {
+      const masDe24Hs = new Date("2026-11-11T19:00:01.000Z");
+
+      // Confirmada sin presente pasadas las 24 hs -> Ausencia consolidada
+      expect(
+        esAusenciaConsolidada(
+          {
+            estado: "CONFIRMADA",
+            asistenciaMarcadaEn: null,
+            claseFin: finClase
+          },
+          masDe24Hs
+        )
+      ).toBe(true);
+
+      // Confirmada con presente -> NO es ausencia
+      expect(
+        esAusenciaConsolidada(
+          {
+            estado: "CONFIRMADA",
+            asistenciaMarcadaEn: new Date("2026-11-10T19:30:00.000Z"),
+            claseFin: finClase
+          },
+          masDe24Hs
+        )
+      ).toBe(false);
+
+      // Confirmada sin presente pero aún dentro de la ventana de 24 hs -> NO está consolidada aún
+      const dentroDeVentana = new Date("2026-11-11T12:00:00.000Z");
+      expect(
+        esAusenciaConsolidada(
+          {
+            estado: "CONFIRMADA",
+            asistenciaMarcadaEn: null,
+            claseFin: finClase
+          },
+          dentroDeVentana
+        )
+      ).toBe(false);
+
+      // Cancelada -> NO es ausencia
+      expect(
+        esAusenciaConsolidada(
+          {
+            estado: "CANCELADA",
+            asistenciaMarcadaEn: null,
+            claseFin: finClase
+          },
+          masDe24Hs
+        )
+      ).toBe(false);
     });
   });
 });

@@ -109,6 +109,19 @@ describe("Seam 1 — Esquemas Zod de Clases y edición puntual (@centris/shared)
           .success
       ).toBe(false);
     });
+
+    it("permite filtrar por coachAfiliacionId opcional (Ticket 12)", () => {
+      expect(
+        FiltroClasesSchema.safeParse({
+          coachAfiliacionId: "22222222-2222-4222-8222-222222222222"
+        }).success
+      ).toBe(true);
+      expect(
+        FiltroClasesSchema.safeParse({
+          coachAfiliacionId: "no-es-uuid"
+        }).success
+      ).toBe(false);
+    });
   });
 
   describe("CancelarClaseSchema y campos de cancelación en ClaseSchema (Ticket 10)", () => {
