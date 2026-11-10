@@ -38,7 +38,7 @@ export class AfiliacionesController {
   }
 
   @Get()
-  @Roles("administrador", "recepcionista")
+  @Roles("administrador")
   async listarAfiliacionesBox(
     @ContextoBox() contexto: ContextoBoxActivo
   ): Promise<AfiliacionConUsuario[]> {

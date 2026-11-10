@@ -11,11 +11,13 @@ import {
   UserPlus,
   Users
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   ERROR_CODES,
   type AfiliacionConUsuario,
+  type Atleta,
   type Clase
 } from "@centris/shared";
 import { Badge } from "@/components/ui/badge";
@@ -37,7 +39,7 @@ interface ClasesViewProps {
   esRecep: boolean;
   clasesIniciales: Clase[];
   coaches: AfiliacionConUsuario[];
-  atletas?: AfiliacionConUsuario[];
+  atletas?: Atleta[];
   fechaDesdeInicial: string;
   fechaHastaInicial: string;
 }
@@ -446,7 +448,7 @@ export function ClasesView({
                   <option value="">-- Seleccioná un Atleta --</option>
                   {atletas.map((a) => (
                     <option key={a.id} value={a.id}>
-                      {a.usuario?.nombre} ({a.usuario?.email})
+                      {a.nombre} ({a.email})
                     </option>
                   ))}
                 </select>
@@ -490,13 +492,13 @@ export function ClasesView({
                       <p className="text-xs text-destructive/80 mb-2">
                         El Atleta no dispone de Créditos o no posee una Membresía vigente para este período.
                       </p>
-                      <a
+                      <Link
                         href="/atletas"
                         data-testid="link-regularizar-atleta"
                         className="inline-flex items-center justify-center rounded-md text-xs font-medium border border-border bg-secondary px-3 py-1.5 text-foreground hover:bg-secondary/80 transition-colors"
                       >
                         Ir a Directorio de Atletas para regularizar Membresía / Créditos
-                      </a>
+                      </Link>
                     </div>
                   ) : null}
                 </div>
