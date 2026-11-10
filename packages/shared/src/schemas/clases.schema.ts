@@ -70,7 +70,11 @@ export type CancelarClase = z.infer<typeof CancelarClaseSchema>;
 export const FiltroClasesSchema = z
   .object({
     desde: FechaCalendarioSchema.optional(),
-    hasta: FechaCalendarioSchema.optional()
+    hasta: FechaCalendarioSchema.optional(),
+    coachAfiliacionId: z
+      .string()
+      .uuid("El identificador del coach debe ser un UUID válido")
+      .optional()
   })
   .refine(
     ({ desde, hasta }) => desde === undefined || hasta === undefined || desde <= hasta,

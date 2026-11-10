@@ -48,7 +48,8 @@ export const ReservaSchema = z.object({
   tipoClaseNombre: z.string().optional(),
   coachNombre: z.string().optional(),
   atletaNombre: z.string().optional(),
-  atletaEmail: z.string().optional()
+  atletaEmail: z.string().optional(),
+  ausenciaConsolidada: z.boolean().optional()
 });
 
 export type Reserva = z.infer<typeof ReservaSchema>;
@@ -285,4 +286,85 @@ export function evaluarVentanaCancelacion(
     estadoResultante: "CANCELADA_TARDIA",
     devuelveCredito: false
   };
+}
+
+export const HORAS_VENTANA_CORRECCION_ASISTENCIA = 24;
+const MS_POR_HORA = 3_600_000;
+
+export const RegistrarAsistenciaSchema = z.object({
+  presente: z.boolean({
+    required_error: "El estado de asistencia (presente) es requerido."
+  })
+});
+
+export type RegistrarAsistencia = z.infer<typeof RegistrarAsistenciaSchema>;
+
+export interface EntradaEvaluarVentanaCorreccionAsistencia {
+  claseFin: Date | string;
+  ahora?: Date | string;
+}
+
+export interface ResultadoVentanaCorreccionAsistencia {
+  dentroDeVentana: boolean;
+  expirada: boolean;
+  limiteCorreccion: Date;
+}
+
+/**
+ * Evalúa si una operación de marcado o rectificación de Asistencia se encuentra
+ * dentro de la Ventana de Corrección de Asistencia (24 hs posteriores a `clase.fin`) (PRD §4.4.3, GLOSSARY.md).
+ */
+export function evaluarVentanaCorreccionAsistencia(
+  entrada: EntradaEvaluarVentanaCorreccionAsistencia
+): ResultadoVentanaCorreccionAsistencia {
+  const finMs =
+    typeof entrada.claseFin === "string"
+      ? new Date(entrada.claseFin).getTime()
+      : entrada.claseFin.getTime();
+  const ahoraMs = entrada.ahora
+    ? typeof entrada.ahora === "string"
+      ? new Date(entrada.ahora).getTime()
+      : entrada.ahora.getTime()
+    : Date.now();
+
+  const limiteMs = finMs + HORAS_VENTANA_CORRECCION_ASISTENCIA * MS_POR_HORA;
+  const expirada = ahoraMs > limiteMs;
+
+  return {
+    dentroDeVentana: !expirada,
+    expirada,
+    limiteCorreccion: new Date(limiteMs)
+  };
+}
+
+export interface EntradaEvaluarAusenciaConsolidada {
+  estado: EstadoReserva;
+  asistenciaMarcadaEn: Date | string | null;
+  claseFin?: Date | string | null;
+}
+
+/**
+ * Determina si una Reserva confirmada se ha consolidado como Ausencia por no registrar Asistencia
+ * tras el vencimiento de la Ventana de Corrección de Asistencia de 24 hs (ADR 0003, GLOSSARY.md).
+ */
+export function esAusenciaConsolidada(
+  reserva: EntradaEvaluarAusenciaConsolidada,
+  ahora?: Date | string
+): boolean {
+  if (reserva.estado !== "CONFIRMADA") {
+    return false;
+  }
+  if (reserva.asistenciaMarcadaEn !== null) {
+    return false;
+  }
+  if (!reserva.claseFin) {
+    return false;
+  }
+
+  const ventana = evaluarVentanaCorreccionAsistencia({
+    claseFin: reserva.claseFin,
+    ahora
+  });
+
+  return ventana.expirada;
 }
