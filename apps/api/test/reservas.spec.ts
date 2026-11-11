@@ -140,6 +140,28 @@ const ATLETA_WALKIN_SIN_CRED = {
   nombre: "Atleta Walkin Sin Creditos"
 };
 
+// Atletas dedicados para Ticket 12 (Panel del Coach, Asistencia 24 hs y Consolidación de Ausencias)
+const ATLETA_ASISTENCIA_1 = {
+  usuarioId: "d1700000-0000-4000-8000-000000000001",
+  afiliacionId: "d2700000-0000-4000-8000-000000000001",
+  email: "atleta.asistencia.1@test.centris.dev",
+  nombre: "Atleta Asistencia Uno"
+};
+
+const ATLETA_ASISTENCIA_2 = {
+  usuarioId: "d1700000-0000-4000-8000-000000000002",
+  afiliacionId: "d2700000-0000-4000-8000-000000000002",
+  email: "atleta.asistencia.2@test.centris.dev",
+  nombre: "Atleta Asistencia Dos"
+};
+
+const ATLETA_ASISTENCIA_3 = {
+  usuarioId: "d1700000-0000-4000-8000-000000000003",
+  afiliacionId: "d2700000-0000-4000-8000-000000000003",
+  email: "atleta.asistencia.3@test.centris.dev",
+  nombre: "Atleta Asistencia Tres"
+};
+
 describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y RLS (@centris/api)", () => {
   let api: ApiDePrueba;
   let tokenAdminNorte: string;
@@ -156,6 +178,7 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
   let tokenAtletaBajaCascada: string;
   const tokensAtletasFcfs16: string[] = [];
   const tokensAtletasCancelBox10: string[] = [];
+  let tokenAtletaAsistencia1: string;
 
   let planSemanal2Id: string;
   let planSemanal1Id: string;
@@ -174,7 +197,10 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
     ATLETA_WALKIN_1,
     ATLETA_WALKIN_2,
     ATLETA_WALKIN_CUPO,
-    ATLETA_WALKIN_SIN_CRED
+    ATLETA_WALKIN_SIN_CRED,
+    ATLETA_ASISTENCIA_1,
+    ATLETA_ASISTENCIA_2,
+    ATLETA_ASISTENCIA_3
   ];
 
   const datos = new DatosDePrueba({
@@ -369,6 +395,7 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
     for (const atleta of ATLETAS_CANCEL_BOX_10) {
       tokensAtletasCancelBox10.push(await login(atleta.email));
     }
+    tokenAtletaAsistencia1 = await login(ATLETA_ASISTENCIA_1.email);
 
     // Crear Planes base en Box Norte
     const resPlan1 = await api.pedir<Plan>("/planes", {
@@ -1445,5 +1472,283 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
     expect(resExito.status).toBe(201);
     expect(resExito.body.estado).toBe("CONFIRMADA");
     expect(resExito.body.creadaPorUsuarioId).toBe(IDS.usuarioRecepNorte);
+  });
+
+  it("Ticket 12 — Criterio 1: Visibilidad acotada del Coach (Coach no puede marcar en Clases de otro Coach; marca en la suya; Recepción y Admin pueden en cualquiera; Atleta recibe 403; filtrado de clases por coach)", async () => {
+    const hoyLocal = obtenerFechaLocal(new Date(), TIMEZONE_BA);
+
+    // Asignar membresía ilimitada a ATLETA_ASISTENCIA_1 y ATLETA_ASISTENCIA_2
+    await api.pedir<Membresia>("/membresias", {
+      method: "POST",
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        afiliacionId: ATLETA_ASISTENCIA_1.afiliacionId,
+        planId: planIlimitadoId,
+        fechaInicio: hoyLocal
+      }
+    });
+
+    await api.pedir<Membresia>("/membresias", {
+      method: "POST",
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        afiliacionId: ATLETA_ASISTENCIA_2.afiliacionId,
+        planId: planIlimitadoId,
+        fechaInicio: hoyLocal
+      }
+    });
+
+    // Clase 1: asignada a Coach Norte (inicio hace 2 horas, dentro de ventana)
+    const inicioClase1 = new Date(Date.now() - 2 * 3600 * 1000);
+    const claseCoachNorteId = await insertarClaseEnInstante({
+      coachAfiliacionId: IDS.afiliacionCoachNorte,
+      inicio: inicioClase1,
+      cupos: 15
+    });
+
+    // Clase 2: asignada a Coach Recep Norte (inicio hace 2 horas, dentro de ventana)
+    const inicioClase2 = new Date(Date.now() - 2 * 3600 * 1000);
+    const claseOtroCoachId = await insertarClaseEnInstante({
+      coachAfiliacionId: IDS.afiliacionCoachRecepNorte,
+      inicio: inicioClase2,
+      cupos: 15
+    });
+
+    // Crear reservas para los atletas
+    const resReserva1 = await api.pedir<Reserva>("/reservas", {
+      method: "POST",
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        claseId: claseCoachNorteId,
+        afiliacionId: ATLETA_ASISTENCIA_1.afiliacionId
+      }
+    });
+    expect(resReserva1.status).toBe(201);
+    const reservaClase1Id = resReserva1.body.id;
+
+    const resReserva2 = await api.pedir<Reserva>("/reservas", {
+      method: "POST",
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        claseId: claseOtroCoachId,
+        afiliacionId: ATLETA_ASISTENCIA_2.afiliacionId
+      }
+    });
+    expect(resReserva2.status).toBe(201);
+    const reservaClase2Id = resReserva2.body.id;
+
+    // 1. Coach Norte (exclusivo) intenta marcar asistencia en Clase 2 (de otro Coach) -> 403 Forbidden
+    const resCoachOtro = await api.pedir<ErrorResponse>(
+      `/reservas/${reservaClase2Id}/asistencia`,
+      {
+        method: "PATCH",
+        token: tokenCoachNorte,
+        boxId: IDS.boxNorte,
+        body: { presente: true }
+      }
+    );
+    expect(resCoachOtro.status).toBe(403);
+    expect(resCoachOtro.body.errorCode).toBe(ERROR_CODES.ACCESO_DENEGADO_ROL);
+
+    // 2. Coach Norte marca asistencia en Clase 1 (su propia clase asignada) -> 200 OK
+    const resCoachPropia = await api.pedir<Reserva>(
+      `/reservas/${reservaClase1Id}/asistencia`,
+      {
+        method: "PATCH",
+        token: tokenCoachNorte,
+        boxId: IDS.boxNorte,
+        body: { presente: true }
+      }
+    );
+    expect(resCoachPropia.status).toBe(200);
+    expect(resCoachPropia.body.asistenciaMarcadaEn).toBeTruthy();
+    expect(resCoachPropia.body.asistenciaPorUsuarioId).toBe(
+      IDS.usuarioCoachNorte
+    );
+
+    // 3. Recepcionista o Administrador pueden marcar asistencia en cualquier Clase del Box -> 200 OK
+    const resRecepEnOtro = await api.pedir<Reserva>(
+      `/reservas/${reservaClase2Id}/asistencia`,
+      {
+        method: "PATCH",
+        token: tokenRecepNorte,
+        boxId: IDS.boxNorte,
+        body: { presente: true }
+      }
+    );
+    expect(resRecepEnOtro.status).toBe(200);
+    expect(resRecepEnOtro.body.asistenciaMarcadaEn).toBeTruthy();
+    expect(resRecepEnOtro.body.asistenciaPorUsuarioId).toBe(
+      IDS.usuarioRecepNorte
+    );
+
+    // 4. Atleta (sin rol staff) intenta marcar asistencia -> 403 Forbidden
+    const resAtleta = await api.pedir<ErrorResponse>(
+      `/reservas/${reservaClase1Id}/asistencia`,
+      {
+        method: "PATCH",
+        token: tokenAtletaAsistencia1,
+        boxId: IDS.boxNorte,
+        body: { presente: true }
+      }
+    );
+    expect(resAtleta.status).toBe(403);
+    expect(resAtleta.body.errorCode).toBe(ERROR_CODES.ACCESO_DENEGADO_ROL);
+
+    // 5. Filtrado de clases por coachAfiliacionId
+    const resClasesCoach = await api.pedir<Clase[]>("/clases", {
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      query: { coachAfiliacionId: IDS.afiliacionCoachNorte }
+    });
+    expect(resClasesCoach.status).toBe(200);
+    expect(
+      resClasesCoach.body.every(
+        (c) => c.coachAfiliacionId === IDS.afiliacionCoachNorte
+      )
+    ).toBe(true);
+  });
+
+  it("Ticket 12 — Criterio 2: Marcado y rectificación dentro de la Ventana de Corrección de Asistencia (24 hs) (presente=true guarda timestamp y operador; presente=false resetea; rechaza en reservas canceladas)", async () => {
+    const inicioClase = new Date(Date.now() - 3 * 3600 * 1000);
+    const claseId = await insertarClaseEnInstante({
+      coachAfiliacionId: IDS.afiliacionCoachNorte,
+      inicio: inicioClase,
+      cupos: 15
+    });
+
+    const resReserva = await api.pedir<Reserva>("/reservas", {
+      method: "POST",
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        claseId,
+        afiliacionId: ATLETA_ASISTENCIA_1.afiliacionId
+      }
+    });
+    expect(resReserva.status).toBe(201);
+    const reservaId = resReserva.body.id;
+
+    // 1. Marcar presente dentro de la ventana de 24 hs
+    const resPresente = await api.pedir<Reserva>(
+      `/reservas/${reservaId}/asistencia`,
+      {
+        method: "PATCH",
+        token: tokenAdminNorte,
+        boxId: IDS.boxNorte,
+        body: { presente: true }
+      }
+    );
+    expect(resPresente.status).toBe(200);
+    expect(resPresente.body.asistenciaMarcadaEn).toBeTruthy();
+    expect(resPresente.body.asistenciaPorUsuarioId).toBe(IDS.usuarioAdminNorte);
+
+    // 2. Rectificar / desmarcar presente dentro de la ventana de 24 hs
+    const resDesmarcar = await api.pedir<Reserva>(
+      `/reservas/${reservaId}/asistencia`,
+      {
+        method: "PATCH",
+        token: tokenAdminNorte,
+        boxId: IDS.boxNorte,
+        body: { presente: false }
+      }
+    );
+    expect(resDesmarcar.status).toBe(200);
+    expect(resDesmarcar.body.asistenciaMarcadaEn).toBeNull();
+    expect(resDesmarcar.body.asistenciaPorUsuarioId).toBeNull();
+
+    // 3. Rechazar en reservas que no están confirmadas (ej. canceladas)
+    const manana = new Date(Date.now() + 24 * 3600 * 1000);
+    const claseFuturaId = await insertarClaseEnInstante({
+      coachAfiliacionId: IDS.afiliacionCoachNorte,
+      inicio: manana,
+      cupos: 15
+    });
+    const resReservaFutura = await api.pedir<Reserva>("/reservas", {
+      method: "POST",
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        claseId: claseFuturaId,
+        afiliacionId: ATLETA_ASISTENCIA_1.afiliacionId
+      }
+    });
+    expect(resReservaFutura.status).toBe(201);
+    const cancelRes = await api.pedir<Reserva>(
+      `/reservas/${resReservaFutura.body.id}/cancelar`,
+      {
+        method: "POST",
+        token: tokenAtletaAsistencia1,
+        boxId: IDS.boxNorte
+      }
+    );
+    expect(cancelRes.status).toBe(200);
+
+    const resRechazoCancelada = await api.pedir<ErrorResponse>(
+      `/reservas/${resReservaFutura.body.id}/asistencia`,
+      {
+        method: "PATCH",
+        token: tokenAdminNorte,
+        boxId: IDS.boxNorte,
+        body: { presente: true }
+      }
+    );
+    expect(resRechazoCancelada.status).toBe(400);
+    expect(resRechazoCancelada.body.errorCode).toBe(
+      ERROR_CODES.VALIDACION_FALLIDA
+    );
+  });
+
+  it("Ticket 12 — Criterio 3: Cierre estricto tras 24 horas y consolidación de Ausencia (pasadas 24 hs rechaza modificar asistencia con VENTANA_CORRECCION_VENCIDA y expone ausenciaConsolidada=true para reservas sin presente)", async () => {
+    // Clase cuyo fin ocurrió hace 26 horas
+    const inicioHace27Hs = new Date(Date.now() - 27 * 3600 * 1000);
+    const claseVencidaId = await insertarClaseEnInstante({
+      coachAfiliacionId: IDS.afiliacionCoachNorte,
+      inicio: inicioHace27Hs,
+      cupos: 15
+    });
+
+    const resReserva = await api.pedir<Reserva>("/reservas", {
+      method: "POST",
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        claseId: claseVencidaId,
+        afiliacionId: ATLETA_ASISTENCIA_1.afiliacionId
+      }
+    });
+    expect(resReserva.status).toBe(201);
+    const reservaId = resReserva.body.id;
+
+    // 1. Intentar marcar asistencia tras vencer la ventana de 24 hs -> 422 VENTANA_CORRECCION_VENCIDA
+    const resVencida = await api.pedir<ErrorResponse>(
+      `/reservas/${reservaId}/asistencia`,
+      {
+        method: "PATCH",
+        token: tokenCoachNorte,
+        boxId: IDS.boxNorte,
+        body: { presente: true }
+      }
+    );
+    expect(resVencida.status).toBe(422);
+    expect(resVencida.body.errorCode).toBe(
+      ERROR_CODES.VENTANA_CORRECCION_VENCIDA
+    );
+
+    // 2. Al listar reservas de la clase vencida, la reserva sin presente se expone como ausencia consolidada
+    const resListado = await api.pedir<Reserva[]>("/reservas", {
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      query: { claseId: claseVencidaId }
+    });
+    expect(resListado.status).toBe(200);
+    const reservaEncontrada = resListado.body.find((r) => r.id === reservaId);
+    expect(reservaEncontrada).toBeDefined();
+    expect(reservaEncontrada?.asistenciaMarcadaEn).toBeNull();
+    expect(reservaEncontrada?.ausenciaConsolidada).toBe(true);
   });
 });
