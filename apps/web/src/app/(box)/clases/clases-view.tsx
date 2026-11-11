@@ -44,7 +44,6 @@ interface ClasesViewProps {
   esAdmin: boolean;
   esRecep: boolean;
   esCoach?: boolean;
-  esSoloCoach?: boolean;
   afiliacionActivaId?: string;
   clasesIniciales: Clase[];
   coaches: AfiliacionConUsuario[];
@@ -80,7 +79,6 @@ export function ClasesView({
   esAdmin,
   esRecep,
   esCoach = false,
-  esSoloCoach: _esSoloCoach = false,
   afiliacionActivaId = "",
   clasesIniciales,
   coaches,
@@ -595,10 +593,11 @@ export function ClasesView({
       {/* Panel de Asistencia de Clase (Ticket 12) */}
       {claseEnAsistencia ? (() => {
         const ventana = evaluarVentanaCorreccionAsistencia({
+          claseInicio: claseEnAsistencia.inicio,
           claseFin: claseEnAsistencia.fin
         });
         const esCoachDeClase = claseEnAsistencia.coachAfiliacionId === afiliacionActivaId;
-        const puedeModificar = (esAdmin || esRecep || esCoachDeClase) && !ventana.expirada;
+        const puedeModificar = (esAdmin || esRecep || esCoachDeClase) && !ventana.expirada && !ventana.noIniciada;
 
         return (
           <Card
@@ -628,12 +627,24 @@ export function ClasesView({
                 type="button"
                 variant="secondary"
                 onClick={() => setClaseEnAsistencia(null)}
-                className="text-xs px-2.5 py-1 min-h-7"
+                className="text-xs px-2.5 py-1 min-h-8"
               >
                 Cerrar
               </Button>
             </CardHeader>
             <CardContent className="space-y-4">
+              {ventana.noIniciada ? (
+                <div
+                  data-testid="aviso-clase-no-iniciada"
+                  className="flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-300"
+                >
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>
+                    La Clase aún no ha comenzado. El registro de asistencia se habilitará a partir del horario de inicio ({formatearHora(claseEnAsistencia.inicio, timezone)}).
+                  </span>
+                </div>
+              ) : null}
+
               {ventana.expirada ? (
                 <div
                   data-testid="aviso-ventana-asistencia-expirada"
@@ -738,7 +749,7 @@ export function ClasesView({
                                 data-testid={`btn-desmarcar-asistencia-${r.id}`}
                                 disabled={isPending}
                                 onClick={() => handleCambiarAsistencia(r.id, false)}
-                                className="text-xs min-h-7 px-2.5 py-1"
+                                className="text-xs min-h-11 px-4 py-2 font-semibold"
                               >
                                 Desmarcar
                               </Button>
@@ -748,7 +759,7 @@ export function ClasesView({
                                 data-testid={`btn-marcar-asistencia-${r.id}`}
                                 disabled={isPending}
                                 onClick={() => handleCambiarAsistencia(r.id, true)}
-                                className="text-xs min-h-7 px-2.5 py-1"
+                                className="text-xs min-h-11 px-4 py-2 font-semibold"
                               >
                                 <Check className="mr-1 h-3.5 w-3.5" />
                                 Marcar Presente
@@ -857,7 +868,7 @@ export function ClasesView({
                           variant="secondary"
                           data-testid={`btn-asistencia-clase-${clase.id}`}
                           onClick={() => abrirAsistencia(clase)}
-                          className="text-xs px-2.5 py-1.5 min-h-8"
+                          className="text-xs px-3 py-2 min-h-11 font-semibold"
                         >
                           <ClipboardCheck className="mr-1 h-3.5 w-3.5" />
                           Asistencia

@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import {
+  esCoachSinPermisosStaff,
   obtenerFechaLocal,
   sumarDiasAFecha,
   tieneAlgunRol
@@ -24,8 +25,7 @@ export default async function ClasesPage() {
   const esAdmin = tieneAlgunRol(afiliacionActiva.roles, ["administrador"]);
   const esRecep = tieneAlgunRol(afiliacionActiva.roles, ["recepcionista"]);
   const esCoach = tieneAlgunRol(afiliacionActiva.roles, ["coach"]);
-  const tieneAtleta = tieneAlgunRol(afiliacionActiva.roles, ["atleta"]);
-  const esSoloCoach = esCoach && !esAdmin && !esRecep && !tieneAtleta;
+  const esSoloCoach = esCoachSinPermisosStaff(afiliacionActiva.roles);
 
   const timezone = afiliacionActiva.box.timezone ?? "America/Argentina/Buenos_Aires";
   const hoy = obtenerFechaLocal(new Date(), timezone);
@@ -62,7 +62,6 @@ export default async function ClasesPage() {
         esAdmin={esAdmin}
         esRecep={esRecep}
         esCoach={esCoach}
-        esSoloCoach={esSoloCoach}
         afiliacionActivaId={afiliacionActiva.id}
         clasesIniciales={clases}
         coaches={coaches}
