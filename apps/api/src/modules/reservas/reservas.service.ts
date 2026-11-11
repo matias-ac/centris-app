@@ -6,6 +6,7 @@ import {
   evaluarVentanaCancelacion,
   evaluarVentanaCorreccionAsistencia,
   esAusenciaConsolidada,
+  esCoachSinPermisosStaff,
   obtenerFechaLocal,
   sumarDiasAFecha,
   type CrearReserva,
@@ -160,13 +161,7 @@ export class ReservasService {
         condiciones.push(eq(reservas.estado, filtro.estado));
       }
 
-      const esSoloCoach =
-        contexto.roles.includes("coach") &&
-        !contexto.roles.includes("administrador") &&
-        !contexto.roles.includes("recepcionista") &&
-        !contexto.roles.includes("atleta");
-
-      if (esSoloCoach) {
+      if (esCoachSinPermisosStaff(contexto.roles)) {
         condiciones.push(eq(clases.coachAfiliacionId, contexto.afiliacionId));
       }
       if (filtro?.desde) {
@@ -835,8 +830,17 @@ export class ReservasService {
       }
 
       const ventana = evaluarVentanaCorreccionAsistencia({
+        claseInicio: fila.claseInicio,
         claseFin: fila.claseFin
       });
+
+      if (ventana.noIniciada) {
+        throw new DomainException(
+          ERROR_CODES.CLASE_NO_INICIADA,
+          "No se puede registrar asistencia en una Clase que aún no ha iniciado.",
+          HttpStatus.UNPROCESSABLE_ENTITY
+        );
+      }
 
       if (ventana.expirada) {
         throw new DomainException(

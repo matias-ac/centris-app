@@ -1729,6 +1729,32 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
     expect(resRechazoCancelada.body.errorCode).toBe(
       ERROR_CODES.VALIDACION_FALLIDA
     );
+
+    // 4. Rechazar marcar asistencia en una Clase que aún no ha iniciado -> 422 CLASE_NO_INICIADA
+    const inicioFuturo = new Date(Date.now() + 2 * 3600 * 1000);
+    const claseFuturaId = await insertarClaseEnInstante({
+      coachAfiliacionId: IDS.afiliacionCoachNorte,
+      inicio: inicioFuturo,
+      cupos: 15
+    });
+    const reservaFuturaId = await insertarReservaDirecta({
+      claseId: claseFuturaId,
+      afiliacionId: ATLETA_ASISTENCIA_1.afiliacionId,
+      membresiaId: membresiaAsistencia1Id,
+      estado: "CONFIRMADA"
+    });
+
+    const resFutura = await api.pedir<ErrorResponse>(
+      `/reservas/${reservaFuturaId}/asistencia`,
+      {
+        method: "PATCH",
+        token: tokenAdminNorte,
+        boxId: IDS.boxNorte,
+        body: { presente: true }
+      }
+    );
+    expect(resFutura.status).toBe(422);
+    expect(resFutura.body.errorCode).toBe(ERROR_CODES.CLASE_NO_INICIADA);
   });
 
   it("Ticket 12 — Criterio 3: Cierre estricto tras 24 horas y consolidación de Ausencia (pasadas 24 hs rechaza modificar asistencia con VENTANA_CORRECCION_VENCIDA y expone ausenciaConsolidada=true para reservas sin presente)", async () => {
