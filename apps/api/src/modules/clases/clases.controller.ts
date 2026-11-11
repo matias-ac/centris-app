@@ -15,7 +15,8 @@ import {
   CancelarClaseSchema,
   EditarClaseSchema,
   FiltroClasesSchema,
-  type Clase
+  type Clase,
+  type FiltroClases
 } from "@centris/shared";
 import {
   ContextoBox,
@@ -50,7 +51,17 @@ export class ClasesController {
     @Query() query: unknown
   ): Promise<Clase[]> {
     const filtro = validarConZod(FiltroClasesSchema, query);
-    return this.clasesService.listarClases(contexto.boxId, filtro);
+    const esSoloCoach =
+      contexto.roles.includes("coach") &&
+      !contexto.roles.includes("administrador") &&
+      !contexto.roles.includes("recepcionista") &&
+      !contexto.roles.includes("atleta");
+
+    const filtroEfectivo: FiltroClases = esSoloCoach
+      ? { ...filtro, coachAfiliacionId: contexto.afiliacionId }
+      : filtro;
+
+    return this.clasesService.listarClases(contexto.boxId, filtroEfectivo);
   }
 
   @Get(":id")

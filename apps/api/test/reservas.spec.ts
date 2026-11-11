@@ -6,6 +6,7 @@ import {
   sumarDiasAFecha,
   type Clase,
   type ErrorResponse,
+  type EstadoReserva,
   type Membresia,
   type Plan,
   type Reserva
@@ -183,6 +184,8 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
   let planSemanal2Id: string;
   let planSemanal1Id: string;
   let planIlimitadoId: string;
+  let membresiaAsistencia1Id: string;
+  let membresiaAsistencia2Id: string;
 
   const todosLosAtletas = [
     ...ATLETAS_CONCURRENCIA,
@@ -353,6 +356,34 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
     return filas[0]!.id;
   }
 
+  async function insertarReservaDirecta(params: {
+    boxId?: string;
+    claseId: string;
+    afiliacionId: string;
+    membresiaId?: string;
+    creadaPorUsuarioId?: string;
+    estado?: EstadoReserva;
+    asistenciaMarcadaEn?: Date | null;
+    asistenciaPorUsuarioId?: string | null;
+  }): Promise<string> {
+    const filas = await datos.consultar<{ id: string }>(
+      `INSERT INTO reservas (box_id, clase_id, afiliacion_id, membresia_id, creada_por_usuario_id, estado, asistencia_marcada_en, asistencia_por_usuario_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       RETURNING id`,
+      [
+        params.boxId ?? IDS.boxNorte,
+        params.claseId,
+        params.afiliacionId,
+        params.membresiaId ?? membresiaAsistencia1Id,
+        params.creadaPorUsuarioId ?? IDS.usuarioAdminNorte,
+        params.estado ?? "CONFIRMADA",
+        params.asistenciaMarcadaEn ? params.asistenciaMarcadaEn.toISOString() : null,
+        params.asistenciaPorUsuarioId ?? null
+      ]
+    );
+    return filas[0]!.id;
+  }
+
   beforeAll(async () => {
     await datos.sembrar();
     // Ampliar anticipacion_reserva_dias a 30 días en Box Norte para facilitar escenarios de semanas consecutivas
@@ -396,6 +427,50 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
       tokensAtletasCancelBox10.push(await login(atleta.email));
     }
     tokenAtletaAsistencia1 = await login(ATLETA_ASISTENCIA_1.email);
+
+    // Plan de 180 días para pruebas de Asistencia (Ticket 12)
+    const resPlanLargo = await api.pedir<Plan>("/planes", {
+      method: "POST",
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        nombre: "Pase Semestral Asistencias",
+        precioBase: 120000,
+        duracionDias: 180,
+        modalidadCreditos: "ILIMITADO",
+        creditosPorPeriodo: null
+      }
+    });
+    expect(resPlanLargo.status).toBe(201);
+
+    const hoyLocal = obtenerFechaLocal(new Date(), TIMEZONE_BA);
+    const hace30Dias = sumarDiasAFecha(hoyLocal, -30);
+
+    const resMemAsist1 = await api.pedir<Membresia>("/membresias", {
+      method: "POST",
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        afiliacionId: ATLETA_ASISTENCIA_1.afiliacionId,
+        planId: resPlanLargo.body.id,
+        fechaInicio: hace30Dias
+      }
+    });
+    expect(resMemAsist1.status).toBe(201);
+    membresiaAsistencia1Id = resMemAsist1.body.id;
+
+    const resMemAsist2 = await api.pedir<Membresia>("/membresias", {
+      method: "POST",
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        afiliacionId: ATLETA_ASISTENCIA_2.afiliacionId,
+        planId: resPlanLargo.body.id,
+        fechaInicio: hace30Dias
+      }
+    });
+    expect(resMemAsist2.status).toBe(201);
+    membresiaAsistencia2Id = resMemAsist2.body.id;
 
     // Crear Planes base en Box Norte
     const resPlan1 = await api.pedir<Plan>("/planes", {
@@ -1475,31 +1550,6 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
   });
 
   it("Ticket 12 — Criterio 1: Visibilidad acotada del Coach (Coach no puede marcar en Clases de otro Coach; marca en la suya; Recepción y Admin pueden en cualquiera; Atleta recibe 403; filtrado de clases por coach)", async () => {
-    const hoyLocal = obtenerFechaLocal(new Date(), TIMEZONE_BA);
-
-    // Asignar membresía ilimitada a ATLETA_ASISTENCIA_1 y ATLETA_ASISTENCIA_2
-    await api.pedir<Membresia>("/membresias", {
-      method: "POST",
-      token: tokenAdminNorte,
-      boxId: IDS.boxNorte,
-      body: {
-        afiliacionId: ATLETA_ASISTENCIA_1.afiliacionId,
-        planId: planIlimitadoId,
-        fechaInicio: hoyLocal
-      }
-    });
-
-    await api.pedir<Membresia>("/membresias", {
-      method: "POST",
-      token: tokenAdminNorte,
-      boxId: IDS.boxNorte,
-      body: {
-        afiliacionId: ATLETA_ASISTENCIA_2.afiliacionId,
-        planId: planIlimitadoId,
-        fechaInicio: hoyLocal
-      }
-    });
-
     // Clase 1: asignada a Coach Norte (inicio hace 2 horas, dentro de ventana)
     const inicioClase1 = new Date(Date.now() - 2 * 3600 * 1000);
     const claseCoachNorteId = await insertarClaseEnInstante({
@@ -1516,30 +1566,18 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
       cupos: 15
     });
 
-    // Crear reservas para los atletas
-    const resReserva1 = await api.pedir<Reserva>("/reservas", {
-      method: "POST",
-      token: tokenAdminNorte,
-      boxId: IDS.boxNorte,
-      body: {
-        claseId: claseCoachNorteId,
-        afiliacionId: ATLETA_ASISTENCIA_1.afiliacionId
-      }
+    // Crear reservas directamente para los atletas
+    const reservaClase1Id = await insertarReservaDirecta({
+      claseId: claseCoachNorteId,
+      afiliacionId: ATLETA_ASISTENCIA_1.afiliacionId,
+      membresiaId: membresiaAsistencia1Id
     });
-    expect(resReserva1.status).toBe(201);
-    const reservaClase1Id = resReserva1.body.id;
 
-    const resReserva2 = await api.pedir<Reserva>("/reservas", {
-      method: "POST",
-      token: tokenAdminNorte,
-      boxId: IDS.boxNorte,
-      body: {
-        claseId: claseOtroCoachId,
-        afiliacionId: ATLETA_ASISTENCIA_2.afiliacionId
-      }
+    const reservaClase2Id = await insertarReservaDirecta({
+      claseId: claseOtroCoachId,
+      afiliacionId: ATLETA_ASISTENCIA_2.afiliacionId,
+      membresiaId: membresiaAsistencia2Id
     });
-    expect(resReserva2.status).toBe(201);
-    const reservaClase2Id = resReserva2.body.id;
 
     // 1. Coach Norte (exclusivo) intenta marcar asistencia en Clase 2 (de otro Coach) -> 403 Forbidden
     const resCoachOtro = await api.pedir<ErrorResponse>(
@@ -1600,14 +1638,28 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
     expect(resAtleta.body.errorCode).toBe(ERROR_CODES.ACCESO_DENEGADO_ROL);
 
     // 5. Filtrado de clases por coachAfiliacionId
-    const resClasesCoach = await api.pedir<Clase[]>("/clases", {
-      token: tokenAdminNorte,
-      boxId: IDS.boxNorte,
-      query: { coachAfiliacionId: IDS.afiliacionCoachNorte }
-    });
+    const resClasesCoach = await api.pedir<Clase[]>(
+      `/clases?coachAfiliacionId=${IDS.afiliacionCoachNorte}`,
+      {
+        token: tokenAdminNorte,
+        boxId: IDS.boxNorte
+      }
+    );
     expect(resClasesCoach.status).toBe(200);
     expect(
       resClasesCoach.body.every(
+        (c) => c.coachAfiliacionId === IDS.afiliacionCoachNorte
+      )
+    ).toBe(true);
+
+    // 6. Coach con rol exclusivo consulta /clases -> se acota automáticamente a sus clases
+    const resClasesSoloCoach = await api.pedir<Clase[]>("/clases", {
+      token: tokenCoachNorte,
+      boxId: IDS.boxNorte
+    });
+    expect(resClasesSoloCoach.status).toBe(200);
+    expect(
+      resClasesSoloCoach.body.every(
         (c) => c.coachAfiliacionId === IDS.afiliacionCoachNorte
       )
     ).toBe(true);
@@ -1621,17 +1673,12 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
       cupos: 15
     });
 
-    const resReserva = await api.pedir<Reserva>("/reservas", {
-      method: "POST",
-      token: tokenAdminNorte,
-      boxId: IDS.boxNorte,
-      body: {
-        claseId,
-        afiliacionId: ATLETA_ASISTENCIA_1.afiliacionId
-      }
+    const reservaId = await insertarReservaDirecta({
+      claseId,
+      afiliacionId: ATLETA_ASISTENCIA_1.afiliacionId,
+      membresiaId: membresiaAsistencia1Id,
+      estado: "CONFIRMADA"
     });
-    expect(resReserva.status).toBe(201);
-    const reservaId = resReserva.body.id;
 
     // 1. Marcar presente dentro de la ventana de 24 hs
     const resPresente = await api.pedir<Reserva>(
@@ -1662,34 +1709,15 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
     expect(resDesmarcar.body.asistenciaPorUsuarioId).toBeNull();
 
     // 3. Rechazar en reservas que no están confirmadas (ej. canceladas)
-    const manana = new Date(Date.now() + 24 * 3600 * 1000);
-    const claseFuturaId = await insertarClaseEnInstante({
-      coachAfiliacionId: IDS.afiliacionCoachNorte,
-      inicio: manana,
-      cupos: 15
+    const reservaCanceladaId = await insertarReservaDirecta({
+      claseId,
+      afiliacionId: ATLETA_ASISTENCIA_2.afiliacionId,
+      membresiaId: membresiaAsistencia2Id,
+      estado: "CANCELADA"
     });
-    const resReservaFutura = await api.pedir<Reserva>("/reservas", {
-      method: "POST",
-      token: tokenAdminNorte,
-      boxId: IDS.boxNorte,
-      body: {
-        claseId: claseFuturaId,
-        afiliacionId: ATLETA_ASISTENCIA_1.afiliacionId
-      }
-    });
-    expect(resReservaFutura.status).toBe(201);
-    const cancelRes = await api.pedir<Reserva>(
-      `/reservas/${resReservaFutura.body.id}/cancelar`,
-      {
-        method: "POST",
-        token: tokenAtletaAsistencia1,
-        boxId: IDS.boxNorte
-      }
-    );
-    expect(cancelRes.status).toBe(200);
 
     const resRechazoCancelada = await api.pedir<ErrorResponse>(
-      `/reservas/${resReservaFutura.body.id}/asistencia`,
+      `/reservas/${reservaCanceladaId}/asistencia`,
       {
         method: "PATCH",
         token: tokenAdminNorte,
@@ -1712,17 +1740,24 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
       cupos: 15
     });
 
-    const resReserva = await api.pedir<Reserva>("/reservas", {
-      method: "POST",
-      token: tokenAdminNorte,
-      boxId: IDS.boxNorte,
-      body: {
-        claseId: claseVencidaId,
-        afiliacionId: ATLETA_ASISTENCIA_1.afiliacionId
-      }
+    // Reserva 1: sin presente
+    const reservaId = await insertarReservaDirecta({
+      claseId: claseVencidaId,
+      afiliacionId: ATLETA_ASISTENCIA_1.afiliacionId,
+      membresiaId: membresiaAsistencia1Id,
+      estado: "CONFIRMADA",
+      asistenciaMarcadaEn: null
     });
-    expect(resReserva.status).toBe(201);
-    const reservaId = resReserva.body.id;
+
+    // Reserva 2: con presente marcado previamente
+    const reservaConPresenteId = await insertarReservaDirecta({
+      claseId: claseVencidaId,
+      afiliacionId: ATLETA_ASISTENCIA_2.afiliacionId,
+      membresiaId: membresiaAsistencia2Id,
+      estado: "CONFIRMADA",
+      asistenciaMarcadaEn: new Date(Date.now() - 26 * 3600 * 1000),
+      asistenciaPorUsuarioId: IDS.usuarioCoachNorte
+    });
 
     // 1. Intentar marcar asistencia tras vencer la ventana de 24 hs -> 422 VENTANA_CORRECCION_VENCIDA
     const resVencida = await api.pedir<ErrorResponse>(
@@ -1739,16 +1774,28 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
       ERROR_CODES.VENTANA_CORRECCION_VENCIDA
     );
 
-    // 2. Al listar reservas de la clase vencida, la reserva sin presente se expone como ausencia consolidada
-    const resListado = await api.pedir<Reserva[]>("/reservas", {
-      token: tokenAdminNorte,
-      boxId: IDS.boxNorte,
-      query: { claseId: claseVencidaId }
-    });
+    // 2. Al listar reservas de la clase vencida:
+    //    - Reserva sin presente se expone como ausencia consolidada (ausenciaConsolidada: true)
+    //    - Reserva con presente se expone normalmente (ausenciaConsolidada: false)
+    const resListado = await api.pedir<Reserva[]>(
+      `/reservas?claseId=${claseVencidaId}`,
+      {
+        token: tokenAdminNorte,
+        boxId: IDS.boxNorte
+      }
+    );
     expect(resListado.status).toBe(200);
-    const reservaEncontrada = resListado.body.find((r) => r.id === reservaId);
-    expect(reservaEncontrada).toBeDefined();
-    expect(reservaEncontrada?.asistenciaMarcadaEn).toBeNull();
-    expect(reservaEncontrada?.ausenciaConsolidada).toBe(true);
+
+    const reservaSinPresente = resListado.body.find((r) => r.id === reservaId);
+    expect(reservaSinPresente).toBeDefined();
+    expect(reservaSinPresente?.asistenciaMarcadaEn).toBeNull();
+    expect(reservaSinPresente?.ausenciaConsolidada).toBe(true);
+
+    const reservaConPresente = resListado.body.find(
+      (r) => r.id === reservaConPresenteId
+    );
+    expect(reservaConPresente).toBeDefined();
+    expect(reservaConPresente?.asistenciaMarcadaEn).toBeTruthy();
+    expect(reservaConPresente?.ausenciaConsolidada).toBe(false);
   });
 });

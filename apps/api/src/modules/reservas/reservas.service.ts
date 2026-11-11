@@ -4,12 +4,15 @@ import {
   ESTADOS_RESERVA_QUE_CONSUMEN_CREDITO,
   calcularDisponibilidadCreditos,
   evaluarVentanaCancelacion,
+  evaluarVentanaCorreccionAsistencia,
+  esAusenciaConsolidada,
   obtenerFechaLocal,
   sumarDiasAFecha,
   type CrearReserva,
   type EstadoReserva,
   type FiltroReservas,
   type ModalidadCreditos,
+  type RegistrarAsistencia,
   type Reserva
 } from "@centris/shared";
 import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm";
@@ -52,6 +55,12 @@ function mapearReserva(
     atletaEmail?: string;
   }
 ): Reserva {
+  const ausenciaConsolidada = esAusenciaConsolidada({
+    estado: fila.estado as EstadoReserva,
+    asistenciaMarcadaEn: fila.asistenciaMarcadaEn,
+    claseFin: extras?.claseFin
+  });
+
   return {
     id: fila.id,
     boxId: fila.boxId,
@@ -72,7 +81,8 @@ function mapearReserva(
     tipoClaseNombre: extras?.tipoClaseNombre,
     coachNombre: extras?.coachNombre,
     atletaNombre: extras?.atletaNombre,
-    atletaEmail: extras?.atletaEmail
+    atletaEmail: extras?.atletaEmail,
+    ausenciaConsolidada
   };
 }
 
@@ -148,6 +158,16 @@ export class ReservasService {
       }
       if (filtro?.estado) {
         condiciones.push(eq(reservas.estado, filtro.estado));
+      }
+
+      const esSoloCoach =
+        contexto.roles.includes("coach") &&
+        !contexto.roles.includes("administrador") &&
+        !contexto.roles.includes("recepcionista") &&
+        !contexto.roles.includes("atleta");
+
+      if (esSoloCoach) {
+        condiciones.push(eq(clases.coachAfiliacionId, contexto.afiliacionId));
       }
       if (filtro?.desde) {
         condiciones.push(
@@ -706,6 +726,155 @@ export class ReservasService {
       return mapearReserva(actualizada, {
         claseInicio: claseBloqueada.inicio,
         claseFin: claseBloqueada.fin
+      });
+    });
+  }
+
+  async registrarAsistencia(
+    contexto: ContextoBoxActivo,
+    usuarioId: string,
+    reservaId: string,
+    input: RegistrarAsistencia
+  ): Promise<Reserva> {
+    const boxId = contexto.boxId;
+    validarUuid(boxId, "boxId");
+    validarUuid(usuarioId, "usuarioId");
+    validarUuid(reservaId, "reservaId");
+
+    const esAdminORecep =
+      contexto.roles.includes("administrador") ||
+      contexto.roles.includes("recepcionista");
+
+    const afiliacionAtleta = alias(afiliaciones, "afiliacion_atleta");
+    const usuarioAtleta = alias(usuarios, "usuario_atleta");
+    const afiliacionCoach = alias(afiliaciones, "afiliacion_coach");
+    const usuarioCoach = alias(usuarios, "usuario_coach");
+
+    return this.db.withBoxTransaction(boxId, async (tx) => {
+      const [fila] = await tx
+        .select({
+          reserva: reservas,
+          claseInicio: clases.inicio,
+          claseFin: clases.fin,
+          claseCoachAfiliacionId: clases.coachAfiliacionId,
+          claseCanceladaEn: clases.canceladaEn,
+          tipoClaseNombre: tiposClase.nombre,
+          coachNombre: usuarioCoach.nombre,
+          atletaNombre: usuarioAtleta.nombre,
+          atletaEmail: usuarioAtleta.email
+        })
+        .from(reservas)
+        .innerJoin(
+          clases,
+          and(
+            eq(reservas.claseId, clases.id),
+            eq(reservas.boxId, clases.boxId)
+          )
+        )
+        .innerJoin(
+          tiposClase,
+          and(
+            eq(clases.tipoClaseId, tiposClase.id),
+            eq(clases.boxId, tiposClase.boxId)
+          )
+        )
+        .innerJoin(
+          afiliacionCoach,
+          and(
+            eq(clases.coachAfiliacionId, afiliacionCoach.id),
+            eq(clases.boxId, afiliacionCoach.boxId)
+          )
+        )
+        .innerJoin(usuarioCoach, eq(afiliacionCoach.usuarioId, usuarioCoach.id))
+        .innerJoin(
+          afiliacionAtleta,
+          and(
+            eq(reservas.afiliacionId, afiliacionAtleta.id),
+            eq(reservas.boxId, afiliacionAtleta.boxId)
+          )
+        )
+        .innerJoin(usuarioAtleta, eq(afiliacionAtleta.usuarioId, usuarioAtleta.id))
+        .where(
+          and(
+            eq(reservas.id, reservaId),
+            eq(reservas.boxId, boxId)
+          )
+        )
+        .for("update");
+
+      if (!fila) {
+        throw new DomainException(
+          ERROR_CODES.VALIDACION_FALLIDA,
+          "Reserva no encontrada.",
+          HttpStatus.NOT_FOUND
+        );
+      }
+
+      if (fila.reserva.estado !== "CONFIRMADA") {
+        throw new DomainException(
+          ERROR_CODES.VALIDACION_FALLIDA,
+          "Solo se puede registrar o rectificar asistencia en Reservas confirmadas.",
+          HttpStatus.BAD_REQUEST
+        );
+      }
+
+      if (fila.claseCanceladaEn !== null) {
+        throw new DomainException(
+          ERROR_CODES.CLASE_CANCELADA,
+          "No se puede registrar asistencia en una Clase cancelada por el Box.",
+          HttpStatus.CONFLICT
+        );
+      }
+
+      if (!esAdminORecep && fila.claseCoachAfiliacionId !== contexto.afiliacionId) {
+        throw new DomainException(
+          ERROR_CODES.ACCESO_DENEGADO_ROL,
+          "Un Coach solo puede registrar o rectificar la asistencia de sus propias Clases asignadas.",
+          HttpStatus.FORBIDDEN
+        );
+      }
+
+      const ventana = evaluarVentanaCorreccionAsistencia({
+        claseFin: fila.claseFin
+      });
+
+      if (ventana.expirada) {
+        throw new DomainException(
+          ERROR_CODES.VENTANA_CORRECCION_VENCIDA,
+          "La Ventana de Corrección de Asistencia (24 horas posteriores al fin de la clase) ha vencido.",
+          HttpStatus.UNPROCESSABLE_ENTITY
+        );
+      }
+
+      const ahora = new Date();
+      const nuevaAsistenciaMarcadaEn = input.presente ? ahora : null;
+      const nuevaAsistenciaPorUsuarioId = input.presente ? usuarioId : null;
+
+      const [actualizada] = await tx
+        .update(reservas)
+        .set({
+          asistenciaMarcadaEn: nuevaAsistenciaMarcadaEn,
+          asistenciaPorUsuarioId: nuevaAsistenciaPorUsuarioId,
+          updatedAt: ahora
+        })
+        .where(and(eq(reservas.boxId, boxId), eq(reservas.id, reservaId)))
+        .returning();
+
+      if (!actualizada) {
+        throw new DomainException(
+          ERROR_CODES.ERROR_INTERNO,
+          "No se pudo actualizar la asistencia de la Reserva.",
+          HttpStatus.INTERNAL_SERVER_ERROR
+        );
+      }
+
+      return mapearReserva(actualizada, {
+        claseInicio: fila.claseInicio,
+        claseFin: fila.claseFin,
+        tipoClaseNombre: fila.tipoClaseNombre,
+        coachNombre: fila.coachNombre,
+        atletaNombre: fila.atletaNombre,
+        atletaEmail: fila.atletaEmail
       });
     });
   }

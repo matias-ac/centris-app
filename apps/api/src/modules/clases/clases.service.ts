@@ -124,6 +124,9 @@ export class ClasesService {
           sql`(${clases.inicio} AT TIME ZONE ${timezone})::date <= ${filtro.hasta}::date`
         );
       }
+      if (filtro?.coachAfiliacionId) {
+        condiciones.push(eq(clases.coachAfiliacionId, filtro.coachAfiliacionId));
+      }
 
       const filas = await tx
         .select({
