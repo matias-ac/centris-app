@@ -379,12 +379,30 @@ export function ReservasAtletaView({
                     <div className="flex items-start justify-between gap-3">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <Badge
-                            variant="emerald"
-                            className="uppercase tracking-wider"
-                          >
-                            Confirmada
-                          </Badge>
+                          {reserva.asistenciaMarcadaEn !== null ? (
+                            <Badge
+                              variant="emerald"
+                              data-testid={`badge-asistencia-${reserva.id}`}
+                              className="uppercase tracking-wider font-semibold"
+                            >
+                              Presente
+                            </Badge>
+                          ) : reserva.ausenciaConsolidada ? (
+                            <Badge
+                              variant="rose"
+                              data-testid={`badge-ausencia-${reserva.id}`}
+                              className="uppercase tracking-wider font-semibold"
+                            >
+                              Ausencia
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="emerald"
+                              className="uppercase tracking-wider"
+                            >
+                              Confirmada
+                            </Badge>
+                          )}
                           <span className="font-display text-sm font-semibold uppercase text-foreground">
                             {reserva.tipoClaseNombre ?? "Clase"}
                           </span>
@@ -396,7 +414,9 @@ export function ReservasAtletaView({
                         />
                       </div>
 
-                      {!mostrandoAdvertenciaTardia ? (
+                      {!mostrandoAdvertenciaTardia &&
+                      !reserva.ausenciaConsolidada &&
+                      reserva.asistenciaMarcadaEn === null ? (
                         <Button
                           type="button"
                           variant="secondary"

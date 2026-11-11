@@ -23,15 +23,20 @@ export default async function ClasesPage() {
   const { afiliacionActiva, sesion } = contexto;
   const esAdmin = tieneAlgunRol(afiliacionActiva.roles, ["administrador"]);
   const esRecep = tieneAlgunRol(afiliacionActiva.roles, ["recepcionista"]);
+  const esCoach = tieneAlgunRol(afiliacionActiva.roles, ["coach"]);
+  const tieneAtleta = tieneAlgunRol(afiliacionActiva.roles, ["atleta"]);
+  const esSoloCoach = esCoach && !esAdmin && !esRecep && !tieneAtleta;
 
   const timezone = afiliacionActiva.box.timezone ?? "America/Argentina/Buenos_Aires";
   const hoy = obtenerFechaLocal(new Date(), timezone);
+  const desde = sumarDiasAFecha(hoy, -2);
   const hasta = sumarDiasAFecha(hoy, 14);
 
   const [resClases, resAfiliaciones, resAtletas] = await Promise.all([
     listarClasesApi(sesion.accessToken, afiliacionActiva.boxId, {
-      desde: hoy,
-      hasta
+      desde,
+      hasta,
+      coachAfiliacionId: esSoloCoach ? afiliacionActiva.id : undefined
     }),
     esAdmin
       ? listarAfiliacionesBoxApi(sesion.accessToken, afiliacionActiva.boxId)
@@ -56,6 +61,9 @@ export default async function ClasesPage() {
         timezone={timezone}
         esAdmin={esAdmin}
         esRecep={esRecep}
+        esCoach={esCoach}
+        esSoloCoach={esSoloCoach}
+        afiliacionActivaId={afiliacionActiva.id}
         clasesIniciales={clases}
         coaches={coaches}
         atletas={atletas}

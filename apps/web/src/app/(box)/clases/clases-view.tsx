@@ -4,7 +4,9 @@ import {
   AlertCircle,
   Ban,
   Calendar,
+  Check,
   CheckCircle,
+  ClipboardCheck,
   Clock,
   Dumbbell,
   RefreshCw,
@@ -16,9 +18,11 @@ import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   ERROR_CODES,
+  evaluarVentanaCorreccionAsistencia,
   type AfiliacionConUsuario,
   type Atleta,
-  type Clase
+  type Clase,
+  type Reserva
 } from "@centris/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,7 +33,9 @@ import {
   cancelarClaseAction,
   crearReservaAction,
   editarClaseAction,
-  materializarClasesAction
+  listarReservasClaseAction,
+  materializarClasesAction,
+  registrarAsistenciaAction
 } from "@/lib/actions";
 
 interface ClasesViewProps {
@@ -37,6 +43,9 @@ interface ClasesViewProps {
   timezone: string;
   esAdmin: boolean;
   esRecep: boolean;
+  esCoach?: boolean;
+  esSoloCoach?: boolean;
+  afiliacionActivaId?: string;
   clasesIniciales: Clase[];
   coaches: AfiliacionConUsuario[];
   atletas?: Atleta[];
@@ -70,6 +79,9 @@ export function ClasesView({
   timezone,
   esAdmin,
   esRecep,
+  esCoach = false,
+  _esSoloCoach = false,
+  afiliacionActivaId = "",
   clasesIniciales,
   coaches,
   atletas = []
@@ -92,10 +104,59 @@ export function ClasesView({
     errorCode?: string;
   } | null>(null);
 
+  const [claseEnAsistencia, setClaseEnAsistencia] = useState<Clase | null>(null);
+  const [reservasAsistencia, setReservasAsistencia] = useState<Reserva[]>([]);
+  const [cargandoAsistencia, setCargandoAsistencia] = useState(false);
+  const [errorAsistencia, setErrorAsistencia] = useState<string | null>(null);
+
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [exitoMsg, setExitoMsg] = useState<string | null>(null);
 
+  function abrirAsistencia(clase: Clase) {
+    setClaseEnEdicion(null);
+    setClaseEnCancelacion(null);
+    setClaseEnWalkin(null);
+    setClaseEnAsistencia(clase);
+    setErrorAsistencia(null);
+    setCargandoAsistencia(true);
+    setErrorMsg(null);
+    setExitoMsg(null);
+
+    startTransition(async () => {
+      const res = await listarReservasClaseAction(boxId, clase.id);
+      setCargandoAsistencia(false);
+      if (res.ok && res.data) {
+        setReservasAsistencia(res.data);
+      } else {
+        setErrorAsistencia(res.message ?? "Error al cargar la lista de reservas.");
+      }
+    });
+  }
+
+  function handleCambiarAsistencia(reservaId: string, presente: boolean) {
+    setErrorAsistencia(null);
+    startTransition(async () => {
+      const res = await registrarAsistenciaAction(boxId, reservaId, { presente });
+      if (!res.ok) {
+        setErrorAsistencia(res.message ?? "Error al actualizar la asistencia.");
+      } else {
+        setReservasAsistencia((prev) =>
+          prev.map((r) =>
+            r.id === reservaId
+              ? {
+                  ...r,
+                  asistenciaMarcadaEn: presente ? new Date().toISOString() : null
+                }
+              : r
+          )
+        );
+        router.refresh();
+      }
+    });
+  }
+
   function abrirEdicion(clase: Clase) {
+    setClaseEnAsistencia(null);
     setClaseEnWalkin(null);
     setClaseEnCancelacion(null);
     setClaseEnEdicion(clase);
@@ -106,6 +167,7 @@ export function ClasesView({
   }
 
   function abrirCancelacion(clase: Clase) {
+    setClaseEnAsistencia(null);
     setClaseEnWalkin(null);
     setClaseEnEdicion(null);
     setClaseEnCancelacion(clase);
@@ -115,6 +177,7 @@ export function ClasesView({
   }
 
   function abrirWalkin(clase: Clase) {
+    setClaseEnAsistencia(null);
     setClaseEnEdicion(null);
     setClaseEnCancelacion(null);
     setClaseEnWalkin(clase);
@@ -529,6 +592,180 @@ export function ClasesView({
         </Card>
       ) : null}
 
+      {/* Panel de Asistencia de Clase (Ticket 12) */}
+      {claseEnAsistencia ? (() => {
+        const ventana = evaluarVentanaCorreccionAsistencia({
+          claseFin: claseEnAsistencia.fin
+        });
+        const esCoachDeClase = claseEnAsistencia.coachAfiliacionId === afiliacionActivaId;
+        const puedeModificar = (esAdmin || esRecep || esCoachDeClase) && !ventana.expirada;
+
+        return (
+          <Card
+            className="border-emerald-500/40 bg-card"
+            data-testid="panel-asistencia-clase"
+          >
+            <CardHeader className="flex flex-row items-start justify-between gap-4 pb-3">
+              <div>
+                <CardTitle className="text-lg tabular-nums text-foreground flex items-center gap-2">
+                  <ClipboardCheck className="h-5 w-5 text-emerald-400" />
+                  Control de Asistencia — {claseEnAsistencia.tipoClaseNombre ?? "Clase"} (
+                  {formatearFecha(claseEnAsistencia.inicio, timezone)}{" "}
+                  {formatearHora(claseEnAsistencia.inicio, timezone)})
+                </CardTitle>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Coach:{" "}
+                  <span className="font-semibold text-foreground">
+                    {claseEnAsistencia.coachNombre ?? "Coach"}
+                  </span>{" "}
+                  · Cupos:{" "}
+                  <span className="font-mono tabular-nums font-semibold text-foreground">
+                    {claseEnAsistencia.reservasConfirmadas ?? 0} / {claseEnAsistencia.cupos}
+                  </span>
+                </p>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => setClaseEnAsistencia(null)}
+                className="text-xs px-2.5 py-1 min-h-7"
+              >
+                Cerrar
+              </Button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {ventana.expirada ? (
+                <div
+                  data-testid="aviso-ventana-asistencia-expirada"
+                  className="flex items-center gap-2 rounded-lg border border-rose-500/40 bg-rose-500/10 p-3 text-xs text-rose-400"
+                >
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>
+                    La Ventana de Corrección de Asistencia ha vencido (más de 24 horas desde la finalización de la clase). Las reservas sin presente han quedado consolidadas como Ausencia.
+                  </span>
+                </div>
+              ) : null}
+
+              {!esAdmin && !esRecep && !esCoachDeClase ? (
+                <div
+                  data-testid="aviso-solo-coach-asignado"
+                  className="flex items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-300"
+                >
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>
+                    Solo el Coach asignado a esta Clase ({claseEnAsistencia.coachNombre}), Recepción o Administración pueden registrar la Asistencia.
+                  </span>
+                </div>
+              ) : null}
+
+              {errorAsistencia ? (
+                <div
+                  data-testid="alerta-error-asistencia"
+                  className="flex items-center gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive"
+                >
+                  <AlertCircle className="h-4 w-4 shrink-0" />
+                  <span>{errorAsistencia}</span>
+                </div>
+              ) : null}
+
+              {cargandoAsistencia ? (
+                <p className="py-6 text-center text-sm text-muted-foreground">
+                  Cargando nómina de Atletas con Reserva...
+                </p>
+              ) : reservasAsistencia.length === 0 ? (
+                <p
+                  data-testid="mensaje-sin-reservas-asistencia"
+                  className="py-6 text-center text-sm text-muted-foreground"
+                >
+                  No hay Atletas con Reserva confirmada en esta Clase.
+                </p>
+              ) : (
+                <div className="divide-y divide-border rounded-md border border-border">
+                  {reservasAsistencia.map((r) => {
+                    const presente = r.asistenciaMarcadaEn !== null;
+                    const esAusencia = !presente && ventana.expirada;
+
+                    return (
+                      <div
+                        key={r.id}
+                        data-testid={`fila-asistencia-reserva-${r.id}`}
+                        className="flex flex-wrap items-center justify-between gap-3 p-3 text-sm hover:bg-secondary/40 transition-colors"
+                      >
+                        <div className="space-y-0.5">
+                          <p
+                            data-testid={`nombre-atleta-asistencia-${r.id}`}
+                            className="font-medium text-foreground"
+                          >
+                            {r.atletaNombre ?? "Atleta"}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {r.atletaEmail ?? ""}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {presente ? (
+                            <Badge
+                              variant="emerald"
+                              data-testid={`badge-presente-${r.id}`}
+                              className="uppercase tracking-wider font-semibold"
+                            >
+                              Presente
+                            </Badge>
+                          ) : esAusencia ? (
+                            <Badge
+                              variant="rose"
+                              data-testid={`badge-ausencia-${r.id}`}
+                              className="uppercase tracking-wider font-semibold"
+                            >
+                              Ausencia
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant="zinc"
+                              data-testid={`badge-sin-marcar-${r.id}`}
+                              className="uppercase tracking-wider"
+                            >
+                              Sin marcar
+                            </Badge>
+                          )}
+
+                          {puedeModificar ? (
+                            presente ? (
+                              <Button
+                                type="button"
+                                variant="secondary"
+                                data-testid={`btn-desmarcar-asistencia-${r.id}`}
+                                disabled={isPending}
+                                onClick={() => handleCambiarAsistencia(r.id, false)}
+                                className="text-xs min-h-7 px-2.5 py-1"
+                              >
+                                Desmarcar
+                              </Button>
+                            ) : (
+                              <Button
+                                type="button"
+                                data-testid={`btn-marcar-asistencia-${r.id}`}
+                                disabled={isPending}
+                                onClick={() => handleCambiarAsistencia(r.id, true)}
+                                className="text-xs min-h-7 px-2.5 py-1"
+                              >
+                                <Check className="mr-1 h-3.5 w-3.5" />
+                                Marcar Presente
+                              </Button>
+                            )
+                          ) : null}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })() : null}
+
       {/* Grilla / Listado de Clases */}
       {clasesIniciales.length === 0 ? (
         <Card className="border-dashed">
@@ -612,37 +849,54 @@ export function ClasesView({
                     </p>
                   ) : null}
 
-                  {clase.canceladaEn === null && (esAdmin || esRecep) ? (
+                  {clase.canceladaEn === null ? (
                     <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        data-testid={`btn-walkin-clase-${clase.id}`}
-                        onClick={() => abrirWalkin(clase)}
-                        className="flex-1 text-xs px-2.5 py-1.5 min-h-8"
-                      >
-                        <UserPlus className="mr-1 h-3.5 w-3.5" />
-                        Anotar Walk-in
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        data-testid={`btn-editar-clase-${clase.id}`}
-                        onClick={() => abrirEdicion(clase)}
-                        className="text-xs px-2.5 py-1.5 min-h-8"
-                      >
-                        Editar Clase
-                      </Button>
-                      {esAdmin ? (
+                      {esAdmin || esRecep || esCoach ? (
                         <Button
                           type="button"
-                          variant="destructive"
-                          data-testid={`btn-abrir-cancelar-clase-${clase.id}`}
-                          onClick={() => abrirCancelacion(clase)}
+                          variant="secondary"
+                          data-testid={`btn-asistencia-clase-${clase.id}`}
+                          onClick={() => abrirAsistencia(clase)}
                           className="text-xs px-2.5 py-1.5 min-h-8"
                         >
-                          <Ban className="mr-1 h-3.5 w-3.5" />
-                          Cancelar Clase
+                          <ClipboardCheck className="mr-1 h-3.5 w-3.5" />
+                          Asistencia
                         </Button>
+                      ) : null}
+
+                      {esAdmin || esRecep ? (
+                        <>
+                          <Button
+                            type="button"
+                            data-testid={`btn-walkin-clase-${clase.id}`}
+                            onClick={() => abrirWalkin(clase)}
+                            className="flex-1 text-xs px-2.5 py-1.5 min-h-8"
+                          >
+                            <UserPlus className="mr-1 h-3.5 w-3.5" />
+                            Anotar Walk-in
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="secondary"
+                            data-testid={`btn-editar-clase-${clase.id}`}
+                            onClick={() => abrirEdicion(clase)}
+                            className="text-xs px-2.5 py-1.5 min-h-8"
+                          >
+                            Editar Clase
+                          </Button>
+                          {esAdmin ? (
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              data-testid={`btn-abrir-cancelar-clase-${clase.id}`}
+                              onClick={() => abrirCancelacion(clase)}
+                              className="text-xs px-2.5 py-1.5 min-h-8"
+                            >
+                              <Ban className="mr-1 h-3.5 w-3.5" />
+                              Cancelar Clase
+                            </Button>
+                          ) : null}
+                        </>
                       ) : null}
                     </div>
                   ) : null}
