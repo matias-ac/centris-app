@@ -12,7 +12,9 @@ import {
   ROLES_AFILIACION,
   RolAfiliacionSchema,
   UsuarioSchema,
-  tieneAlgunRol
+  tieneAlgunRol,
+  esStaffAdministrativo,
+  esCoachSinPermisosStaff
 } from "../src/index.js";
 
 describe("Seam 1 — Contratos de dominio en @centris/shared", () => {
@@ -55,6 +57,16 @@ describe("Seam 1 — Contratos de dominio en @centris/shared", () => {
       true
     );
     expect(tieneAlgunRol(rolesMulti, ["administrador"])).toBe(false);
+
+    // Helpers de staff administrativo y coach sin permisos de staff
+    expect(esStaffAdministrativo(["administrador"])).toBe(true);
+    expect(esStaffAdministrativo(["recepcionista"])).toBe(true);
+    expect(esStaffAdministrativo(["coach", "atleta"])).toBe(false);
+
+    expect(esCoachSinPermisosStaff(["coach"])).toBe(true);
+    expect(esCoachSinPermisosStaff(["coach", "atleta"])).toBe(true);
+    expect(esCoachSinPermisosStaff(["coach", "recepcionista"])).toBe(false);
+    expect(esCoachSinPermisosStaff(["coach", "administrador"])).toBe(false);
   });
 
   it("valida configuración de Box exigiendo timezone IANA real, moneda ISO de 3 letras y rangos operativos", () => {

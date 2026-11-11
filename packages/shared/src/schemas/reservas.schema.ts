@@ -301,18 +301,21 @@ export type RegistrarAsistencia = z.infer<typeof RegistrarAsistenciaSchema>;
 
 export interface EntradaEvaluarVentanaCorreccionAsistencia {
   claseFin: Date | string;
+  claseInicio?: Date | string;
   ahora?: Date | string;
 }
 
 export interface ResultadoVentanaCorreccionAsistencia {
   dentroDeVentana: boolean;
   expirada: boolean;
+  noIniciada: boolean;
+  activa: boolean;
   limiteCorreccion: Date;
 }
 
 /**
  * Evalúa si una operación de marcado o rectificación de Asistencia se encuentra
- * dentro de la Ventana de Corrección de Asistencia (24 hs posteriores a `clase.fin`) (PRD §4.4.3, GLOSSARY.md).
+ * dentro de la Ventana de Corrección de Asistencia (desde `clase.inicio` hasta 24 hs posteriores a `clase.fin`) (PRD §4.4.3, GLOSSARY.md).
  */
 export function evaluarVentanaCorreccionAsistencia(
   entrada: EntradaEvaluarVentanaCorreccionAsistencia
@@ -330,9 +333,20 @@ export function evaluarVentanaCorreccionAsistencia(
   const limiteMs = finMs + HORAS_VENTANA_CORRECCION_ASISTENCIA * MS_POR_HORA;
   const expirada = ahoraMs > limiteMs;
 
+  const inicioMs = entrada.claseInicio
+    ? typeof entrada.claseInicio === "string"
+      ? new Date(entrada.claseInicio).getTime()
+      : entrada.claseInicio.getTime()
+    : null;
+
+  const noIniciada = inicioMs !== null ? ahoraMs < inicioMs : false;
+  const dentroDeVentana = !expirada && !noIniciada;
+
   return {
-    dentroDeVentana: !expirada,
+    dentroDeVentana,
     expirada,
+    noIniciada,
+    activa: dentroDeVentana,
     limiteCorreccion: new Date(limiteMs)
   };
 }

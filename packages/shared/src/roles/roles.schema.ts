@@ -25,3 +25,23 @@ export function tieneAlgunRol(
   return rolesRequeridos.some((rol) => rolesAfiliacion.includes(rol));
 }
 
+/**
+ * Evalúa si la Afiliación posee roles de staff administrativo (administrador o recepcionista)
+ * con visibilidad y potestades operativas sobre todas las clases y reservas del Box.
+ */
+export function esStaffAdministrativo(
+  rolesAfiliacion: readonly RolAfiliacion[]
+): boolean {
+  return tieneAlgunRol(rolesAfiliacion, ["administrador", "recepcionista"]);
+}
+
+/**
+ * Evalúa si la Afiliación opera como Coach sin privilegios de staff administrativo.
+ * Un Coach que además posee el rol de Atleta (ADR 0007) sigue teniendo visibilidad acotada a sus Clases asignadas.
+ */
+export function esCoachSinPermisosStaff(
+  rolesAfiliacion: readonly RolAfiliacion[]
+): boolean {
+  return rolesAfiliacion.includes("coach") && !esStaffAdministrativo(rolesAfiliacion);
+}
+

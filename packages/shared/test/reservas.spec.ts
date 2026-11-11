@@ -312,6 +312,36 @@ describe("Seam 1 — Esquemas Zod y cálculo de Período y Créditos de Reservas
       });
       expect(res.dentroDeVentana).toBe(true);
       expect(res.expirada).toBe(false);
+      expect(res.activa).toBe(true);
+      expect(res.noIniciada).toBe(false);
+    });
+
+    it("reporta noIniciada y dentroDeVentana=false si la clase aún no ha comenzado", () => {
+      const inicioClase = new Date("2026-11-10T18:00:00.000Z");
+      const antesDeInicio = new Date("2026-11-10T17:59:00.000Z");
+      const res = evaluarVentanaCorreccionAsistencia({
+        claseInicio: inicioClase,
+        claseFin: finClase,
+        ahora: antesDeInicio
+      });
+      expect(res.noIniciada).toBe(true);
+      expect(res.activa).toBe(false);
+      expect(res.dentroDeVentana).toBe(false);
+      expect(res.expirada).toBe(false);
+    });
+
+    it("habilita la ventana desde el momento en que inicia la clase", () => {
+      const inicioClase = new Date("2026-11-10T18:00:00.000Z");
+      const enElInicio = new Date("2026-11-10T18:00:00.000Z");
+      const res = evaluarVentanaCorreccionAsistencia({
+        claseInicio: inicioClase,
+        claseFin: finClase,
+        ahora: enElInicio
+      });
+      expect(res.noIniciada).toBe(false);
+      expect(res.activa).toBe(true);
+      expect(res.dentroDeVentana).toBe(true);
+      expect(res.expirada).toBe(false);
     });
 
     it("permite marcar o rectificar Asistencia exactamente a las 24 horas de finClase", () => {

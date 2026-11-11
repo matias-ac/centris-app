@@ -2,6 +2,8 @@ export {
   ROLES_AFILIACION,
   RolAfiliacionSchema,
   tieneAlgunRol,
+  esStaffAdministrativo,
+  esCoachSinPermisosStaff,
   type RolAfiliacion
 } from "./roles/roles.schema.js";
 
