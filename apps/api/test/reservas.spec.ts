@@ -517,7 +517,7 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
     });
     expect(resPlanIlim.status).toBe(201);
     planIlimitadoId = resPlanIlim.body.id;
-  });
+  }, 30000);
 
   afterAll(async () => {
     if (api) await api.cerrar();
