@@ -131,6 +131,7 @@ Toda respuesta de error en `apps/api` es formateada por un `ExceptionFilter` glo
 | `SUPERPOSICION_HORARIA` | `409` | El Atleta ya tiene otra `Reserva` confirmada en una `Clase` cuyo horario `[inicio, fin)` se solapa. |
 | `FUERA_DE_ANTICIPACION` | `422` | La `Clase` está más allá del horizonte de `anticipacion_reserva_dias` configurado por el Box. |
 | `CLASE_CANCELADA` | `409` | Intento de operar sobre una `Clase` que fue cancelada por el Box. |
+| `CLASE_NO_INICIADA` | `422` | Intento de registrar `Asistencia` sobre una `Clase` cuyo horario de inicio aún no ocurrió. |
 | `VENTANA_CORRECCION_VENCIDA` | `422` | Intento de marcar o rectificar `Asistencia` pasadas más de 24 horas desde `clase.fin`. |
 | `PAGO_YA_ANULADO` | `409` | Intento de aplicar una `Anulación` sobre un `Pago` que ya se encuentra anulado. |
 | `VALIDACION_FALLIDA` | `400` | Error de validación de esquema Zod en `body`, `query` o `params` (`details` incluye los errores por campo). |

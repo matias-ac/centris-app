@@ -24,6 +24,7 @@ import {
   CrearReservaSchema,
   CrearTipoClaseSchema,
   EditarClaseSchema,
+  RegistrarAsistenciaSchema,
   ERROR_CODES,
   LoginSchema,
   type ActualizarAtleta,
@@ -43,6 +44,8 @@ import {
   type CrearReserva,
   type CrearTipoClase,
   type EditarClase,
+  type RegistrarAsistencia,
+  type Reserva,
   type RolAfiliacion,
   type SesionAuth
 } from "@centris/shared";
@@ -73,8 +76,10 @@ import {
   eliminarPlanApi,
   eliminarTipoClaseApi,
   iniciarSesionApi,
+  listarReservasApi,
   materializarClasesApi,
   obtenerMisAfiliacionesApi,
+  registrarAsistenciaApi,
   registrarPagoApi,
   type ResultadoApi
 } from "./api-client";
@@ -794,6 +799,41 @@ export async function cancelarClaseAction(
     "Datos de cancelación de Clase inválidos.",
     (token, datos) => cancelarClaseApi(token, boxId, claseId, datos)
   );
+}
+
+export async function registrarAsistenciaAction(
+  boxId: string,
+  reservaId: string,
+  input: RegistrarAsistencia
+): Promise<ResultadoAccion> {
+  return ejecutarAccionConValidacion(
+    RegistrarAsistenciaSchema,
+    input,
+    "Datos de asistencia inválidos.",
+    (token, datos) => registrarAsistenciaApi(token, boxId, reservaId, datos)
+  );
+}
+
+export async function listarReservasClaseAction(
+  boxId: string,
+  claseId: string
+): Promise<{ ok: boolean; data?: Reserva[]; message?: string; errorCode?: string }> {
+  const sesion = await obtenerSesionWeb();
+  if (!sesion) {
+    return {
+      ok: false,
+      errorCode: ERROR_CODES.NO_AUTENTICADO,
+      message: "Sesión expirada"
+    };
+  }
+  const res = await listarReservasApi(sesion.accessToken, boxId, {
+    claseId,
+    estado: "CONFIRMADA"
+  });
+  if (!res.ok) {
+    return { ok: false, errorCode: res.error.errorCode, message: res.error.message };
+  }
+  return { ok: true, data: res.data };
 }
 
 

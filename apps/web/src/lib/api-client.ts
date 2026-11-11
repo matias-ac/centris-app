@@ -43,6 +43,7 @@ import {
   type FiltroClases,
   type FiltroMorosos,
   type FiltroReservas,
+  type RegistrarAsistencia,
   type Horario,
   type LoginInput,
   type Membresia,
@@ -904,6 +905,9 @@ export async function listarClasesApi(
   const query = new URLSearchParams();
   if (filtro?.desde) query.set("desde", filtro.desde);
   if (filtro?.hasta) query.set("hasta", filtro.hasta);
+  if (filtro?.coachAfiliacionId) {
+    query.set("coachAfiliacionId", filtro.coachAfiliacionId);
+  }
   const queryString = query.toString();
   const url = `${API_URL}/clases${queryString ? `?${queryString}` : ""}`;
 
@@ -1095,6 +1099,31 @@ export async function cancelarClaseApi(
 
   const json = await response.json();
   return { ok: true, data: ClaseSchema.parse(json) };
+}
+
+export async function registrarAsistenciaApi(
+  accessToken: string,
+  boxId: string,
+  reservaId: string,
+  input: RegistrarAsistencia
+): Promise<ResultadoApi<Reserva>> {
+  const response = await fetch(`${API_URL}/reservas/${reservaId}/asistencia`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    body: JSON.stringify(input),
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: ReservaSchema.parse(json) };
 }
 
 

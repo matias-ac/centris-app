@@ -6,12 +6,14 @@ import {
   HttpStatus,
   Inject,
   Param,
+  Patch,
   Post,
   Query
 } from "@nestjs/common";
 import {
   CrearReservaSchema,
   FiltroReservasSchema,
+  RegistrarAsistenciaSchema,
   type Reserva
 } from "@centris/shared";
 import {
@@ -60,5 +62,23 @@ export class ReservasController {
     @Param("id") id: string
   ): Promise<Reserva> {
     return this.reservasService.cancelarReserva(contexto, id);
+  }
+
+  @Patch(":id/asistencia")
+  @HttpCode(HttpStatus.OK)
+  @Roles("administrador", "recepcionista", "coach")
+  async registrarAsistencia(
+    @ContextoBox() contexto: ContextoBoxActivo,
+    @UsuarioActual() usuario: UsuarioAutenticado,
+    @Param("id") id: string,
+    @Body() body: unknown
+  ): Promise<Reserva> {
+    const input = validarConZod(RegistrarAsistenciaSchema, body);
+    return this.reservasService.registrarAsistencia(
+      contexto,
+      usuario.id,
+      id,
+      input
+    );
   }
 }

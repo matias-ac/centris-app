@@ -2,6 +2,8 @@ export {
   ROLES_AFILIACION,
   RolAfiliacionSchema,
   tieneAlgunRol,
+  esStaffAdministrativo,
+  esCoachSinPermisosStaff,
   type RolAfiliacion
 } from "./roles/roles.schema.js";
 
@@ -156,16 +158,24 @@ export {
   obtenerPeriodoSemanalDeInstante,
   calcularDisponibilidadCreditos,
   evaluarVentanaCancelacion,
+  HORAS_VENTANA_CORRECCION_ASISTENCIA,
+  RegistrarAsistenciaSchema,
+  evaluarVentanaCorreccionAsistencia,
+  esAusenciaConsolidada,
   type EstadoReserva,
   type Reserva,
   type CrearReserva,
   type FiltroReservas,
+  type RegistrarAsistencia,
   type RangoPeriodoSemanal,
   type PeriodoSemanalInstante,
   type EntradaDisponibilidadCreditos,
   type ResultadoDisponibilidadCreditos,
   type EntradaEvaluarVentanaCancelacion,
-  type ResultadoVentanaCancelacion
+  type ResultadoVentanaCancelacion,
+  type EntradaEvaluarVentanaCorreccionAsistencia,
+  type ResultadoVentanaCorreccionAsistencia,
+  type EntradaEvaluarAusenciaConsolidada
 } from "./schemas/reservas.schema.js";
 
 
