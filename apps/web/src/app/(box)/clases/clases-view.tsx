@@ -80,7 +80,7 @@ export function ClasesView({
   esAdmin,
   esRecep,
   esCoach = false,
-  _esSoloCoach = false,
+  esSoloCoach: _esSoloCoach = false,
   afiliacionActivaId = "",
   clasesIniciales,
   coaches,
