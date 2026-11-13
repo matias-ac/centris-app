@@ -3,14 +3,15 @@
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import type { AfiliacionConBox } from "@centris/shared";
-import { seleccionarBoxAction } from "@/lib/actions";
 
 export function SelectorBoxHeader({
   afiliaciones,
-  boxActivoId
+  boxActivoId,
+  onSeleccionarBox
 }: {
   afiliaciones: AfiliacionConBox[];
   boxActivoId: string;
+  onSeleccionarBox: (boxId: string) => Promise<void>;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -18,7 +19,7 @@ export function SelectorBoxHeader({
   function handleChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const nuevoBoxId = e.target.value;
     startTransition(async () => {
-      await seleccionarBoxAction(nuevoBoxId);
+      await onSeleccionarBox(nuevoBoxId);
       router.refresh();
     });
   }
@@ -30,10 +31,14 @@ export function SelectorBoxHeader({
       value={boxActivoId}
       onChange={handleChange}
       disabled={isPending}
-      className="h-11 rounded-lg border border-border bg-secondary px-3 text-base font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+      className="min-h-11 cursor-pointer rounded-full border border-border bg-card px-3.5 text-base font-medium text-foreground transition-colors hover:border-[#3A3C42] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
     >
       {afiliaciones.map((afiliacion) => (
-        <option key={afiliacion.boxId} value={afiliacion.boxId}>
+        <option
+          key={afiliacion.boxId}
+          value={afiliacion.boxId}
+          className="bg-card text-foreground"
+        >
           {afiliacion.box.nombre}
         </option>
       ))}
