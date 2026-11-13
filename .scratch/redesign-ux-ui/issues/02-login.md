@@ -1,6 +1,6 @@
 # 02 — Rediseño UX/UI de `/login`
 
-**Status:** ready-for-agent
+**Status:** in-progress
 **Branch:** `feat/ui-02-login`
 **Blocked by:** `01`
 
