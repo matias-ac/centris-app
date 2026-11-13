@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "./card";
 import { Input } from "./input";
 import { Label } from "./label";
 import { Select } from "./select";
+import { Textarea } from "./textarea";
 
 describe("Primitivas Bento Centris v2", () => {
   it("Button cumple altura táctil min-h-11, forma rounded-full y variantes v2", () => {
@@ -101,7 +102,7 @@ describe("Primitivas Bento Centris v2", () => {
     expect(html).not.toContain("font-display");
   });
 
-  it("Input, Label y Select mantienen fuente >= 16px (text-base), rounded-xl y min-h-11", () => {
+  it("Input, Label, Select y Textarea mantienen fuente >= 16px (text-base), rounded-xl y min-h-11", () => {
     const html = renderToStaticMarkup(
       createElement(
         "div",
@@ -112,15 +113,18 @@ describe("Primitivas Bento Centris v2", () => {
           Select,
           { id: "select-test", defaultValue: "ars" },
           createElement("option", { value: "ars" }, "ARS")
-        )
+        ),
+        createElement(Textarea, { id: "textarea-test", placeholder: "Detalle" })
       )
     );
 
     expect(html).toContain('for="campo-test"');
     expect(html).toContain("rounded-xl");
     expect(html).toContain("min-h-11");
+    expect(html).toContain("min-h-[88px]");
     expect(html).toContain("text-base");
     expect(html).toContain("<select");
+    expect(html).toContain("<textarea");
     expect(html).toContain("ARS");
   });
 });

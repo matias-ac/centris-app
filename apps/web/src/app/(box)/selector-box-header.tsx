@@ -31,13 +31,13 @@ export function SelectorBoxHeader({
       value={boxActivoId}
       onChange={handleChange}
       disabled={isPending}
-      className="min-h-11 cursor-pointer rounded-full border border-border bg-card px-3.5 text-base font-medium text-foreground transition-colors hover:border-[#3A3C42] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+      className="min-h-10 cursor-pointer bg-transparent pr-2 text-base font-medium text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-full disabled:opacity-50"
     >
       {afiliaciones.map((afiliacion) => (
         <option
           key={afiliacion.boxId}
           value={afiliacion.boxId}
-          className="bg-card text-foreground"
+          className="bg-secondary text-foreground"
         >
           {afiliacion.box.nombre}
         </option>

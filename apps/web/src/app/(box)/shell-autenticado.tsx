@@ -56,34 +56,38 @@ export interface ShellAutenticadoProps {
   children: React.ReactNode;
 }
 
-function EnlaceSidebar({
-  item,
-  activo,
+function ListaEnlacesSidebar({
+  items,
+  pathname,
   onNavigate
 }: {
-  item: ItemNavegacionBox;
-  activo: boolean;
+  items: readonly ItemNavegacionBox[];
+  pathname: string;
   onNavigate: () => void;
 }) {
-  const Icono = ICONOS_NAVEGACION[item.id];
+  return items.map((item) => {
+    const Icono = ICONOS_NAVEGACION[item.id];
+    const activo = esRutaActiva(pathname, item.href);
 
-  return (
-    <Link
-      href={item.href}
-      data-testid={item.testId}
-      aria-current={activo ? "page" : undefined}
-      onClick={onNavigate}
-      className={cn(
-        "flex min-h-11 items-center gap-3 rounded-full px-3.5 py-2.5 text-[0.9375rem] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-        activo
-          ? "bg-primary text-primary-foreground font-semibold"
-          : "text-muted-foreground font-medium hover:bg-secondary hover:text-foreground"
-      )}
-    >
-      <Icono className="h-[18px] w-[18px] shrink-0" aria-hidden={true} />
-      <span className="truncate">{item.label}</span>
-    </Link>
-  );
+    return (
+      <Link
+        key={item.id}
+        href={item.href}
+        data-testid={item.testId}
+        aria-current={activo ? "page" : undefined}
+        onClick={onNavigate}
+        className={cn(
+          "flex min-h-11 items-center gap-3 rounded-full px-3.5 py-2.5 text-[0.9375rem] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          activo
+            ? "bg-primary text-primary-foreground font-semibold"
+            : "text-muted-foreground font-medium hover:bg-secondary hover:text-foreground"
+        )}
+      >
+        <Icono className="h-[18px] w-[18px] shrink-0" aria-hidden={true} />
+        <span className="truncate">{item.label}</span>
+      </Link>
+    );
+  });
 }
 
 /**
@@ -106,6 +110,7 @@ export function ShellAutenticado({
 
   const navegacion = resolverNavegacionPorRoles(afiliacionActiva.roles);
   const iniciales = obtenerInicialesUsuario(nombreUsuario);
+  const tieneMultiplesBoxes = afiliaciones.length > 1;
 
   useEffect(() => {
     if (!drawerAbierto) {
@@ -136,7 +141,7 @@ export function ShellAutenticado({
         className={cn(
           "flex-col justify-between gap-5 border-r border-border bg-card px-3.5 py-5",
           drawerAbierto
-            ? "fixed inset-y-0 left-0 z-50 flex w-[272px] overflow-y-auto shadow-2xl lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-[248px] lg:shrink-0 lg:shadow-none"
+            ? "fixed inset-y-0 left-0 z-50 flex w-[272px] overflow-y-auto lg:sticky lg:top-0 lg:z-auto lg:h-screen lg:w-[248px] lg:shrink-0"
             : "hidden lg:sticky lg:top-0 lg:flex lg:h-screen lg:w-[248px] lg:shrink-0"
         )}
       >
@@ -145,9 +150,9 @@ export function ShellAutenticado({
             <Link
               href="/inicio"
               onClick={() => setDrawerAbierto(false)}
-              className="flex items-center gap-2.5 text-[1.0625rem] font-semibold tracking-[-0.02em] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring rounded-xl"
+              className="flex items-center gap-2.5 rounded-xl text-[1.0625rem] font-semibold tracking-[-0.02em] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-primary text-base font-bold text-primary-foreground">
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-primary text-base font-semibold text-primary-foreground">
                 C
               </span>
               <span>Centris</span>
@@ -165,27 +170,21 @@ export function ShellAutenticado({
           </div>
 
           <nav aria-label="Secciones del Box" className="flex flex-col gap-1.5">
-            {navegacion.principal.map((item) => (
-              <EnlaceSidebar
-                key={item.id}
-                item={item}
-                activo={esRutaActiva(pathname, item.href)}
-                onNavigate={() => setDrawerAbierto(false)}
-              />
-            ))}
+            <ListaEnlacesSidebar
+              items={navegacion.principal}
+              pathname={pathname}
+              onNavigate={() => setDrawerAbierto(false)}
+            />
           </nav>
         </div>
 
         {navegacion.pie.length > 0 ? (
           <div className="flex flex-col gap-1.5 border-t border-border pt-3.5">
-            {navegacion.pie.map((item) => (
-              <EnlaceSidebar
-                key={item.id}
-                item={item}
-                activo={esRutaActiva(pathname, item.href)}
-                onNavigate={() => setDrawerAbierto(false)}
-              />
-            ))}
+            <ListaEnlacesSidebar
+              items={navegacion.pie}
+              pathname={pathname}
+              onNavigate={() => setDrawerAbierto(false)}
+            />
           </div>
         ) : null}
       </aside>
@@ -205,38 +204,49 @@ export function ShellAutenticado({
               <Menu className="h-5 w-5" aria-hidden={true} />
             </Button>
 
-            <div className="inline-flex min-h-11 max-w-full items-center gap-2.5 rounded-full border border-border bg-card px-3.5 py-1.5">
+            <div className="inline-flex min-h-11 max-w-full items-center gap-2.5 rounded-full border border-border bg-secondary px-3.5 py-1">
               <span
                 aria-hidden="true"
                 className="h-2 w-2 shrink-0 rounded-full bg-primary"
               />
-              <span
-                data-testid="box-activo-nombre"
-                className="truncate text-sm font-medium text-foreground"
-              >
-                {afiliacionActiva.box.nombre}
-              </span>
+              {tieneMultiplesBoxes ? (
+                <>
+                  <span
+                    data-testid="box-activo-nombre"
+                    className="sr-only"
+                  >
+                    {afiliacionActiva.box.nombre}
+                  </span>
+                  <SelectorBoxHeader
+                    afiliaciones={afiliaciones}
+                    boxActivoId={afiliacionActiva.boxId}
+                    onSeleccionarBox={onSeleccionarBox}
+                  />
+                </>
+              ) : (
+                <span
+                  data-testid="box-activo-nombre"
+                  className="truncate text-sm font-medium text-foreground"
+                >
+                  {afiliacionActiva.box.nombre}
+                </span>
+              )}
             </div>
 
-            {afiliaciones.length > 1 ? (
-              <SelectorBoxHeader
-                afiliaciones={afiliaciones}
-                boxActivoId={afiliacionActiva.boxId}
-                onSeleccionarBox={onSeleccionarBox}
-              />
-            ) : null}
-
-            <div className="hidden min-h-11 items-center gap-2 rounded-full border border-border bg-card px-3.5 text-xs text-muted-foreground tabular-nums sm:inline-flex">
+            <div className="hidden min-h-11 items-center gap-2 rounded-full border border-border bg-secondary px-3.5 text-xs text-muted-foreground tabular-nums sm:inline-flex">
               <Calendar className="h-3.5 w-3.5 shrink-0" aria-hidden={true} />
               <span>{fechaOperativaLabel}</span>
+              <span className="hidden xl:inline text-muted-foreground/80">
+                · {afiliacionActiva.box.timezone}
+              </span>
             </div>
           </div>
 
           <div className="flex flex-wrap items-center gap-2.5">
-            <div className="inline-flex min-h-11 flex-wrap items-center gap-2.5 rounded-full border border-border bg-card px-3 py-1.5">
+            <div className="inline-flex min-h-11 flex-wrap items-center gap-2.5 rounded-full border border-border bg-secondary px-3 py-1.5">
               <span
                 aria-hidden="true"
-                className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-border bg-secondary text-xs font-semibold text-primary"
+                className="grid h-7 w-7 shrink-0 place-items-center rounded-full border border-border bg-card text-xs font-semibold text-primary"
               >
                 {iniciales}
               </span>

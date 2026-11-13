@@ -31,31 +31,24 @@ export function CardHeader({
   );
 }
 
+export const BENTO_TITLE_CLASSES =
+  "text-[1.0625rem] font-medium leading-[1.3] tracking-[-0.01em] text-foreground";
+
+export const BENTO_DESCRIPTION_CLASSES =
+  "text-sm leading-normal text-muted-foreground";
+
 export function CardTitle({
   className,
   ...props
 }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return (
-    <h2
-      className={cn(
-        "text-[1.0625rem] font-medium leading-[1.3] tracking-[-0.01em] text-foreground",
-        className
-      )}
-      {...props}
-    />
-  );
+  return <h2 className={cn(BENTO_TITLE_CLASSES, className)} {...props} />;
 }
 
 export function CardDescription({
   className,
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return (
-    <p
-      className={cn("text-sm leading-[1.4] text-muted-foreground", className)}
-      {...props}
-    />
-  );
+  return <p className={cn(BENTO_DESCRIPTION_CLASSES, className)} {...props} />;
 }
 
 export function CardContent({

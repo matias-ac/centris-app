@@ -4,6 +4,7 @@ import { useEffect, useId, useRef } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "./button";
+import { BENTO_DESCRIPTION_CLASSES, BENTO_TITLE_CLASSES } from "./card";
 
 export function manejarTeclaDrawer(key: string, onClose: () => void): void {
   if (key === "Escape") {
@@ -41,6 +42,11 @@ export function SideDrawer({
   const titleId = useId();
   const descriptionId = useId();
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   useEffect(() => {
     if (!open) {
@@ -57,7 +63,7 @@ export function SideDrawer({
     closeButtonRef.current?.focus();
 
     function onKeyDown(event: KeyboardEvent) {
-      manejarTeclaDrawer(event.key, onClose);
+      manejarTeclaDrawer(event.key, () => onCloseRef.current());
     }
 
     document.addEventListener("keydown", onKeyDown);
@@ -67,7 +73,7 @@ export function SideDrawer({
       document.body.style.overflow = previousOverflow;
       previousActive?.focus();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!open) {
     return null;
@@ -78,7 +84,7 @@ export function SideDrawer({
       <div
         aria-hidden="true"
         data-testid="drawer-backdrop"
-        onClick={onClose}
+        onClick={() => onCloseRef.current()}
         className="fixed inset-0 bg-black/70 backdrop-blur-[2px]"
       />
       <section
@@ -94,17 +100,11 @@ export function SideDrawer({
       >
         <header className="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
           <div className="min-w-0 space-y-1">
-            <h2
-              id={titleId}
-              className="text-[1.0625rem] font-medium leading-[1.3] tracking-[-0.01em] text-foreground"
-            >
+            <h2 id={titleId} className={BENTO_TITLE_CLASSES}>
               {title}
             </h2>
             {description ? (
-              <p
-                id={descriptionId}
-                className="text-sm leading-[1.4] text-muted-foreground"
-              >
+              <p id={descriptionId} className={BENTO_DESCRIPTION_CLASSES}>
                 {description}
               </p>
             ) : null}
@@ -114,7 +114,7 @@ export function SideDrawer({
             type="button"
             variant="iconCircle"
             aria-label={closeLabel}
-            onClick={onClose}
+            onClick={() => onCloseRef.current()}
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </Button>

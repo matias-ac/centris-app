@@ -110,13 +110,3 @@ body {
 .tabular-nums {
   font-variant-numeric: tabular-nums;
 }
-
-.bg-bento-stripe {
-  background: repeating-linear-gradient(
-    -45deg,
-    #18191C,
-    #18191C 4px,
-    #22242A 4px,
-    #22242A 8px
-  );
-}

@@ -1,7 +1,8 @@
 import type * as React from "react";
 import { cn } from "@/lib/utils";
+import { CONTROL_BASE_CLASSES } from "./input";
 
-export type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement>;
+export type SelectProps = React.ComponentProps<"select">;
 
 /**
  * Selector nativo estilizado Dark Bento con altura mínima 44px y fuente mínima de 16px.
@@ -9,10 +10,7 @@ export type SelectProps = React.SelectHTMLAttributes<HTMLSelectElement>;
 export function Select({ className, children, ...props }: SelectProps) {
   return (
     <select
-      className={cn(
-        "flex min-h-11 w-full cursor-pointer rounded-xl border border-border bg-background px-3.5 py-2 text-base text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-[#FF6D6D]",
-        className
-      )}
+      className={cn(CONTROL_BASE_CLASSES, "cursor-pointer", className)}
       {...props}
     >
       {children}

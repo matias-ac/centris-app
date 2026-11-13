@@ -2,11 +2,7 @@ import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { FilterChips } from "./filter-chips";
-import {
-  InlineConfirm,
-  ejecutarConfirmacionInline,
-  manejarTeclaInlineConfirm
-} from "./inline-confirm";
+import { InlineConfirm, manejarTeclaInlineConfirm } from "./inline-confirm";
 import { SideDrawer, manejarTeclaDrawer } from "./side-drawer";
 
 describe("Módulos profundos de interacción Bento", () => {
@@ -44,13 +40,8 @@ describe("Módulos profundos de interacción Bento", () => {
       expect(html).toContain('role="group"');
     });
 
-    it("ejecuta confirmación asíncrona sin llamadas nativas y cancela con Escape", async () => {
-      const confirmSpy = vi.fn(async () => undefined);
+    it("cancela la confirmación inline con Escape solo cuando no está pendiente", () => {
       const cancelSpy = vi.fn();
-
-      const ok = await ejecutarConfirmacionInline(confirmSpy);
-      expect(ok).toBe(true);
-      expect(confirmSpy).toHaveBeenCalledTimes(1);
 
       manejarTeclaInlineConfirm("Escape", false, cancelSpy);
       expect(cancelSpy).toHaveBeenCalledTimes(1);

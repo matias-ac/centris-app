@@ -14,13 +14,6 @@ export function manejarTeclaInlineConfirm(
   }
 }
 
-export async function ejecutarConfirmacionInline(
-  onConfirm: () => void | Promise<void>
-): Promise<boolean> {
-  await onConfirm();
-  return true;
-}
-
 export interface InlineConfirmProps {
   triggerLabel: string;
   confirmMessage: string;
@@ -79,7 +72,7 @@ export function InlineConfirm({
     }
     setEjecutando(true);
     try {
-      await ejecutarConfirmacionInline(onConfirm);
+      await onConfirm();
       setConfirmando(false);
     } finally {
       setEjecutando(false);

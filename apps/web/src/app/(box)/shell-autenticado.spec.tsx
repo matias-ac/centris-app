@@ -139,6 +139,8 @@ describe("Shell Autenticado Dark Bento Cockpit", () => {
 
     expect(html).toContain('data-testid="box-activo-nombre"');
     expect(html).toContain("Box Centris Norte");
+    expect(html).toContain("America/Argentina/Buenos_Aires");
+    expect(html).toContain("bg-secondary");
     expect(html).toContain('data-testid="roles-activos-badges"');
     expect(html).toContain('data-testid="selector-box-header"');
     expect(html).toContain('data-testid="nav-link-inicio"');
