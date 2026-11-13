@@ -355,3 +355,76 @@ Then(
     }
   }
 );
+
+Given(
+  "un Usuario no autenticado en la pantalla de inicio de sesión",
+  async ({ page }) => {
+    await page.context().clearCookies();
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("/login");
+    await expect(
+      page.getByRole("heading", { name: /Iniciar sesión/i })
+    ).toBeVisible();
+  }
+);
+
+When(
+  "valida campos inválidos individualmente, alterna la visibilidad de contraseña y envía credenciales incorrectas",
+  async ({ page }) => {
+    const emailInput = page.getByLabel(/Correo electrónico/i);
+    const passwordInput = page.getByLabel("Contraseña", { exact: true });
+    const submitBtn = page.getByRole("button", { name: /Iniciar sesión/i });
+
+    // Validación individual: solo email inválido
+    await emailInput.fill("correo-invalido");
+    await passwordInput.fill("Centris123!");
+    await submitBtn.click();
+    await expect(emailInput).toHaveAttribute("aria-invalid", "true");
+    await expect(passwordInput).not.toHaveAttribute("aria-invalid", "true");
+
+    // Toggle de visibilidad de contraseña accesible (>= 44px)
+    const toggleBtn = page.getByRole("button", {
+      name: /Mostrar clave/i
+    });
+    const toggleBox = await toggleBtn.boundingBox();
+    expect(toggleBox?.width).toBeGreaterThanOrEqual(44);
+    expect(toggleBox?.height).toBeGreaterThanOrEqual(44);
+    await toggleBtn.click();
+    await expect(passwordInput).toHaveAttribute("type", "text");
+    await expect(
+      page.getByRole("button", { name: /Ocultar clave/i })
+    ).toHaveAttribute("aria-pressed", "true");
+
+    // Credenciales válidas en formato pero incorrectas en servidor
+    await emailInput.fill("admin@centris.dev");
+    await passwordInput.fill("ClaveIncorrecta999!");
+    await submitBtn.click();
+  }
+);
+
+Then(
+  "visualiza errores accesibles sin códigos técnicos, sin desborde horizontal en móvil ni escritorio y puede navegar a activar su cuenta",
+  async ({ page }) => {
+    const alerta = page.getByTestId("alerta-error-auth");
+    await expect(alerta).toBeVisible();
+    await expect(alerta).toHaveAttribute("role", "alert");
+    const textoAlerta = (await alerta.textContent()) ?? "";
+    expect(textoAlerta).not.toMatch(/CREDENCIALES_INVALIDAS|ERROR:|401|500/);
+
+    // Sin desborde horizontal en móvil (375px) ni escritorio (1280px y 1440px)
+    for (const width of [375, 1280, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
+      );
+      expect(overflow).toBe(false);
+    }
+
+    // Navegación accesible hacia /activar-cuenta
+    const activarLink = page.getByRole("link", { name: /Activar mi cuenta/i });
+    const linkBox = await activarLink.boundingBox();
+    expect(linkBox?.height).toBeGreaterThanOrEqual(44);
+    await activarLink.click();
+    await expect(page).toHaveURL(/\/activar-cuenta/);
+  }
+);

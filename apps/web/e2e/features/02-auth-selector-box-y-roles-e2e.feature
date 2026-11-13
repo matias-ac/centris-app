@@ -26,3 +26,8 @@ Característica: Identidad Global, Autenticación, Selector de Box y Guard de 4 
     Dado un Usuario del equipo con Afiliación activa en "Box Centris Norte" y en "Box Centris Sur"
     Cuando el Administrador de "Box Centris Norte" modifica los roles de su Afiliación y luego le aplica baja lógica
     Entonces los permisos del Usuario se actualizan de inmediato en "Box Centris Norte" sin afectar su Afiliación en "Box Centris Sur"
+
+  Escenario: Validación accesible, toggle de contraseña, estabilidad responsive y enlace a activación en /login
+    Dado un Usuario no autenticado en la pantalla de inicio de sesión
+    Cuando valida campos inválidos individualmente, alterna la visibilidad de contraseña y envía credenciales incorrectas
+    Entonces visualiza errores accesibles sin códigos técnicos, sin desborde horizontal en móvil ni escritorio y puede navegar a activar su cuenta
