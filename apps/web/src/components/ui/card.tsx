@@ -52,7 +52,7 @@ export function CardDescription({
 }: React.HTMLAttributes<HTMLParagraphElement>) {
   return (
     <p
-      className={cn("text-[0.8125rem] leading-[1.4] text-muted-foreground", className)}
+      className={cn("text-sm leading-[1.4] text-muted-foreground", className)}
       {...props}
     />
   );
