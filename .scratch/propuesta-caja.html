@@ -1,0 +1,1319 @@
+<!doctype html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Centris — Boceto Propuesto /caja (Sidebar + Dark Bento)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --canvas: #09090b;
+      --surface: #111214;
+      --elevated: #18191c;
+      --border: #232428;
+      --white: #ffffff;
+      --gray: #a1a1aa;
+      --lime: #c1f429;
+      --lime-hover: #aedf1b;
+      --black: #000000;
+      --mint: #18ffc8;
+      --mint-bg: rgba(24, 255, 200, 0.14);
+      --mint-border: rgba(24, 255, 200, 0.28);
+      --amber: #fbbf24;
+      --amber-bg: rgba(251, 191, 36, 0.14);
+      --amber-border: rgba(251, 191, 36, 0.28);
+      --coral: #ff6d6d;
+      --coral-bg: rgba(255, 109, 109, 0.14);
+      --coral-border: rgba(255, 109, 109, 0.28);
+      --zinc-bg: rgba(161, 161, 170, 0.14);
+      --zinc-border: rgba(161, 161, 170, 0.28);
+      --font: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    ::selection { background: var(--lime); color: var(--black); }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--canvas);
+      color: var(--white);
+      font-family: var(--font);
+      font-size: 0.9375rem;
+      font-weight: 400;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .hidden { display: none !important; }
+
+    /* Barra superior exclusiva del boceto */
+    .preview-toolbar {
+      background: #050506;
+      border-bottom: 1px dashed var(--border);
+      padding: 8px 16px;
+      font-size: 0.8125rem;
+      color: var(--gray);
+    }
+    .preview-toolbar-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .preview-pills { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .preview-pill {
+      min-height: 36px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--white);
+      font-family: var(--font);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .preview-pill[aria-pressed="true"] {
+      background: rgba(193, 244, 41, 0.12);
+      border-color: var(--lime);
+      color: var(--lime);
+    }
+
+    /* Shell */
+    .app-shell {
+      max-width: 1440px;
+      margin: 0 auto;
+      min-height: calc(100vh - 53px);
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 1024px) {
+      .app-shell { grid-template-columns: 248px minmax(0, 1fr); }
+    }
+
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 20px 14px;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    @media (min-width: 1024px) {
+      .sidebar { display: flex; position: sticky; top: 0; height: 100vh; }
+    }
+    .sidebar.mobile-open {
+      display: flex;
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: 272px;
+      z-index: 60;
+      height: 100vh;
+      box-shadow: 16px 0 48px rgba(0, 0, 0, 0.7);
+    }
+    .sidebar-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); z-index: 50; }
+
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand-mark {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 1.0625rem;
+      letter-spacing: -0.02em;
+      color: var(--white);
+    }
+    .brand-badge-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: var(--lime);
+      color: var(--black);
+      display: grid;
+      place-items: center;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .side-nav { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+    .side-link {
+      min-height: 44px;
+      padding: 10px 14px;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--gray);
+      font-size: 0.9375rem;
+      font-weight: 500;
+      transition: background-color 150ms ease, color 150ms ease;
+    }
+    .side-link svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .side-link:hover { background: var(--elevated); color: var(--white); }
+    .side-link[aria-current="page"] { background: var(--lime); color: var(--black); font-weight: 600; }
+    .sidebar-footer { border-top: 1px solid var(--border); padding-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+
+    /* Columna derecha */
+    .workspace-col { display: flex; flex-direction: column; min-width: 0; }
+    .topbar {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    @media (min-width: 1024px) { .topbar { padding: 16px 28px; } }
+    .topbar-left, .topbar-right { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+    .mobile-menu-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--white);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    @media (min-width: 1024px) { .mobile-menu-btn { display: none; } }
+
+    .capsule {
+      min-height: 44px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.875rem;
+      color: var(--white);
+    }
+    .capsule-muted { color: var(--gray); }
+    .capsule-dot { width: 8px; height: 8px; border-radius: 9999px; background: var(--lime); flex-shrink: 0; }
+    .avatar-circle {
+      width: 30px;
+      height: 30px;
+      border-radius: 9999px;
+      background: var(--elevated);
+      border: 1px solid var(--border);
+      display: grid;
+      place-items: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--lime);
+    }
+
+    /* Main */
+    .main-container {
+      padding: 24px 20px 72px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      width: 100%;
+    }
+    @media (min-width: 1024px) { .main-container { padding: 28px 28px 72px; } }
+
+    .page-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .page-title {
+      margin: 0;
+      font-size: clamp(1.375rem, 1.2rem + 0.8vw, 1.75rem);
+      font-weight: 500;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+    .page-subtitle { margin: 4px 0 0; color: var(--gray); font-size: 0.875rem; max-width: 65ch; }
+
+    /* Botones (>= 44px) */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 10px 16px;
+      border-radius: 9999px;
+      border: 1px solid transparent;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 600;
+      line-height: 1;
+      cursor: pointer;
+      transition: background-color 150ms ease, border-color 150ms ease;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .btn:focus-visible,
+    .filter-chip:focus-visible,
+    .tab-pill:focus-visible,
+    .side-link:focus-visible,
+    .mobile-menu-btn:focus-visible,
+    .preview-pill:focus-visible,
+    .icon-circle-btn:focus-visible,
+    .input-control:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--lime);
+    }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: var(--lime); color: var(--black); }
+    .btn-primary:hover:not(:disabled) { background: var(--lime-hover); }
+    .btn-secondary { background: var(--elevated); color: var(--white); border-color: var(--border); }
+    .btn-secondary:hover:not(:disabled) { background: #222328; }
+    .btn-destructive { background: var(--coral-bg); color: var(--coral); border-color: var(--coral-border); }
+    .btn-destructive:hover:not(:disabled) { background: rgba(255, 109, 109, 0.24); }
+
+    .icon-circle-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--elevated);
+      color: var(--white);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .icon-circle-btn:hover { background: #26282e; }
+
+    /* Tabs */
+    .tabs-bar { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tab-pill {
+      min-height: 44px;
+      padding: 10px 18px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--gray);
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .tab-pill[aria-selected="true"] {
+      background: var(--lime);
+      color: var(--black);
+      border-color: transparent;
+      font-weight: 600;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 9999px;
+      border: 1px solid transparent;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      line-height: 1.25;
+      white-space: nowrap;
+    }
+    .badge-mint { background: var(--mint-bg); color: var(--mint); border-color: var(--mint-border); }
+    .badge-amber { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
+    .badge-coral { background: var(--coral-bg); color: var(--coral); border-color: var(--coral-border); }
+    .badge-zinc { background: var(--zinc-bg); color: var(--gray); border-color: var(--zinc-border); }
+    .badge-lime { background: rgba(193, 244, 41, 0.14); color: var(--lime); border-color: rgba(193, 244, 41, 0.34); }
+
+    /* Banner recepción */
+    .scope-banner {
+      border-radius: 20px;
+      border: 1px solid var(--amber-border);
+      background: var(--amber-bg);
+      color: #fde68a;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.875rem;
+    }
+    .scope-banner svg { width: 18px; height: 18px; color: var(--amber); flex-shrink: 0; }
+
+    /* KPIs */
+    .kpi-grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+    .kpi-label { font-size: 0.8125rem; color: var(--gray); }
+    .kpi-val-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px 12px;
+      min-width: 0;
+    }
+    .kpi-val-row .badge {
+      max-width: 100%;
+      white-space: normal;
+      text-align: left;
+    }
+    .kpi-val {
+      font-size: clamp(1.375rem, 1.2rem + 0.8vw, 1.625rem);
+      font-weight: 500;
+      letter-spacing: -0.02em;
+    }
+    .kpi-val.coral { color: var(--coral); }
+    .kpi-val.mint { color: var(--mint); }
+    .kpi-foot { font-size: 0.75rem; color: var(--gray); }
+
+    /* Paneles bento */
+    .bento-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .card-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+    }
+    .card-title { margin: 0; font-size: 1.125rem; font-weight: 500; letter-spacing: -0.015em; }
+    .card-sub { margin: 3px 0 0; font-size: 0.8125rem; color: var(--gray); }
+
+    .search-box { position: relative; flex: 1 1 260px; max-width: 380px; }
+    .search-box svg {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gray);
+      width: 16px;
+      height: 16px;
+    }
+    .input-control {
+      width: 100%;
+      min-height: 44px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--canvas);
+      color: var(--white);
+      padding: 10px 14px;
+      font-family: var(--font);
+      font-size: 1rem;
+    }
+    .search-input { padding-left: 40px; border-radius: 9999px; }
+
+    .filter-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .filter-chip {
+      min-height: 44px;
+      padding: 8px 16px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--elevated);
+      color: var(--gray);
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .filter-chip[aria-pressed="true"] {
+      background: var(--lime);
+      color: var(--black);
+      border-color: transparent;
+      font-weight: 600;
+    }
+
+    /* Lista de morosos */
+    .debtors-list { display: flex; flex-direction: column; gap: 12px; }
+    .debtor-row {
+      border-radius: 18px;
+      background: var(--elevated);
+      border: 1px solid var(--border);
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+      grid-template-columns: 1fr;
+      align-items: center;
+      min-width: 0;
+    }
+    @media (min-width: 960px) {
+      .debtor-row {
+        grid-template-columns: minmax(0, 1fr) 150px auto;
+        gap: 18px;
+      }
+    }
+    .debtor-main { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .debtor-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .debtor-name { font-weight: 500; font-size: 1rem; color: var(--white); }
+    .debtor-email { font-size: 0.8125rem; color: var(--gray); }
+    .debt-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+    .debt-chip {
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 6px 10px;
+      font-size: 0.8125rem;
+      color: var(--gray);
+    }
+    .debt-chip strong { color: var(--coral); font-weight: 600; }
+
+    .debtor-amount { text-align: left; }
+    @media (min-width: 960px) { .debtor-amount { text-align: right; } }
+    .debtor-amount-label { display: block; font-size: 0.75rem; color: var(--gray); }
+    .debtor-amount-val { font-size: 1.375rem; font-weight: 500; color: var(--coral); }
+
+    .debtor-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-start; }
+    @media (min-width: 960px) { .debtor-actions { justify-content: flex-end; } }
+
+    /* Auditoría responsiva sin scroll horizontal forzado y columnas estables */
+    .audit-list { display: flex; flex-direction: column; gap: 10px; }
+    .audit-header-desktop {
+      display: none;
+      padding: 0 16px 6px;
+      font-size: 0.75rem;
+      color: var(--gray);
+      border-bottom: 1px solid var(--border);
+    }
+    .audit-row {
+      border-radius: 16px;
+      background: var(--elevated);
+      border: 1px solid var(--border);
+      padding: 16px;
+      display: grid;
+      gap: 12px 16px;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      align-items: start;
+      min-width: 0;
+    }
+    .audit-col-monto { order: 1; }
+    .audit-col-monto strong { font-size: 1.125rem; }
+    .audit-col-fecha { order: 2; text-align: right; }
+    .audit-col-registrador { order: 3; min-width: 0; }
+    .audit-col-medio {
+      order: 4;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      text-align: right;
+    }
+    .audit-footer-pair {
+      order: 5;
+      grid-column: 1 / -1;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px 14px;
+      border-top: 1px solid var(--border);
+      padding-top: 12px;
+      min-width: 0;
+    }
+    .audit-cell-label { display: block; font-size: 0.75rem; color: var(--gray); margin-bottom: 3px; }
+    .audit-status-col {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+      min-width: 0;
+      flex: 1 1 160px;
+    }
+    .audit-reason {
+      font-size: 0.75rem;
+      color: var(--gray);
+      line-height: 1.35;
+    }
+    .audit-actions { display: flex; justify-content: flex-end; flex-shrink: 0; }
+    .audit-empty-action { display: none; }
+
+    @media (min-width: 1080px) {
+      .audit-header-desktop {
+        display: grid;
+        grid-template-columns: 106px 128px 136px minmax(150px, 1fr) 156px 116px;
+        gap: 14px;
+      }
+      .audit-row {
+        padding: 14px 16px;
+        grid-template-columns: 106px 128px 136px minmax(150px, 1fr) 156px 116px;
+        gap: 14px;
+        align-items: center;
+      }
+      .audit-col-fecha,
+      .audit-col-monto,
+      .audit-col-medio,
+      .audit-col-registrador {
+        order: initial;
+        text-align: left;
+        align-items: flex-start;
+      }
+      .audit-col-monto strong { font-size: 0.9375rem; }
+      .audit-footer-pair { display: contents; }
+      .audit-cell-label { display: none; }
+      .audit-status-col { min-width: 156px; flex: initial; }
+      .audit-actions { justify-content: flex-end; }
+      .audit-empty-action { display: inline; font-size: 0.75rem; color: var(--gray); }
+    }
+
+    .empty-state {
+      border-radius: 18px;
+      border: 1px dashed var(--border);
+      background: var(--elevated);
+      padding: 28px 16px;
+      text-align: center;
+      color: var(--gray);
+      font-size: 0.875rem;
+    }
+
+    /* Drawer lateral derecho */
+    .drawer-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.72); z-index: 80; }
+    .drawer {
+      position: fixed;
+      inset: 0 0 0 auto;
+      width: min(480px, 100vw);
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      z-index: 90;
+      display: flex;
+      flex-direction: column;
+      padding: 22px;
+      overflow-y: auto;
+      gap: 18px;
+    }
+    .drawer-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .drawer-title { margin: 0; font-size: 1.1875rem; font-weight: 500; color: var(--coral); }
+    .drawer-sub { margin: 4px 0 0; font-size: 0.8125rem; color: var(--gray); }
+
+    .receipt-box {
+      border-radius: 16px;
+      background: var(--elevated);
+      border: 1px solid var(--border);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 0.875rem;
+    }
+    .receipt-row { display: flex; justify-content: space-between; gap: 10px; }
+    .receipt-row span:first-child { color: var(--gray); }
+
+    .field-label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 6px; color: var(--white); }
+    .form-error {
+      border-radius: 14px;
+      border: 1px solid var(--coral-border);
+      background: var(--coral-bg);
+      color: #fecaca;
+      padding: 12px 14px;
+      font-size: 0.8125rem;
+    }
+    .drawer-footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 100;
+      max-width: 420px;
+      border-radius: 18px;
+      border: 1px solid var(--mint-border);
+      background: #0d1d1a;
+      color: #ccfbf1;
+      padding: 14px 16px;
+      display: none;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.875rem;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+    }
+    .toast.visible { display: flex; }
+  </style>
+</head>
+<body>
+  <!-- Barra exclusiva del boceto -->
+  <div class="preview-toolbar">
+    <div class="preview-toolbar-inner">
+      <span><strong>Boceto /caja (nuevo diseño base)</strong> · Seguimiento de morosos, auditoría y anulación de pagos (datos de ejemplo)</span>
+      <div class="preview-pills" role="group" aria-label="Cambiar rol simulado">
+        <span>Rol activo:</span>
+        <button type="button" class="preview-pill" data-role="admin" aria-pressed="true">Administrador (Morosos + Auditoría)</button>
+        <button type="button" class="preview-pill" data-role="recep" aria-pressed="false">Recepcionista (solo Morosos)</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="sidebar-backdrop" class="sidebar-backdrop hidden"></div>
+
+  <div class="app-shell">
+    <!-- Sidebar Vertical Izquierdo -->
+    <aside id="sidebar" class="sidebar" aria-label="Menú principal del Box">
+      <div>
+        <div class="brand-lockup">
+          <div class="brand-mark">
+            <span class="brand-badge-dot" aria-hidden="true">C</span>
+            <span>Centris</span>
+          </div>
+          <button type="button" id="close-mobile-menu" class="mobile-menu-btn" aria-label="Cerrar menú">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <nav class="side-nav" aria-label="Secciones del Box">
+          <a href="#inicio" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>
+            <span>Inicio</span>
+          </a>
+          <a href="#horarios" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            <span>Horarios</span>
+          </a>
+          <a href="#clases" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            <span>Clases</span>
+          </a>
+          <a href="#reservas" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <span>Reservas</span>
+          </a>
+          <a href="#planes" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg>
+            <span>Planes</span>
+          </a>
+          <a href="#atletas" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>Atletas</span>
+          </a>
+          <a href="#caja" class="side-link" aria-current="page">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <span>Caja</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="sidebar-footer">
+        <a href="#afiliaciones" class="side-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+          <span>Cambiar de Box</span>
+        </a>
+        <a href="#configuracion" id="nav-config" class="side-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Configuración</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Columna Principal -->
+    <div class="workspace-col">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button type="button" id="open-mobile-menu" class="mobile-menu-btn" aria-label="Abrir menú">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+          </button>
+          <div class="capsule">
+            <span class="capsule-dot" aria-hidden="true"></span>
+            <strong>Box Centris Norte</strong>
+            <span class="capsule-muted">· ARS</span>
+          </div>
+          <div class="capsule">
+            <span class="capsule-muted">Sección</span>
+            <strong>Caja y cobranzas</strong>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <div class="capsule">
+            <span class="avatar-circle" id="user-avatar">LB</span>
+            <span id="user-name">Lucía Benítez</span>
+            <span class="badge badge-lime" id="user-role-badge">Administrador</span>
+          </div>
+          <button type="button" class="btn btn-secondary" id="logout-btn">Cerrar sesión</button>
+        </div>
+      </header>
+
+      <main class="main-container">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Caja y seguimiento de deuda</h1>
+            <p class="page-subtitle">Controlá saldos pendientes de atletas y revisá el historial completo de cobros del Box.</p>
+          </div>
+
+          <div class="tabs-bar" role="tablist" aria-label="Vistas de caja">
+            <button type="button" class="tab-pill" role="tab" id="tab-morosos" data-tab="morosos" aria-selected="true">
+              Atletas con deuda (<span class="tabular-nums" id="tab-morosos-count">3</span>)
+            </button>
+            <button type="button" class="tab-pill" role="tab" id="tab-auditoria" data-tab="auditoria" aria-selected="false">
+              Auditoría de movimientos (<span class="tabular-nums" id="tab-pagos-count">5</span>)
+            </button>
+          </div>
+        </div>
+
+        <!-- Banner alcance recepción -->
+        <div id="recep-banner" class="scope-banner hidden" role="status">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          <span><strong>Vista de Recepción:</strong> podés consultar atletas con saldo pendiente y abrir su ficha para registrar cobros. La auditoría de movimientos y anulación de pagos es exclusiva de Administración.</span>
+        </div>
+
+        <!-- KPIs -->
+        <section class="kpi-grid" aria-label="Resumen de caja">
+          <div class="kpi-card">
+            <span class="kpi-label">Saldo total pendiente</span>
+            <div class="kpi-val-row">
+              <strong class="kpi-val coral tabular-nums" id="kpi-deuda">$ 83.000</strong>
+              <span class="badge badge-coral" id="kpi-deuda-badge">Por cobrar</span>
+            </div>
+            <span class="kpi-foot">Cuotas vigentes con saldo mayor a cero</span>
+          </div>
+
+          <div class="kpi-card">
+            <span class="kpi-label">Atletas con saldo pendiente</span>
+            <div class="kpi-val-row">
+              <strong class="kpi-val tabular-nums" id="kpi-morosos">3</strong>
+              <span class="badge badge-amber" id="kpi-morosos-badge">Seguimiento</span>
+            </div>
+            <span class="kpi-foot">Acceso directo a la ficha para registrar pagos</span>
+          </div>
+
+          <div class="kpi-card" id="kpi-ingresos-card">
+            <span class="kpi-label">Ingresos válidos en auditoría</span>
+            <div class="kpi-val-row">
+              <strong class="kpi-val mint tabular-nums" id="kpi-recaudado">$ 157.000</strong>
+              <span class="badge badge-mint tabular-nums" id="kpi-pagos-split">4 válidos · 1 anulado</span>
+            </div>
+            <span class="kpi-foot">Excluye movimientos anulados (datos de ejemplo)</span>
+          </div>
+        </section>
+
+        <!-- Vista 1: Morosos -->
+        <section id="view-morosos" class="bento-card" aria-label="Atletas con deuda pendiente">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Atletas con saldo pendiente</h2>
+              <p class="card-sub">Revisá el detalle de cada membresía adeudada y abrí su ficha para regularizar el pago.</p>
+            </div>
+            <div class="search-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <input id="search-morosos" class="input-control search-input" type="search" placeholder="Buscar por nombre o email..." aria-label="Buscar atleta con deuda" />
+            </div>
+          </div>
+
+          <div id="debtors-list" class="debtors-list"></div>
+        </section>
+
+        <!-- Vista 2: Auditoría de caja (solo Administrador) -->
+        <section id="view-auditoria" class="bento-card hidden" aria-label="Auditoría de cobros y anulaciones">
+          <div class="card-header">
+            <div>
+              <h2 class="card-title">Auditoría de cobros y anulaciones</h2>
+              <p class="card-sub">Registro histórico de pagos ingresados en el Box. Anular un pago restaura el saldo en la membresía.</p>
+            </div>
+            <div class="search-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <input id="search-auditoria" class="input-control search-input" type="search" placeholder="Buscar por quien registró o motivo..." aria-label="Buscar en auditoría" />
+            </div>
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;">
+            <div class="filter-chips" role="group" aria-label="Filtrar por estado">
+              <button type="button" class="filter-chip" data-audit-status="all" aria-pressed="true">Todos</button>
+              <button type="button" class="filter-chip" data-audit-status="valid" aria-pressed="false">Válidos</button>
+              <button type="button" class="filter-chip" data-audit-status="void" aria-pressed="false">Anulados</button>
+            </div>
+
+            <div class="filter-chips" role="group" aria-label="Filtrar por medio de pago">
+              <button type="button" class="filter-chip" data-audit-medio="ALL" aria-pressed="true">Todos los medios</button>
+              <button type="button" class="filter-chip" data-audit-medio="Transferencia" aria-pressed="false">Transferencia</button>
+              <button type="button" class="filter-chip" data-audit-medio="Efectivo" aria-pressed="false">Efectivo</button>
+              <button type="button" class="filter-chip" data-audit-medio="Tarjeta" aria-pressed="false">Tarjeta</button>
+            </div>
+          </div>
+
+          <div class="audit-list">
+            <div class="audit-header-desktop" aria-hidden="true">
+              <span>Fecha</span>
+              <span>Monto</span>
+              <span>Medio</span>
+              <span>Registrado por</span>
+              <span>Estado</span>
+              <span style="text-align:right;">Acción</span>
+            </div>
+            <div id="audit-rows" style="display:flex;flex-direction:column;gap:10px;"></div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Drawer lateral Anular Pago -->
+  <div id="drawer-backdrop" class="drawer-backdrop hidden"></div>
+  <aside id="op-drawer" class="drawer hidden" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+    <div class="drawer-head">
+      <div>
+        <h2 id="drawer-title" class="drawer-title">Anular pago registrado</h2>
+        <p class="drawer-sub">El comprobante queda marcado como anulado en auditoría y el importe vuelve al saldo pendiente.</p>
+      </div>
+      <button type="button" id="close-drawer" class="icon-circle-btn" aria-label="Cerrar panel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <div id="drawer-receipt" class="receipt-box"></div>
+
+    <form id="void-form" style="display:flex;flex-direction:column;gap:16px;" novalidate>
+      <div id="void-error" class="form-error hidden" role="alert"></div>
+
+      <div>
+        <label class="field-label" for="motivo-input">Motivo de anulación (obligatorio)</label>
+        <input id="motivo-input" class="input-control" type="text" placeholder="Ej: Transferencia cargada dos veces por error" required />
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" id="cancel-drawer" class="btn btn-secondary">Cancelar</button>
+        <button type="submit" id="confirm-void-btn" class="btn btn-destructive">Confirmar anulación</button>
+      </div>
+    </form>
+  </aside>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M20 6 9 17l-5-5"/></svg>
+    <span id="toast-msg"></span>
+  </div>
+
+  <script>
+    const state = {
+      role: "admin", // "admin" | "recep"
+      activeTab: "morosos", // "morosos" | "auditoria"
+      searchMorosos: "",
+      searchAuditoria: "",
+      auditStatus: "all", // "all" | "valid" | "void"
+      auditMedio: "ALL", // "ALL" | "Transferencia" | "Efectivo" | "Tarjeta"
+      voidTargetId: null,
+      morosos: [
+        {
+          afiliacionId: "af-101",
+          nombre: "Valentina Gómez",
+          email: "valen.gomez@demo.centris",
+          totalDeuda: 19000,
+          membresiasConDeuda: [
+            { nombrePlan: "CrossFit 3 veces por semana", precio: 38000, totalPagado: 19000, saldo: 19000 }
+          ]
+        },
+        {
+          afiliacionId: "af-102",
+          nombre: "Tomás Ferreyra",
+          email: "tomas.ferreyra@demo.centris",
+          totalDeuda: 54000,
+          membresiasConDeuda: [
+            { nombrePlan: "Pase Libre Mensual", precio: 54000, totalPagado: 0, saldo: 54000 }
+          ]
+        },
+        {
+          afiliacionId: "af-103",
+          nombre: "Camila Duarte",
+          email: "camila.duarte@demo.centris",
+          totalDeuda: 10000,
+          membresiasConDeuda: [
+            { nombrePlan: "Pack 12 Clases Flexible", precio: 41500, totalPagado: 31500, saldo: 10000 }
+          ]
+        }
+      ],
+      pagos: [
+        {
+          id: "pago-1",
+          fechaPago: "2026-11-13",
+          monto: 54000,
+          medioPago: "Transferencia",
+          registradoPorNombre: "Lucía Benítez",
+          anuladoEn: null,
+          motivoAnulacion: null
+        },
+        {
+          id: "pago-2",
+          fechaPago: "2026-11-13",
+          monto: 38000,
+          medioPago: "Efectivo",
+          registradoPorNombre: "Mateo Ríos",
+          anuladoEn: null,
+          motivoAnulacion: null
+        },
+        {
+          id: "pago-3",
+          fechaPago: "2026-11-12",
+          monto: 33500,
+          medioPago: "Tarjeta",
+          registradoPorNombre: "Mateo Ríos",
+          anuladoEn: null,
+          motivoAnulacion: null
+        },
+        {
+          id: "pago-4",
+          fechaPago: "2026-11-12",
+          monto: 31500,
+          medioPago: "Transferencia",
+          registradoPorNombre: "Lucía Benítez",
+          anuladoEn: null,
+          motivoAnulacion: null
+        },
+        {
+          id: "pago-5",
+          fechaPago: "2026-11-10",
+          monto: 38000,
+          medioPago: "Transferencia",
+          registradoPorNombre: "Mateo Ríos",
+          anuladoEn: "2026-11-10T18:10:00Z",
+          motivoAnulacion: "Transferencia duplicada por error de carga"
+        }
+      ]
+    };
+
+    const arsFormatter = new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      maximumFractionDigits: 0
+    });
+    function formatMoney(v) { return arsFormatter.format(v); }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById("toast");
+      document.getElementById("toast-msg").textContent = msg;
+      el.classList.add("visible");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove("visible"), 3400);
+    }
+
+    function updateKPIs() {
+      const totalDeuda = state.morosos.reduce((acc, m) => acc + m.totalDeuda, 0);
+      document.getElementById("kpi-deuda").textContent = formatMoney(totalDeuda);
+      document.getElementById("kpi-morosos").textContent = String(state.morosos.length);
+      document.getElementById("tab-morosos-count").textContent = String(state.morosos.length);
+
+      const validos = state.pagos.filter((p) => p.anuladoEn === null);
+      const anulados = state.pagos.length - validos.length;
+      const recaudado = validos.reduce((acc, p) => acc + p.monto, 0);
+
+      document.getElementById("kpi-recaudado").textContent = formatMoney(recaudado);
+      document.getElementById("kpi-pagos-split").textContent = `${validos.length} válidos · ${anulados} anulado${anulados === 1 ? "" : "s"}`;
+      document.getElementById("tab-pagos-count").textContent = String(state.pagos.length);
+    }
+
+    function renderMorosos() {
+      const container = document.getElementById("debtors-list");
+      const q = state.searchMorosos.trim().toLowerCase();
+      const filtered = state.morosos.filter((m) =>
+        !q || m.nombre.toLowerCase().includes(q) || m.email.toLowerCase().includes(q)
+      );
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="empty-state">No hay atletas con deuda que coincidan con la búsqueda.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map((m) => `
+        <article class="debtor-row">
+          <div class="debtor-main">
+            <div class="debtor-head">
+              <strong class="debtor-name">${escapeHtml(m.nombre)}</strong>
+              <span class="badge badge-coral">Saldo pendiente</span>
+            </div>
+            <span class="debtor-email">${escapeHtml(m.email)}</span>
+            <div class="debt-chips">
+              ${m.membresiasConDeuda.map((d) => `
+                <span class="debt-chip tabular-nums">
+                  ${escapeHtml(d.nombrePlan)}: debe <strong>${formatMoney(d.saldo)}</strong> (Precio ${formatMoney(d.precio)} − Pagado ${formatMoney(d.totalPagado)})
+                </span>
+              `).join("")}
+            </div>
+          </div>
+
+          <div class="debtor-amount">
+            <span class="debtor-amount-label">Deuda total</span>
+            <strong class="debtor-amount-val tabular-nums">${formatMoney(m.totalDeuda)}</strong>
+          </div>
+
+          <div class="debtor-actions">
+            <button type="button" class="btn btn-secondary" data-jump-athlete="${m.afiliacionId}" data-athlete-name="${escapeHtml(m.nombre)}">
+              Abrir ficha y cobrar
+            </button>
+          </div>
+        </article>
+      `).join("");
+    }
+
+    function renderAuditoria() {
+      const container = document.getElementById("audit-rows");
+      const q = state.searchAuditoria.trim().toLowerCase();
+
+      const filtered = state.pagos.filter((p) => {
+        const isVoid = p.anuladoEn !== null;
+        if (state.auditStatus === "valid" && isVoid) return false;
+        if (state.auditStatus === "void" && !isVoid) return false;
+        if (state.auditMedio !== "ALL" && p.medioPago !== state.auditMedio) return false;
+        if (q) {
+          const text = `${p.registradoPorNombre} ${p.medioPago} ${p.motivoAnulacion ?? ""}`.toLowerCase();
+          if (!text.includes(q)) return false;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="empty-state">No hay movimientos para los filtros seleccionados.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map((p) => {
+        const isVoid = p.anuladoEn !== null;
+        return `
+          <article class="audit-row">
+            <div class="audit-col-fecha">
+              <span class="audit-cell-label">Fecha</span>
+              <span class="tabular-nums">${escapeHtml(p.fechaPago)}</span>
+            </div>
+            <div class="audit-col-monto">
+              <span class="audit-cell-label">Monto</span>
+              <strong class="tabular-nums">${formatMoney(p.monto)}</strong>
+            </div>
+            <div class="audit-col-medio">
+              <span class="audit-cell-label">Medio</span>
+              <span class="badge badge-zinc">${escapeHtml(p.medioPago)}</span>
+            </div>
+            <div class="audit-col-registrador">
+              <span class="audit-cell-label">Registrado por</span>
+              <span>${escapeHtml(p.registradoPorNombre)}</span>
+            </div>
+            <div class="audit-footer-pair">
+              <div class="audit-status-col">
+                <span class="audit-cell-label">Estado</span>
+                ${isVoid
+                  ? `<span class="badge badge-coral">Anulado</span><span class="audit-reason">${escapeHtml(p.motivoAnulacion)}</span>`
+                  : `<span class="badge badge-mint">Válido</span>`}
+              </div>
+              <div class="audit-actions">
+                ${!isVoid && state.role === "admin"
+                  ? `<button type="button" class="btn btn-destructive" data-void-id="${p.id}">Anular</button>`
+                  : `<span class="audit-empty-action">Sin acciones</span>`}
+              </div>
+            </div>
+          </article>
+        `;
+      }).join("");
+    }
+
+    function openVoidDrawer(pagoId) {
+      const pago = state.pagos.find((p) => p.id === pagoId);
+      if (!pago) return;
+      state.voidTargetId = pagoId;
+      document.getElementById("void-error").classList.add("hidden");
+      document.getElementById("motivo-input").value = "";
+
+      document.getElementById("drawer-receipt").innerHTML = `
+        <div class="receipt-row"><span>Monto del pago</span><strong class="tabular-nums">${formatMoney(pago.monto)}</strong></div>
+        <div class="receipt-row"><span>Medio</span><strong>${escapeHtml(pago.medioPago)}</strong></div>
+        <div class="receipt-row"><span>Fecha</span><span class="tabular-nums">${escapeHtml(pago.fechaPago)}</span></div>
+        <div class="receipt-row"><span>Registrado por</span><span>${escapeHtml(pago.registradoPorNombre)}</span></div>
+      `;
+
+      document.getElementById("drawer-backdrop").classList.remove("hidden");
+      document.getElementById("op-drawer").classList.remove("hidden");
+      document.getElementById("motivo-input").focus();
+    }
+
+    function closeDrawer() {
+      document.getElementById("drawer-backdrop").classList.add("hidden");
+      document.getElementById("op-drawer").classList.add("hidden");
+      state.voidTargetId = null;
+    }
+
+    function syncRoleUI() {
+      const isAdmin = state.role === "admin";
+      document.getElementById("tab-auditoria").classList.toggle("hidden", !isAdmin);
+      document.getElementById("kpi-ingresos-card").classList.toggle("hidden", !isAdmin);
+      document.getElementById("recep-banner").classList.toggle("hidden", isAdmin);
+      document.getElementById("nav-config").classList.toggle("hidden", !isAdmin);
+
+      document.getElementById("user-avatar").textContent = isAdmin ? "LB" : "MR";
+      document.getElementById("user-name").textContent = isAdmin ? "Lucía Benítez" : "Mateo Ríos";
+      document.getElementById("user-role-badge").textContent = isAdmin ? "Administrador" : "Recepcionista";
+
+      document.querySelectorAll(".preview-pill").forEach((btn) => {
+        btn.setAttribute("aria-pressed", btn.dataset.role === state.role ? "true" : "false");
+      });
+
+      if (!isAdmin) {
+        state.activeTab = "morosos";
+        closeDrawer();
+      }
+      syncTabsUI();
+    }
+
+    function syncTabsUI() {
+      const showMorosos = state.activeTab === "morosos";
+      document.getElementById("tab-morosos").setAttribute("aria-selected", showMorosos ? "true" : "false");
+      document.getElementById("tab-auditoria").setAttribute("aria-selected", !showMorosos ? "true" : "false");
+      document.getElementById("view-morosos").classList.toggle("hidden", !showMorosos);
+      document.getElementById("view-auditoria").classList.toggle("hidden", showMorosos || state.role !== "admin");
+      updateKPIs();
+      renderMorosos();
+      renderAuditoria();
+    }
+
+    // Eventos
+    document.querySelectorAll(".preview-pill").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.role = btn.dataset.role;
+        syncRoleUI();
+      });
+    });
+
+    document.querySelectorAll("[data-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.activeTab = btn.dataset.tab;
+        syncTabsUI();
+      });
+    });
+
+    document.getElementById("search-morosos").addEventListener("input", (e) => {
+      state.searchMorosos = e.target.value;
+      renderMorosos();
+    });
+
+    document.getElementById("search-auditoria").addEventListener("input", (e) => {
+      state.searchAuditoria = e.target.value;
+      renderAuditoria();
+    });
+
+    document.querySelectorAll("[data-audit-status]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.auditStatus = btn.dataset.auditStatus;
+        document.querySelectorAll("[data-audit-status]").forEach((b) => {
+          b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+        });
+        renderAuditoria();
+      });
+    });
+
+    document.querySelectorAll("[data-audit-medio]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.auditMedio = btn.dataset.auditMedio;
+        document.querySelectorAll("[data-audit-medio]").forEach((b) => {
+          b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+        });
+        renderAuditoria();
+      });
+    });
+
+    document.getElementById("debtors-list").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-jump-athlete]");
+      if (!btn) return;
+      showToast(`Navegación directa a /atletas?afiliacionId=${btn.dataset.jumpAthlete} (${btn.dataset.athleteName}).`);
+    });
+
+    document.getElementById("audit-rows").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-void-id]");
+      if (!btn || state.role !== "admin") return;
+      openVoidDrawer(btn.dataset.voidId);
+    });
+
+    document.getElementById("close-drawer").addEventListener("click", closeDrawer);
+    document.getElementById("cancel-drawer").addEventListener("click", closeDrawer);
+    document.getElementById("drawer-backdrop").addEventListener("click", closeDrawer);
+
+    document.getElementById("void-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const motivo = document.getElementById("motivo-input").value.trim();
+      const errBox = document.getElementById("void-error");
+      if (motivo.length < 3) {
+        errBox.textContent = "Ingresá un motivo claro de al menos 3 caracteres para la auditoría.";
+        errBox.classList.remove("hidden");
+        return;
+      }
+      const target = state.pagos.find((p) => p.id === state.voidTargetId);
+      if (target) {
+        target.anuladoEn = new Date().toISOString();
+        target.motivoAnulacion = motivo;
+        showToast(`Pago de ${formatMoney(target.monto)} anulado y registrado en auditoría.`);
+      }
+      closeDrawer();
+      updateKPIs();
+      renderAuditoria();
+    });
+
+    // Menú móvil
+    const sidebar = document.getElementById("sidebar");
+    const sideBackdrop = document.getElementById("sidebar-backdrop");
+    document.getElementById("open-mobile-menu").addEventListener("click", () => {
+      sidebar.classList.add("mobile-open");
+      sideBackdrop.classList.remove("hidden");
+    });
+    const closeMobileMenu = () => {
+      sidebar.classList.remove("mobile-open");
+      sideBackdrop.classList.add("hidden");
+    };
+    document.getElementById("close-mobile-menu").addEventListener("click", closeMobileMenu);
+    sideBackdrop.addEventListener("click", closeMobileMenu);
+
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      showToast("Simulación de cierre de sesión.");
+    });
+
+    syncRoleUI();
+  </script>
+</body>
+</html>

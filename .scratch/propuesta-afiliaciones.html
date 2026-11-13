@@ -1,0 +1,1119 @@
+<!doctype html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Centris — Boceto Propuesto /afiliaciones (Sidebar + Dark Bento)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --canvas: #09090b;
+      --surface: #111214;
+      --elevated: #18191c;
+      --border: #232428;
+      --white: #ffffff;
+      --gray: #a1a1aa;
+      --lime: #c1f429;
+      --lime-hover: #aedf1b;
+      --black: #000000;
+      --mint: #18ffc8;
+      --mint-bg: rgba(24, 255, 200, 0.14);
+      --mint-border: rgba(24, 255, 200, 0.28);
+      --amber: #fbbf24;
+      --amber-bg: rgba(251, 191, 36, 0.14);
+      --amber-border: rgba(251, 191, 36, 0.28);
+      --coral: #ff6d6d;
+      --coral-bg: rgba(255, 109, 109, 0.14);
+      --coral-border: rgba(255, 109, 109, 0.28);
+      --zinc-bg: rgba(161, 161, 170, 0.14);
+      --zinc-border: rgba(161, 161, 170, 0.28);
+      --font: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    ::selection { background: var(--lime); color: var(--black); }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--canvas);
+      color: var(--white);
+      font-family: var(--font);
+      font-size: 0.9375rem;
+      font-weight: 400;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .hidden { display: none !important; }
+
+    /* Barra exclusiva del boceto */
+    .preview-toolbar {
+      background: #050506;
+      border-bottom: 1px dashed var(--border);
+      padding: 8px 16px;
+      font-size: 0.8125rem;
+      color: var(--gray);
+    }
+    .preview-toolbar-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .preview-pills { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .preview-pill {
+      min-height: 36px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--white);
+      font-family: var(--font);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .preview-pill[aria-pressed="true"] {
+      background: rgba(193, 244, 41, 0.12);
+      border-color: var(--lime);
+      color: var(--lime);
+    }
+
+    /* Shell */
+    .app-shell {
+      max-width: 1440px;
+      margin: 0 auto;
+      min-height: calc(100vh - 53px);
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 1024px) {
+      .app-shell { grid-template-columns: 248px minmax(0, 1fr); }
+    }
+
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 20px 14px;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    @media (min-width: 1024px) {
+      .sidebar { display: flex; position: sticky; top: 0; height: 100vh; }
+    }
+    .sidebar.mobile-open {
+      display: flex;
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: 272px;
+      z-index: 60;
+      height: 100vh;
+      box-shadow: 16px 0 48px rgba(0, 0, 0, 0.7);
+    }
+    .sidebar-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); z-index: 50; }
+
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand-mark {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 1.0625rem;
+      letter-spacing: -0.02em;
+      color: var(--white);
+    }
+    .brand-badge-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: var(--lime);
+      color: var(--black);
+      display: grid;
+      place-items: center;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .side-nav { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+    .side-link {
+      min-height: 44px;
+      padding: 10px 14px;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--gray);
+      font-size: 0.9375rem;
+      font-weight: 500;
+      transition: background-color 150ms ease, color 150ms ease;
+    }
+    .side-link svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .side-link:hover { background: var(--elevated); color: var(--white); }
+    .side-link[aria-current="page"] { background: var(--lime); color: var(--black); font-weight: 600; }
+    .sidebar-footer { border-top: 1px solid var(--border); padding-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+
+    /* Columna derecha */
+    .workspace-col { display: flex; flex-direction: column; min-width: 0; }
+    .topbar {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    @media (min-width: 1024px) { .topbar { padding: 16px 28px; } }
+    .topbar-left, .topbar-right { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+    .mobile-menu-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--white);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    @media (min-width: 1024px) { .mobile-menu-btn { display: none; } }
+
+    .capsule {
+      min-height: 44px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.875rem;
+      color: var(--white);
+    }
+    .capsule-muted { color: var(--gray); }
+    .capsule-dot { width: 8px; height: 8px; border-radius: 9999px; background: var(--lime); flex-shrink: 0; }
+    .avatar-circle {
+      width: 30px;
+      height: 30px;
+      border-radius: 9999px;
+      background: var(--elevated);
+      border: 1px solid var(--border);
+      display: grid;
+      place-items: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--lime);
+      flex-shrink: 0;
+    }
+
+    /* Main */
+    .main-container {
+      padding: 24px 20px 72px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      width: 100%;
+    }
+    @media (min-width: 1024px) { .main-container { padding: 28px 28px 72px; } }
+
+    .page-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .page-title {
+      margin: 0;
+      font-size: clamp(1.375rem, 1.2rem + 0.8vw, 1.75rem);
+      font-weight: 500;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+    .page-subtitle { margin: 4px 0 0; color: var(--gray); font-size: 0.875rem; max-width: 68ch; }
+
+    /* Botones (>= 44px) */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 10px 16px;
+      border-radius: 9999px;
+      border: 1px solid transparent;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 600;
+      line-height: 1;
+      cursor: pointer;
+      transition: background-color 150ms ease, border-color 150ms ease;
+      white-space: nowrap;
+      text-decoration: none;
+    }
+    .btn:focus-visible,
+    .filter-chip:focus-visible,
+    .role-toggle-pill:focus-visible,
+    .side-link:focus-visible,
+    .mobile-menu-btn:focus-visible,
+    .preview-pill:focus-visible,
+    .input-control:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--lime);
+    }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: var(--lime); color: var(--black); }
+    .btn-primary:hover:not(:disabled) { background: var(--lime-hover); }
+    .btn-secondary { background: var(--elevated); color: var(--white); border-color: var(--border); }
+    .btn-secondary:hover:not(:disabled) { background: #222328; }
+    .btn-destructive { background: var(--coral-bg); color: var(--coral); border-color: var(--coral-border); }
+    .btn-destructive:hover:not(:disabled) { background: rgba(255, 109, 109, 0.24); }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 9999px;
+      border: 1px solid transparent;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      line-height: 1.25;
+      white-space: nowrap;
+    }
+    .badge-mint { background: var(--mint-bg); color: var(--mint); border-color: var(--mint-border); }
+    .badge-amber { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
+    .badge-coral { background: var(--coral-bg); color: var(--coral); border-color: var(--coral-border); }
+    .badge-zinc { background: var(--zinc-bg); color: var(--gray); border-color: var(--zinc-border); }
+    .badge-lime { background: rgba(193, 244, 41, 0.14); color: var(--lime); border-color: rgba(193, 244, 41, 0.34); }
+
+    /* KPIs Bento */
+    .kpi-grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-width: 0;
+    }
+    .kpi-label { font-size: 0.8125rem; color: var(--gray); }
+    .kpi-val-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px 12px;
+      min-width: 0;
+    }
+    .kpi-val-row .badge { max-width: 100%; white-space: normal; text-align: left; }
+    .kpi-val { font-size: clamp(1.375rem, 1.2rem + 0.8vw, 1.625rem); font-weight: 500; letter-spacing: -0.02em; }
+    .kpi-foot { font-size: 0.75rem; color: var(--gray); }
+
+    /* Buscador y filtros */
+    .controls-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      justify-content: space-between;
+    }
+    .search-box { position: relative; flex: 1 1 260px; max-width: 400px; }
+    .search-box svg {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gray);
+      width: 16px;
+      height: 16px;
+    }
+    .input-control {
+      width: 100%;
+      min-height: 44px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--canvas);
+      color: var(--white);
+      padding: 10px 14px;
+      font-family: var(--font);
+      font-size: 1rem;
+    }
+    .search-input { padding-left: 40px; border-radius: 9999px; }
+
+    .filter-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .filter-chip {
+      min-height: 44px;
+      padding: 8px 16px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--elevated);
+      color: var(--gray);
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .filter-chip[aria-pressed="true"] {
+      background: var(--lime);
+      color: var(--black);
+      border-color: transparent;
+      font-weight: 600;
+    }
+
+    /* Listado de afiliaciones Bento */
+    .bento-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .member-list { display: flex; flex-direction: column; gap: 12px; }
+    .member-row {
+      border-radius: 18px;
+      background: var(--elevated);
+      border: 1px solid var(--border);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-width: 0;
+      transition: border-color 150ms ease;
+    }
+    .member-row.is-dirty {
+      border-color: var(--amber-border);
+    }
+    .member-main {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      min-width: 0;
+    }
+    @media (min-width: 1100px) {
+      .member-main {
+        display: grid;
+        grid-template-columns: minmax(210px, 1fr) minmax(300px, 1.55fr) 264px;
+        align-items: center;
+        gap: 18px;
+      }
+    }
+
+    .member-identity { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .member-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 9999px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      display: grid;
+      place-items: center;
+      font-size: 0.8125rem;
+      font-weight: 600;
+      color: var(--lime);
+      flex-shrink: 0;
+    }
+    .member-name { font-weight: 500; font-size: 0.9375rem; color: var(--white); display: block; }
+    .member-email { font-size: 0.8125rem; color: var(--gray); word-break: break-word; }
+
+    /* Pills seleccionables de roles (>= 44px) */
+    .roles-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      min-width: 0;
+    }
+    .role-toggle-pill {
+      min-height: 44px;
+      padding: 8px 14px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--gray);
+      font-family: var(--font);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+    }
+    .role-toggle-pill:hover { border-color: #3a3d45; color: var(--white); }
+    .role-toggle-pill[aria-checked="true"] {
+      background: rgba(193, 244, 41, 0.14);
+      border-color: var(--lime);
+      color: var(--lime);
+      font-weight: 600;
+    }
+    .role-check-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+    .role-toggle-pill[aria-checked="true"] .role-check-dot {
+      background: var(--lime);
+      border-color: var(--lime);
+      color: var(--black);
+    }
+
+    .member-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      justify-content: flex-start;
+      min-width: 0;
+    }
+    .member-actions .btn { flex: 1 1 130px; }
+    @media (min-width: 1100px) {
+      .member-actions { justify-content: flex-end; }
+      .member-actions .btn { flex: 0 0 auto; }
+    }
+
+    .dirty-strip {
+      border-radius: 14px;
+      background: var(--amber-bg);
+      border: 1px solid var(--amber-border);
+      padding: 10px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.8125rem;
+      color: #fde68a;
+    }
+    .dirty-strip-left {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .inline-msg {
+      font-size: 0.8125rem;
+      color: var(--coral);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .confirm-inline {
+      border-radius: 14px;
+      background: var(--coral-bg);
+      border: 1px solid var(--coral-border);
+      padding: 12px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 0.8125rem;
+      color: #fecaca;
+    }
+    .confirm-inline-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    /* Acceso restringido (no admin) */
+    .restricted-card {
+      background: var(--surface);
+      border: 1px solid var(--coral-border);
+      border-radius: 24px;
+      padding: 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      max-width: 680px;
+    }
+
+    .empty-state {
+      border-radius: 18px;
+      border: 1px dashed var(--border);
+      background: var(--elevated);
+      padding: 28px 16px;
+      text-align: center;
+      color: var(--gray);
+      font-size: 0.875rem;
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 100;
+      max-width: 420px;
+      border-radius: 18px;
+      border: 1px solid var(--mint-border);
+      background: #0d1d1a;
+      color: #ccfbf1;
+      padding: 14px 16px;
+      display: none;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.875rem;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+    }
+    .toast.visible { display: flex; }
+  </style>
+</head>
+<body>
+  <!-- Barra exclusiva del boceto -->
+  <div class="preview-toolbar">
+    <div class="preview-toolbar-inner">
+      <span><strong>Boceto /afiliaciones (nuevo diseño base)</strong> · Permisos del equipo y atletas en el Box (datos de ejemplo)</span>
+      <div class="preview-pills" role="group" aria-label="Cambiar rol simulado">
+        <span>Rol activo:</span>
+        <button type="button" class="preview-pill" data-role="admin" aria-pressed="true">Administrador (acceso total)</button>
+        <button type="button" class="preview-pill" data-role="recep" aria-pressed="false">Recepcionista (sin permiso)</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="sidebar-backdrop" class="sidebar-backdrop hidden"></div>
+
+  <div class="app-shell">
+    <!-- Sidebar Vertical Izquierdo -->
+    <aside id="sidebar" class="sidebar" aria-label="Menú principal del Box">
+      <div>
+        <div class="brand-lockup">
+          <div class="brand-mark">
+            <span class="brand-badge-dot" aria-hidden="true">C</span>
+            <span>Centris</span>
+          </div>
+          <button type="button" id="close-mobile-menu" class="mobile-menu-btn" aria-label="Cerrar menú">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <nav class="side-nav" aria-label="Secciones del Box">
+          <a href="#inicio" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>
+            <span>Inicio</span>
+          </a>
+          <a href="#horarios" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            <span>Horarios</span>
+          </a>
+          <a href="#clases" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            <span>Clases</span>
+          </a>
+          <a href="#reservas" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <span>Reservas</span>
+          </a>
+          <a href="#planes" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg>
+            <span>Planes</span>
+          </a>
+          <a href="#atletas" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>Atletas</span>
+          </a>
+          <a href="#caja" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <span>Caja</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="sidebar-footer">
+        <a href="#afiliaciones" id="nav-afiliaciones" class="side-link" aria-current="page">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6M23 11h-6"/></svg>
+          <span>Afiliaciones</span>
+        </a>
+        <a href="#configuracion" id="nav-config" class="side-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Configuración</span>
+        </a>
+        <a href="#seleccionar-box" class="side-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+          <span>Cambiar de Box</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Columna Principal -->
+    <div class="workspace-col">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button type="button" id="open-mobile-menu" class="mobile-menu-btn" aria-label="Abrir menú">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+          </button>
+          <div class="capsule">
+            <span class="capsule-dot" aria-hidden="true"></span>
+            <strong>Box Centris Norte</strong>
+            <span class="capsule-muted">· ARS</span>
+          </div>
+          <div class="capsule">
+            <span class="capsule-muted">Sección</span>
+            <strong>Afiliaciones y roles</strong>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <div class="capsule">
+            <span class="avatar-circle" id="user-avatar">LB</span>
+            <span id="user-name">Lucía Benítez</span>
+            <span class="badge badge-lime" id="user-role-badge">Administrador</span>
+          </div>
+          <button type="button" class="btn btn-secondary" id="logout-btn">Cerrar sesión</button>
+        </div>
+      </header>
+
+      <main class="main-container">
+        <!-- Vista de acceso restringido (Recepción) -->
+        <section id="restricted-view" class="restricted-card hidden" aria-label="Acceso restringido">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;">
+            <h1 class="page-title">Acceso exclusivo de Administración</h1>
+            <span class="badge badge-coral">Permiso requerido</span>
+          </div>
+          <p class="page-subtitle" style="margin:0;">
+            Tu afiliación actual en Box Centris Norte no tiene permiso de Administrador para modificar roles o quitar accesos de integrantes.
+          </p>
+          <div>
+            <button type="button" class="btn btn-secondary" id="back-to-home-btn">Volver a Inicio</button>
+          </div>
+        </section>
+
+        <!-- Vista principal (Administrador) -->
+        <div id="admin-view" style="display:flex;flex-direction:column;gap:22px;">
+          <div class="page-head">
+            <div>
+              <h1 class="page-title">Afiliaciones y permisos del Box</h1>
+              <p class="page-subtitle">Combiná roles para cada persona en Box Centris Norte (por ejemplo, Coach y Atleta al mismo tiempo) o revocá su acceso local sin afectar otros Boxes.</p>
+            </div>
+          </div>
+
+          <!-- KPIs -->
+          <section class="kpi-grid" aria-label="Resumen de integrantes">
+            <div class="kpi-card">
+              <span class="kpi-label">Integrantes activos</span>
+              <div class="kpi-val-row">
+                <strong class="kpi-val tabular-nums" id="kpi-total">5</strong>
+                <span class="badge badge-mint">Con acceso</span>
+              </div>
+              <span class="kpi-foot">Personas vinculadas a este Box (demo seed)</span>
+            </div>
+
+            <div class="kpi-card">
+              <span class="kpi-label">Staff con acceso operativo</span>
+              <div class="kpi-val-row">
+                <strong class="kpi-val tabular-nums" id="kpi-staff">3</strong>
+                <span class="badge badge-lime">Admin · Coach · Recep</span>
+              </div>
+              <span class="kpi-foot">Pueden operar turnos, caja o configuración</span>
+            </div>
+
+            <div class="kpi-card">
+              <span class="kpi-label">Con rol Atleta</span>
+              <div class="kpi-val-row">
+                <strong class="kpi-val tabular-nums" id="kpi-atletas">3</strong>
+                <span class="badge badge-zinc">Habilitados a reservar</span>
+              </div>
+              <span class="kpi-foot">Incluye miembros del staff que también entrenan</span>
+            </div>
+          </section>
+
+          <!-- Filtros -->
+          <section class="controls-panel" aria-label="Buscar y filtrar afiliaciones">
+            <div class="controls-row">
+              <div class="search-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <input id="search-input" class="input-control search-input" type="search" placeholder="Buscar por nombre o email..." aria-label="Buscar integrante" />
+              </div>
+
+              <div class="filter-chips" role="group" aria-label="Filtrar por rol">
+                <button type="button" class="filter-chip" data-role-filter="ALL" aria-pressed="true">Todos</button>
+                <button type="button" class="filter-chip" data-role-filter="administrador" aria-pressed="false">Administrador</button>
+                <button type="button" class="filter-chip" data-role-filter="coach" aria-pressed="false">Coach</button>
+                <button type="button" class="filter-chip" data-role-filter="recepcionista" aria-pressed="false">Recepcionista</button>
+                <button type="button" class="filter-chip" data-role-filter="atleta" aria-pressed="false">Atleta</button>
+              </div>
+            </div>
+          </section>
+
+          <!-- Listado de afiliaciones -->
+          <section class="bento-card" aria-label="Listado de afiliaciones activas">
+            <div class="member-list" id="member-list"></div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M20 6 9 17l-5-5"/></svg>
+    <span id="toast-msg"></span>
+  </div>
+
+  <script>
+    const ROLES = [
+      { id: "administrador", label: "Administrador" },
+      { id: "coach", label: "Coach" },
+      { id: "recepcionista", label: "Recepcionista" },
+      { id: "atleta", label: "Atleta" }
+    ];
+
+    const state = {
+      role: "admin", // "admin" | "recep"
+      search: "",
+      roleFilter: "ALL",
+      confirmRemoveId: null,
+      members: [
+        {
+          id: "af-1",
+          nombre: "Lucía Benítez",
+          email: "lucia.benitez@demo.centris",
+          savedRoles: ["administrador", "atleta"],
+          draftRoles: ["administrador", "atleta"],
+          error: null
+        },
+        {
+          id: "af-2",
+          nombre: "Santiago Morales",
+          email: "santi.morales@demo.centris",
+          savedRoles: ["coach", "atleta"],
+          draftRoles: ["coach", "atleta"],
+          error: null
+        },
+        {
+          id: "af-3",
+          nombre: "Mateo Ríos",
+          email: "mateo.rios@demo.centris",
+          savedRoles: ["recepcionista"],
+          draftRoles: ["recepcionista"],
+          error: null
+        },
+        {
+          id: "af-4",
+          nombre: "Valentina Gómez",
+          email: "valen.gomez@demo.centris",
+          savedRoles: ["atleta"],
+          draftRoles: ["atleta"],
+          error: null
+        },
+        {
+          id: "af-5",
+          nombre: "Tomás Ferreyra",
+          email: "tomas.ferreyra@demo.centris",
+          savedRoles: ["atleta"],
+          draftRoles: ["atleta"],
+          error: null
+        }
+      ]
+    };
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function initials(name) {
+      return name
+        .split(" ")
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((w) => w[0].toUpperCase())
+        .join("");
+    }
+
+    function sameRoles(a, b) {
+      if (a.length !== b.length) return false;
+      const setB = new Set(b);
+      return a.every((r) => setB.has(r));
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById("toast");
+      document.getElementById("toast-msg").textContent = msg;
+      el.classList.add("visible");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove("visible"), 3400);
+    }
+
+    function updateKPIs() {
+      const total = state.members.length;
+      const staff = state.members.filter((m) =>
+        m.savedRoles.some((r) => r === "administrador" || r === "coach" || r === "recepcionista")
+      ).length;
+      const atletas = state.members.filter((m) => m.savedRoles.includes("atleta")).length;
+
+      document.getElementById("kpi-total").textContent = String(total);
+      document.getElementById("kpi-staff").textContent = String(staff);
+      document.getElementById("kpi-atletas").textContent = String(atletas);
+    }
+
+    function renderMembers() {
+      updateKPIs();
+      const container = document.getElementById("member-list");
+      const q = state.search.trim().toLowerCase();
+
+      const filtered = state.members.filter((m) => {
+        if (q && !m.nombre.toLowerCase().includes(q) && !m.email.toLowerCase().includes(q)) return false;
+        if (state.roleFilter !== "ALL" && !m.savedRoles.includes(state.roleFilter)) return false;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="empty-state">No hay afiliaciones activas que coincidan con los filtros.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map((m) => {
+        const isDirty = !sameRoles(m.savedRoles, m.draftRoles);
+        const confirming = state.confirmRemoveId === m.id;
+
+        return `
+          <article class="member-row ${isDirty ? "is-dirty" : ""}" data-member-id="${m.id}">
+            <div class="member-main">
+              <div class="member-identity">
+                <span class="member-avatar" aria-hidden="true">${initials(m.nombre)}</span>
+                <div style="min-width:0;">
+                  <strong class="member-name">${escapeHtml(m.nombre)}</strong>
+                  <span class="member-email">${escapeHtml(m.email)}</span>
+                </div>
+              </div>
+
+              <div class="roles-group" role="group" aria-label="Roles de ${escapeHtml(m.nombre)}">
+                ${ROLES.map((r) => {
+                  const checked = m.draftRoles.includes(r.id);
+                  return `
+                    <button
+                      type="button"
+                      class="role-toggle-pill"
+                      role="switch"
+                      aria-checked="${checked ? "true" : "false"}"
+                      data-toggle-role="${r.id}"
+                      data-id="${m.id}"
+                    >
+                      <span class="role-check-dot" aria-hidden="true">
+                        ${checked ? `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" width="10" height="10"><path d="M20 6 9 17l-5-5"/></svg>` : ""}
+                      </span>
+                      <span>${r.label}</span>
+                    </button>
+                  `;
+                }).join("")}
+              </div>
+
+              <div class="member-actions">
+                <button
+                  type="button"
+                  class="btn ${isDirty ? "btn-primary" : "btn-secondary"}"
+                  data-action="save"
+                  data-id="${m.id}"
+                  ${!isDirty ? "disabled" : ""}
+                >
+                  Guardar roles
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-destructive"
+                  data-action="ask-remove"
+                  data-id="${m.id}"
+                >
+                  Dar de baja
+                </button>
+              </div>
+            </div>
+
+            ${isDirty ? `
+              <div class="dirty-strip" role="status">
+                <div class="dirty-strip-left">
+                  <span class="badge badge-amber">Cambios sin guardar</span>
+                  <span>Presioná <strong>Guardar roles</strong> para aplicar los nuevos permisos.</span>
+                </div>
+                <button type="button" class="btn btn-secondary" data-action="discard" data-id="${m.id}">Descartar</button>
+              </div>
+            ` : ""}
+
+            ${m.error ? `<div class="inline-msg" role="alert">${escapeHtml(m.error)}</div>` : ""}
+
+            ${confirming ? `
+              <div class="confirm-inline" role="region" aria-label="Confirmar baja de afiliación">
+                <span>¿Quitar el acceso de <strong>${escapeHtml(m.nombre)}</strong> a Box Centris Norte? No afectará sus cuentas en otros Boxes.</span>
+                <div class="confirm-inline-actions">
+                  <button type="button" class="btn btn-destructive" data-action="confirm-remove" data-id="${m.id}">Confirmar baja</button>
+                  <button type="button" class="btn btn-secondary" data-action="cancel-remove">Cancelar</button>
+                </div>
+              </div>
+            ` : ""}
+          </article>
+        `;
+      }).join("");
+    }
+
+    function syncRoleUI() {
+      const isAdmin = state.role === "admin";
+      document.getElementById("admin-view").classList.toggle("hidden", !isAdmin);
+      document.getElementById("restricted-view").classList.toggle("hidden", isAdmin);
+      document.getElementById("nav-afiliaciones").classList.toggle("hidden", !isAdmin);
+      document.getElementById("nav-config").classList.toggle("hidden", !isAdmin);
+
+      document.getElementById("user-avatar").textContent = isAdmin ? "LB" : "MR";
+      document.getElementById("user-name").textContent = isAdmin ? "Lucía Benítez" : "Mateo Ríos";
+      document.getElementById("user-role-badge").textContent = isAdmin ? "Administrador" : "Recepcionista";
+
+      document.querySelectorAll(".preview-pill").forEach((btn) => {
+        btn.setAttribute("aria-pressed", btn.dataset.role === state.role ? "true" : "false");
+      });
+
+      if (isAdmin) renderMembers();
+    }
+
+    // Eventos
+    document.querySelectorAll(".preview-pill").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.role = btn.dataset.role;
+        syncRoleUI();
+      });
+    });
+
+    document.getElementById("search-input").addEventListener("input", (e) => {
+      state.search = e.target.value;
+      renderMembers();
+    });
+
+    document.querySelectorAll("[data-role-filter]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.roleFilter = btn.dataset.roleFilter;
+        document.querySelectorAll("[data-role-filter]").forEach((b) => {
+          b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+        });
+        renderMembers();
+      });
+    });
+
+    document.getElementById("member-list").addEventListener("click", (e) => {
+      const toggleBtn = e.target.closest("[data-toggle-role]");
+      if (toggleBtn) {
+        const member = state.members.find((m) => m.id === toggleBtn.dataset.id);
+        const roleId = toggleBtn.dataset.toggleRole;
+        if (!member) return;
+        member.error = null;
+        if (member.draftRoles.includes(roleId)) {
+          member.draftRoles = member.draftRoles.filter((r) => r !== roleId);
+        } else {
+          member.draftRoles = [...member.draftRoles, roleId];
+        }
+        renderMembers();
+        return;
+      }
+
+      const actionBtn = e.target.closest("[data-action]");
+      if (!actionBtn) return;
+      const action = actionBtn.dataset.action;
+      const id = actionBtn.dataset.id;
+      const member = state.members.find((m) => m.id === id);
+
+      if (action === "save" && member) {
+        if (member.draftRoles.length === 0) {
+          member.error = "Cada persona debe conservar al menos un rol activo. Si querés quitarle acceso, usá Dar de baja.";
+          renderMembers();
+          return;
+        }
+        member.error = null;
+        member.savedRoles = [...member.draftRoles];
+        renderMembers();
+        showToast(`Roles actualizados para ${member.nombre}.`);
+        return;
+      }
+
+      if (action === "discard" && member) {
+        member.error = null;
+        member.draftRoles = [...member.savedRoles];
+        renderMembers();
+        return;
+      }
+
+      if (action === "ask-remove") {
+        state.confirmRemoveId = id;
+        renderMembers();
+        return;
+      }
+
+      if (action === "cancel-remove") {
+        state.confirmRemoveId = null;
+        renderMembers();
+        return;
+      }
+
+      if (action === "confirm-remove" && member) {
+        state.members = state.members.filter((m) => m.id !== id);
+        state.confirmRemoveId = null;
+        renderMembers();
+        showToast(`Se quitó el acceso de ${member.nombre} en Box Centris Norte.`);
+      }
+    });
+
+    document.getElementById("back-to-home-btn").addEventListener("click", () => {
+      showToast("Navegación simulada a /inicio.");
+    });
+
+    // Menú móvil
+    const sidebar = document.getElementById("sidebar");
+    const sideBackdrop = document.getElementById("sidebar-backdrop");
+    document.getElementById("open-mobile-menu").addEventListener("click", () => {
+      sidebar.classList.add("mobile-open");
+      sideBackdrop.classList.remove("hidden");
+    });
+    const closeMobileMenu = () => {
+      sidebar.classList.remove("mobile-open");
+      sideBackdrop.classList.add("hidden");
+    };
+    document.getElementById("close-mobile-menu").addEventListener("click", closeMobileMenu);
+    sideBackdrop.addEventListener("click", closeMobileMenu);
+
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      showToast("Simulación de cierre de sesión.");
+    });
+
+    syncRoleUI();
+  </script>
+</body>
+</html>

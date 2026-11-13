@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Centris — Boceto Propuesto /seleccionar-box (Dark Bento)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --canvas: #09090b;
+      --surface: #111214;
+      --elevated: #18191c;
+      --border: #232428;
+      --white: #ffffff;
+      --gray: #a1a1aa;
+      --lime: #c1f429;
+      --lime-hover: #aedf1b;
+      --black: #000000;
+      --mint: #18ffc8;
+      --mint-bg: rgba(24, 255, 200, 0.14);
+      --mint-border: rgba(24, 255, 200, 0.28);
+      --amber: #fbbf24;
+      --amber-bg: rgba(251, 191, 36, 0.14);
+      --amber-border: rgba(251, 191, 36, 0.28);
+      --zinc-bg: rgba(161, 161, 170, 0.14);
+      --zinc-border: rgba(161, 161, 170, 0.28);
+      --font: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    ::selection { background: var(--lime); color: var(--black); }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--canvas);
+      color: var(--white);
+      font-family: var(--font);
+      font-size: 0.9375rem;
+      font-weight: 400;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .hidden { display: none !important; }
+
+    /* Barra exclusiva del boceto */
+    .preview-toolbar {
+      background: #050506;
+      border-bottom: 1px dashed var(--border);
+      padding: 8px 16px;
+      font-size: 0.8125rem;
+      color: var(--gray);
+    }
+    .preview-toolbar-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .preview-pills { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .preview-pill {
+      min-height: 36px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--white);
+      font-family: var(--font);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .preview-pill[aria-pressed="true"] {
+      background: rgba(193, 244, 41, 0.12);
+      border-color: var(--lime);
+      color: var(--lime);
+    }
+
+    .page-shell {
+      flex: 1;
+      width: 100%;
+      max-width: 1020px;
+      margin: 0 auto;
+      padding: 28px 20px 64px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .top-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 1.125rem;
+      letter-spacing: -0.02em;
+      color: var(--white);
+      text-decoration: none;
+    }
+    .brand-badge-dot {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: var(--lime);
+      color: var(--black);
+      display: grid;
+      place-items: center;
+      font-weight: 600;
+      font-size: 1.0625rem;
+    }
+
+    .user-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .capsule {
+      min-height: 44px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.875rem;
+      color: var(--white);
+    }
+    .avatar-circle {
+      width: 28px;
+      height: 28px;
+      border-radius: 9999px;
+      background: var(--elevated);
+      border: 1px solid var(--border);
+      display: grid;
+      place-items: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--lime);
+    }
+
+    .page-head { display: flex; flex-direction: column; gap: 6px; }
+    .page-title {
+      margin: 0;
+      font-size: clamp(1.5rem, 1.3rem + 0.8vw, 1.875rem);
+      font-weight: 500;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+    .page-subtitle { margin: 0; color: var(--gray); font-size: 0.9375rem; max-width: 66ch; }
+
+    /* Botones (>= 44px) */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 10px 18px;
+      border-radius: 9999px;
+      border: 1px solid transparent;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 600;
+      line-height: 1;
+      cursor: pointer;
+      transition: background-color 150ms ease, border-color 150ms ease;
+      white-space: nowrap;
+    }
+    .btn-full { width: 100%; }
+    .btn-primary { background: var(--lime); color: var(--black); }
+    .btn-primary:hover:not(:disabled) { background: var(--lime-hover); }
+    .btn-secondary { background: var(--elevated); color: var(--white); border-color: var(--border); }
+    .btn-secondary:hover:not(:disabled) { background: #222328; }
+    .btn:focus-visible,
+    .preview-pill:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--lime);
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 9999px;
+      border: 1px solid transparent;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      line-height: 1.25;
+      white-space: nowrap;
+    }
+    .badge-mint { background: var(--mint-bg); color: var(--mint); border-color: var(--mint-border); }
+    .badge-amber { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
+    .badge-zinc { background: var(--zinc-bg); color: var(--gray); border-color: var(--zinc-border); }
+    .badge-lime { background: rgba(193, 244, 41, 0.14); color: var(--lime); border-color: rgba(193, 244, 41, 0.34); }
+
+    /* Grilla de Boxes */
+    .boxes-grid {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
+    }
+
+    .box-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 18px;
+      min-width: 0;
+      transition: border-color 150ms ease;
+    }
+    .box-card:hover { border-color: #343740; }
+    .box-card.active-session { border-color: rgba(193, 244, 41, 0.48); }
+
+    .box-card-body {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      min-width: 0;
+    }
+    .box-card-eyebrow {
+      min-height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+    .box-header-text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+    .box-meta { margin: 0; font-size: 0.8125rem; color: var(--gray); }
+    .box-name {
+      margin: 0;
+      font-size: 1.25rem;
+      font-weight: 500;
+      line-height: 1.25;
+      letter-spacing: -0.015em;
+    }
+    @media (min-width: 640px) {
+      .box-header-text { min-height: 4.5rem; }
+    }
+
+    .roles-well {
+      margin-top: auto;
+      border-radius: 16px;
+      background: var(--elevated);
+      border: 1px solid var(--border);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .roles-well-label { font-size: 0.75rem; color: var(--gray); }
+    .roles-badges { display: flex; flex-wrap: wrap; gap: 8px; }
+
+    /* Estado vacío */
+    .empty-card {
+      background: var(--surface);
+      border: 1px dashed var(--border);
+      border-radius: 24px;
+      padding: 32px 24px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      max-width: 620px;
+    }
+    .empty-title { margin: 0; font-size: 1.125rem; font-weight: 500; }
+    .empty-copy { margin: 0; font-size: 0.875rem; color: var(--gray); }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 100;
+      max-width: 420px;
+      border-radius: 18px;
+      border: 1px solid var(--mint-border);
+      background: #0d1d1a;
+      color: #ccfbf1;
+      padding: 14px 16px;
+      display: none;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.875rem;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+    }
+    .toast.visible { display: flex; }
+  </style>
+</head>
+<body>
+  <!-- Barra exclusiva del boceto -->
+  <div class="preview-toolbar">
+    <div class="preview-toolbar-inner">
+      <span><strong>Boceto /seleccionar-box (nuevo diseño base)</strong> · Cambio de gimnasio activo según afiliaciones</span>
+      <div class="preview-pills" role="group" aria-label="Cambiar escenario">
+        <button type="button" class="preview-pill" data-mode="multi" aria-pressed="true">Con múltiples Boxes (3)</button>
+        <button type="button" class="preview-pill" data-mode="empty" aria-pressed="false">Sin afiliaciones activas</button>
+      </div>
+    </div>
+  </div>
+
+  <main class="page-shell">
+    <header class="top-bar">
+      <a href="#seleccionar-box" class="brand-mark">
+        <span class="brand-badge-dot" aria-hidden="true">C</span>
+        <span>Centris</span>
+      </a>
+
+      <div class="user-actions">
+        <div class="capsule">
+          <span class="avatar-circle">LB</span>
+          <span>Lucía Benítez</span>
+        </div>
+        <button type="button" id="logout-btn" class="btn btn-secondary">Cerrar sesión</button>
+      </div>
+    </header>
+
+    <div class="page-head">
+      <h1 class="page-title">Elegí tu Box</h1>
+      <p class="page-subtitle">Hola, Lucía. Seleccioná con qué gimnasio querés operar ahora; podés volver a cambiarlo desde el menú lateral en cualquier momento.</p>
+    </div>
+
+    <!-- Grilla de Boxes -->
+    <section id="boxes-grid" class="boxes-grid" aria-label="Boxes disponibles"></section>
+
+    <!-- Estado vacío -->
+    <section id="empty-state" class="empty-card hidden" aria-label="Sin afiliaciones activas">
+      <h2 class="empty-title">No tenés afiliaciones activas</h2>
+      <p class="empty-copy">
+        Tu cuenta todavía no está vinculada a ningún Box. Si recién te diste de alta o creés que es un error, consultá en recepción o cerrá sesión para probar con otro correo.
+      </p>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;">
+        <button type="button" id="empty-logout-btn" class="btn btn-secondary">Cerrar sesión</button>
+        <button type="button" id="empty-retry-btn" class="btn btn-primary">Actualizar listado</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M20 6 9 17l-5-5"/></svg>
+    <span id="toast-msg"></span>
+  </div>
+
+  <script>
+    const ROLE_META = {
+      administrador: { label: "Administrador", cls: "badge-lime" },
+      coach: { label: "Coach", cls: "badge-mint" },
+      recepcionista: { label: "Recepcionista", cls: "badge-amber" },
+      atleta: { label: "Atleta", cls: "badge-zinc" }
+    };
+
+    const state = {
+      mode: "multi", // "multi" | "empty"
+      activeBoxId: "box-1",
+      boxes: [
+        {
+          id: "box-1",
+          nombre: "Box Centris Norte",
+          ciudad: "Buenos Aires",
+          moneda: "ARS",
+          roles: ["administrador", "atleta"]
+        },
+        {
+          id: "box-2",
+          nombre: "Centris Palermo",
+          ciudad: "Buenos Aires",
+          moneda: "ARS",
+          roles: ["coach", "atleta"]
+        },
+        {
+          id: "box-3",
+          nombre: "Centris Montevideo",
+          ciudad: "Montevideo",
+          moneda: "UYU",
+          roles: ["atleta"]
+        }
+      ]
+    };
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById("toast");
+      document.getElementById("toast-msg").textContent = msg;
+      el.classList.add("visible");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove("visible"), 3400);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    function render() {
+      const grid = document.getElementById("boxes-grid");
+      const empty = document.getElementById("empty-state");
+      const isEmpty = state.mode === "empty";
+
+      grid.classList.toggle("hidden", isEmpty);
+      empty.classList.toggle("hidden", !isEmpty);
+
+      if (isEmpty) return;
+
+      grid.innerHTML = state.boxes.map((box) => {
+        const isCurrent = box.id === state.activeBoxId;
+        return `
+          <article class="box-card ${isCurrent ? "active-session" : ""}">
+            <div class="box-card-body">
+              <div class="box-card-eyebrow">
+                <span class="badge badge-zinc tabular-nums">${escapeHtml(box.moneda)}</span>
+                ${isCurrent ? `<span class="badge badge-lime">Activo ahora</span>` : ""}
+              </div>
+
+              <div class="box-header-text">
+                <h2 class="box-name">${escapeHtml(box.nombre)}</h2>
+                <p class="box-meta">${escapeHtml(box.ciudad)}</p>
+              </div>
+
+              <div class="roles-well">
+                <span class="roles-well-label">Tus permisos en este Box</span>
+                <div class="roles-badges">
+                  ${box.roles.map((r) => {
+                    const meta = ROLE_META[r] || { label: r, cls: "badge-zinc" };
+                    return `<span class="badge ${meta.cls}">${meta.label}</span>`;
+                  }).join("")}
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              class="btn ${isCurrent ? "btn-secondary" : "btn-primary"} btn-full"
+              data-enter-box="${box.id}"
+            >
+              ${isCurrent ? "Continuar en este Box" : "Ingresar al Box"}
+            </button>
+          </article>
+        `;
+      }).join("");
+    }
+
+    document.querySelectorAll(".preview-pill").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.mode = btn.dataset.mode;
+        document.querySelectorAll(".preview-pill").forEach((b) => {
+          b.setAttribute("aria-pressed", b === btn ? "true" : "false");
+        });
+        render();
+      });
+    });
+
+    document.getElementById("boxes-grid").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-enter-box]");
+      if (!btn) return;
+      const id = btn.dataset.enterBox;
+      const target = state.boxes.find((b) => b.id === id);
+      if (!target) return;
+      state.activeBoxId = id;
+      render();
+      showToast(`Box activo cambiado a ${target.nombre} -> redirección a /inicio.`);
+    });
+
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      showToast("Simulación de cierre de sesión.");
+    });
+    document.getElementById("empty-logout-btn").addEventListener("click", () => {
+      showToast("Simulación de cierre de sesión.");
+    });
+    document.getElementById("empty-retry-btn").addEventListener("click", () => {
+      showToast("Listado actualizado (sin cambios en demo).");
+    });
+
+    render();
+  </script>
+</body>
+</html>
