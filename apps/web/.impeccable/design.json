@@ -1,0 +1,205 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-13T17:36:00-03:00",
+  "title": "Design System: Centris",
+  "extensions": {
+    "colorMeta": {
+      "volt-lime": {
+        "role": "primary",
+        "displayName": "Volt Lime",
+        "canonical": "#C1F429",
+        "tonalRamp": ["#202A00", "#384A00", "#557000", "#769B00", "#9BC80B", "#C1F429", "#DCF97E", "#F4FDE0"]
+      },
+      "volt-lime-hover": {
+        "role": "primary",
+        "displayName": "Volt Lime Hover",
+        "canonical": "#AEDF1B",
+        "tonalRamp": ["#1C2600", "#324300", "#4C6600", "#6A8E00", "#8CB80A", "#AEDF1B", "#CEEE6A", "#EEFBD0"]
+      },
+      "volt-lime-tint": {
+        "role": "primary",
+        "displayName": "Volt Lime Tint",
+        "canonical": "#F4FDE0",
+        "tonalRamp": ["#202A00", "#384A00", "#557000", "#769B00", "#9BC80B", "#C1F429", "#DCF97E", "#F4FDE0"]
+      },
+      "pure-black": {
+        "role": "neutral",
+        "displayName": "Pure Black",
+        "canonical": "#000000",
+        "tonalRamp": ["#000000", "#09090B", "#111214", "#18191C", "#232428", "#52525B", "#A1A1AA", "#F4F4F5"]
+      },
+      "canvas-obsidian": {
+        "role": "neutral",
+        "displayName": "Canvas Obsidian",
+        "canonical": "#09090B",
+        "tonalRamp": ["#000000", "#09090B", "#111214", "#18191C", "#232428", "#52525B", "#A1A1AA", "#F4F4F5"]
+      },
+      "surface-card": {
+        "role": "neutral",
+        "displayName": "Surface Card",
+        "canonical": "#111214",
+        "tonalRamp": ["#09090B", "#111214", "#18191C", "#232428", "#3F3F46", "#71717A", "#A1A1AA", "#F4F4F5"]
+      },
+      "surface-elevated": {
+        "role": "neutral",
+        "displayName": "Surface Elevated",
+        "canonical": "#18191C",
+        "tonalRamp": ["#09090B", "#111214", "#18191C", "#232428", "#3F3F46", "#71717A", "#A1A1AA", "#F4F4F5"]
+      },
+      "border-hairline": {
+        "role": "neutral",
+        "displayName": "Border Hairline",
+        "canonical": "#232428",
+        "tonalRamp": ["#09090B", "#111214", "#18191C", "#232428", "#3F3F46", "#71717A", "#A1A1AA", "#F4F4F5"]
+      },
+      "pure-white": {
+        "role": "neutral",
+        "displayName": "Pure White",
+        "canonical": "#FFFFFF",
+        "tonalRamp": ["#18181B", "#27272A", "#52525B", "#71717A", "#A1A1AA", "#D4D4D8", "#F4F4F5", "#FFFFFF"]
+      },
+      "cool-gray": {
+        "role": "neutral",
+        "displayName": "Cool Gray",
+        "canonical": "#A1A1AA",
+        "tonalRamp": ["#18181B", "#27272A", "#3F3F46", "#52525B", "#71717A", "#A1A1AA", "#D4D4D8", "#F4F4F5"]
+      },
+      "mint-active": {
+        "role": "semantic",
+        "displayName": "Mint Active",
+        "canonical": "#18FFC8",
+        "tonalRamp": ["#022C22", "#064E3B", "#047857", "#059669", "#10B981", "#18FFC8", "#6EE7D7", "#D1FAF5"]
+      },
+      "amber-warning": {
+        "role": "semantic",
+        "displayName": "Amber Warning",
+        "canonical": "#FBBF24",
+        "tonalRamp": ["#451A03", "#78350F", "#B45309", "#D97706", "#F59E0B", "#FBBF24", "#FCD34D", "#FEF3C7"]
+      },
+      "coral-alert": {
+        "role": "semantic",
+        "displayName": "Coral Alert",
+        "canonical": "#FF6D6D",
+        "tonalRamp": ["#450A0A", "#7F1D1D", "#B91C1C", "#DC2626", "#EF4444", "#FF6D6D", "#FCA5A5", "#FEE2E2"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display Stat",
+        "purpose": "KPI figures, revenue summaries, and highlighted credit counts in Inter Medium."
+      },
+      "headline": {
+        "displayName": "Page Headline",
+        "purpose": "Primary screen headings (h1) in clean Sentence case Inter."
+      },
+      "title": {
+        "displayName": "Bento Card Title",
+        "purpose": "Card headings and section titles in Inter Medium."
+      },
+      "body": {
+        "displayName": "Operational Body",
+        "purpose": "Table cells, forms, labels, card subtitles, and buttons."
+      },
+      "label": {
+        "displayName": "Pill Label / Badge",
+        "purpose": "Status pills, micro-labels, and chart axis tags."
+      }
+    },
+    "shadows": [
+      {
+        "name": "card-subtle",
+        "value": "0 1px 2px 0 rgba(0, 0, 0, 0.25)",
+        "purpose": "Subtle separation for dark bento surfaces bounded by 1px #232428 borders."
+      }
+    ],
+    "motion": [
+      {
+        "name": "transition-colors",
+        "value": "color, background-color, border-color 150ms cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Hover and focus transitions across sidebar links, pills, buttons, and cards."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Pill Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "High-visibility pill CTA with Volt Lime (#C1F429) fill and Pure Black text.",
+      "html": "<button type=\"button\" class=\"ds-btn-primary\">Reservar lugar</button>",
+      "css": ".ds-btn-primary { display: inline-flex; min-height: 44px; align-items: center; justify-content: center; border-radius: 9999px; border: 1px solid transparent; background: #C1F429; color: #000000; padding: 10px 18px; font-family: Inter, sans-serif; font-size: 0.9375rem; font-weight: 600; line-height: 1; cursor: pointer; transition: background-color 150ms cubic-bezier(0.4, 0, 0.2, 1); } .ds-btn-primary:hover { background: #AEDF1B; }"
+    },
+    {
+      "name": "Circular Quick-Action Button",
+      "kind": "button",
+      "refersTo": "button-icon-circle",
+      "description": "44x44px circular secondary button with hairline border for card drill-downs.",
+      "html": "<button type=\"button\" class=\"ds-btn-circle\" aria-label=\"Abrir sección\">↗</button>",
+      "css": ".ds-btn-circle { display: inline-flex; width: 44px; height: 44px; align-items: center; justify-content: center; border-radius: 9999px; border: 1px solid #232428; background: #18191C; color: #FFFFFF; cursor: pointer; }"
+    },
+    {
+      "name": "Bento KPI Card",
+      "kind": "card",
+      "refersTo": "card-container",
+      "description": "24px rounded obsidian card with Sentence-case title, muted subtitle, metric pill, and circular action.",
+      "html": "<article class=\"ds-bento-card\"><h2 class=\"ds-bento-title\">Turnos reservados hoy</h2><p class=\"ds-bento-sub\">Seguimiento de reservas activas para la jornada.</p><div class=\"ds-bento-foot\"><span class=\"ds-metric-pill\">56</span><span class=\"ds-btn-circle\">↗</span></div></article>",
+      "css": ".ds-bento-card { border-radius: 24px; border: 1px solid #232428; background: #111214; padding: 24px; color: #FFFFFF; } .ds-bento-title { margin: 0; font-family: Inter, sans-serif; font-size: 1.0625rem; font-weight: 500; } .ds-bento-sub { margin: 6px 0 0; font-size: 0.875rem; color: #A1A1AA; } .ds-bento-foot { margin-top: 20px; display: flex; align-items: center; justify-content: space-between; } .ds-metric-pill { border-radius: 9999px; background: #18191C; border: 1px solid #232428; padding: 8px 14px; font-weight: 500; font-variant-numeric: tabular-nums; }"
+    },
+    {
+      "name": "Left Vertical Sidebar Navigation",
+      "kind": "nav",
+      "description": "Vertical left sidebar displaying icon and visible Spanish section label, filtered by active Box role.",
+      "html": "<nav class=\"ds-sidebar\"><a href=\"#\" class=\"ds-side-link ds-side-active\">Panel</a><a href=\"#\" class=\"ds-side-link\">Calendario de Clases</a></nav>",
+      "css": ".ds-sidebar { display: flex; flex-direction: column; gap: 6px; background: #111214; border-right: 1px solid #232428; padding: 16px; } .ds-side-link { display: flex; min-height: 44px; align-items: center; gap: 12px; border-radius: 9999px; padding: 10px 14px; font-family: Inter, sans-serif; font-size: 0.9375rem; font-weight: 500; color: #A1A1AA; text-decoration: none; } .ds-side-active { background: #C1F429; color: #000000; font-weight: 600; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Dark Bento Cockpit",
+    "overview": "Centris combines modular dark bento surfaces (24px rounded cards, subtle 1px hairline borders, and pill-shaped metric containers) with clear Argentine Spanish terminology and role-aware navigation. Clean Inter typography in Sentence case replaces condensed uppercase headings, while Volt Lime (#C1F429), Mint Active (#18FFC8), and Coral Alert (#FF6D6D) signal action and status cleanly.",
+    "keyCharacteristics": [
+      "Obsidian dark canvas (#09090B) with surface cards (#111214) and elevated nested wells (#18191C) separated by 1px #232428 borders.",
+      "Mockup-aligned palette: Volt Lime (#C1F429) primary accent with #000000 foreground, Mint Active (#18FFC8) positive status, Coral Alert (#FF6D6D) overdue/warning alerts.",
+      "Single clean sans-serif family (Inter in Light/Regular/Medium/SemiBold) using Sentence case and tabular-nums alignment.",
+      "Left vertical sidebar showing both icon and visible section label per role, paired with a contextual pill topbar."
+    ],
+    "rules": [
+      {
+        "name": "The Black-on-Volt Rule",
+        "body": "Never render white (#FFFFFF) text or icons on Volt Lime (#C1F429). Every Volt Lime surface uses Pure Black (#000000) foreground content.",
+        "section": "colors"
+      },
+      {
+        "name": "The Visible Sidebar Label Rule",
+        "body": "Desktop left sidebar items must always display both icon and visible section label so owners, receptionists, coaches, and athletes recognize routes immediately.",
+        "section": "layout"
+      },
+      {
+        "name": "The Tabular Numerals Rule",
+        "body": "Apply .tabular-nums to every currency amount, time range, duration, capacity ratio, percentage, and credit counter.",
+        "section": "typography"
+      },
+      {
+        "name": "The 16px Input Floor Rule",
+        "body": "Interactive <input> and <select> controls stay at 16px (1rem) minimum on mobile viewports.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "Do pair Volt Lime (#C1F429) exclusively with Pure Black (#000000) text and icons.",
+      "Do use Inter in Sentence case across headings and card titles.",
+      "Do keep 24px corner radius on primary bento cards and 9999px on pills, chips, and circular quick-action buttons.",
+      "Do keep every interactive sidebar item, button, and input at 44px minimum touch height."
+    ],
+    "donts": [
+      "Don't use Oswald or forced all-caps display headings.",
+      "Don't render icon-only desktop sidebar navigation without visible section labels.",
+      "Don't place white text on Volt Lime (#C1F429) or Mint Active (#18FFC8)."
+    ]
+  }
+}
