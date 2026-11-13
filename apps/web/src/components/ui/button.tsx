@@ -24,8 +24,7 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
     "h-11 w-11 min-w-11 shrink-0 p-0 bg-secondary text-foreground border border-border hover:bg-[#222328] hover:border-[#3A3C42]"
 };
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends React.ComponentProps<"button"> {
   variant?: ButtonVariant;
 }
 
@@ -36,10 +35,12 @@ export function Button({
   className,
   variant = "primary",
   type = "button",
+  ref,
   ...props
 }: ButtonProps) {
   return (
     <button
+      ref={ref}
       type={type}
       className={cn(
         "inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full text-[0.9375rem] font-semibold leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50",
