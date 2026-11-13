@@ -1,6 +1,6 @@
 # 01 — Shell Autenticado, Sidebar Vertical v2 y Primitivas Bento
 
-**Status:** ready-for-agent
+**Status:** in-progress
 **Branch:** `feat/ui-01-shell-sidebar-y-primitivas`
 **Blocked by:** —
 
