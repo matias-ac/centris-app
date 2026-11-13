@@ -1,0 +1,1353 @@
+<!doctype html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Centris — Boceto Propuesto /planes (Sidebar + Dark Bento)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --canvas: #09090b;
+      --surface: #111214;
+      --elevated: #18191c;
+      --border: #232428;
+      --white: #ffffff;
+      --gray: #a1a1aa;
+      --lime: #c1f429;
+      --lime-hover: #aedf1b;
+      --black: #000000;
+      --mint: #18ffc8;
+      --mint-bg: rgba(24, 255, 200, 0.14);
+      --mint-border: rgba(24, 255, 200, 0.28);
+      --amber: #fbbf24;
+      --amber-bg: rgba(251, 191, 36, 0.14);
+      --amber-border: rgba(251, 191, 36, 0.28);
+      --coral: #ff6d6d;
+      --coral-bg: rgba(255, 109, 109, 0.14);
+      --coral-border: rgba(255, 109, 109, 0.28);
+      --zinc-bg: rgba(161, 161, 170, 0.14);
+      --zinc-border: rgba(161, 161, 170, 0.28);
+      --font: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    ::selection { background: var(--lime); color: var(--black); }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--canvas);
+      color: var(--white);
+      font-family: var(--font);
+      font-size: 0.9375rem;
+      font-weight: 400;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .hidden { display: none !important; }
+
+    /* Barra superior exclusiva del boceto */
+    .preview-toolbar {
+      background: #050506;
+      border-bottom: 1px dashed var(--border);
+      padding: 8px 16px;
+      font-size: 0.8125rem;
+      color: var(--gray);
+    }
+    .preview-toolbar-inner {
+      max-width: 1440px;
+      margin: 0 auto;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .preview-pills { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+    .preview-pill {
+      min-height: 36px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--white);
+      font-family: var(--font);
+      font-size: 0.8125rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .preview-pill[aria-pressed="true"] {
+      background: rgba(193, 244, 41, 0.12);
+      border-color: var(--lime);
+      color: var(--lime);
+    }
+
+    /* Shell */
+    .app-shell {
+      max-width: 1440px;
+      margin: 0 auto;
+      min-height: calc(100vh - 53px);
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+    @media (min-width: 1024px) {
+      .app-shell { grid-template-columns: 248px minmax(0, 1fr); }
+    }
+
+    .sidebar {
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      padding: 20px 14px;
+      display: none;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    @media (min-width: 1024px) {
+      .sidebar { display: flex; position: sticky; top: 0; height: 100vh; }
+    }
+    .sidebar.mobile-open {
+      display: flex;
+      position: fixed;
+      inset: 0 auto 0 0;
+      width: 272px;
+      z-index: 60;
+      height: 100vh;
+      box-shadow: 16px 0 48px rgba(0, 0, 0, 0.7);
+    }
+    .sidebar-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); z-index: 50; }
+
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 4px 10px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .brand-mark {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+      font-size: 1.0625rem;
+      letter-spacing: -0.02em;
+      color: var(--white);
+    }
+    .brand-badge-dot {
+      width: 32px;
+      height: 32px;
+      border-radius: 10px;
+      background: var(--lime);
+      color: var(--black);
+      display: grid;
+      place-items: center;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+    .side-nav { display: flex; flex-direction: column; gap: 6px; margin-top: 14px; }
+    .side-link {
+      min-height: 44px;
+      padding: 10px 14px;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--gray);
+      font-size: 0.9375rem;
+      font-weight: 500;
+      transition: background-color 150ms ease, color 150ms ease;
+    }
+    .side-link svg { width: 18px; height: 18px; flex-shrink: 0; }
+    .side-link:hover { background: var(--elevated); color: var(--white); }
+    .side-link[aria-current="page"] { background: var(--lime); color: var(--black); font-weight: 600; }
+    .sidebar-footer { border-top: 1px solid var(--border); padding-top: 14px; display: flex; flex-direction: column; gap: 6px; }
+
+    /* Columna derecha */
+    .workspace-col { display: flex; flex-direction: column; min-width: 0; }
+    .topbar {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    @media (min-width: 1024px) { .topbar { padding: 16px 28px; } }
+    .topbar-left, .topbar-right { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+    .mobile-menu-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--white);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+    }
+    @media (min-width: 1024px) { .mobile-menu-btn { display: none; } }
+
+    .capsule {
+      min-height: 44px;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.875rem;
+      color: var(--white);
+    }
+    .capsule-muted { color: var(--gray); }
+    .capsule-dot { width: 8px; height: 8px; border-radius: 9999px; background: var(--lime); flex-shrink: 0; }
+    .avatar-circle {
+      width: 30px;
+      height: 30px;
+      border-radius: 9999px;
+      background: var(--elevated);
+      border: 1px solid var(--border);
+      display: grid;
+      place-items: center;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--lime);
+    }
+
+    /* Main */
+    .main-container {
+      padding: 24px 20px 72px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      width: 100%;
+    }
+    @media (min-width: 1024px) { .main-container { padding: 28px 28px 72px; } }
+
+    .page-head {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .page-title {
+      margin: 0;
+      font-size: clamp(1.375rem, 1.2rem + 0.8vw, 1.75rem);
+      font-weight: 500;
+      line-height: 1.2;
+      letter-spacing: -0.02em;
+    }
+    .page-subtitle { margin: 4px 0 0; color: var(--gray); font-size: 0.875rem; max-width: 65ch; }
+
+    /* Botones (>= 44px) */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 10px 16px;
+      border-radius: 9999px;
+      border: 1px solid transparent;
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 600;
+      line-height: 1;
+      cursor: pointer;
+      transition: background-color 150ms ease, border-color 150ms ease;
+      white-space: nowrap;
+    }
+    .btn:focus-visible,
+    .filter-chip:focus-visible,
+    .side-link:focus-visible,
+    .mobile-menu-btn:focus-visible,
+    .preview-pill:focus-visible,
+    .icon-circle-btn:focus-visible,
+    .input-control:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 2px var(--lime);
+    }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: var(--lime); color: var(--black); }
+    .btn-primary:hover:not(:disabled) { background: var(--lime-hover); }
+    .btn-secondary { background: var(--elevated); color: var(--white); border-color: var(--border); }
+    .btn-secondary:hover:not(:disabled) { background: #222328; }
+    .btn-destructive { background: var(--coral-bg); color: var(--coral); border-color: var(--coral-border); }
+    .btn-destructive:hover:not(:disabled) { background: rgba(255, 109, 109, 0.24); }
+
+    .icon-circle-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--elevated);
+      color: var(--white);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      flex-shrink: 0;
+    }
+    .icon-circle-btn:hover { background: #26282e; }
+
+    /* Badges */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 9999px;
+      border: 1px solid transparent;
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      line-height: 1.25;
+      white-space: nowrap;
+    }
+    .badge svg { width: 13px; height: 13px; flex-shrink: 0; }
+    .badge-mint { background: var(--mint-bg); color: var(--mint); border-color: var(--mint-border); }
+    .badge-amber { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-border); }
+    .badge-coral { background: var(--coral-bg); color: var(--coral); border-color: var(--coral-border); }
+    .badge-zinc { background: var(--zinc-bg); color: var(--gray); border-color: var(--zinc-border); }
+    .badge-lime { background: rgba(193, 244, 41, 0.14); color: var(--lime); border-color: rgba(193, 244, 41, 0.34); }
+
+    /* Banner solo lectura */
+    .readonly-banner {
+      border-radius: 20px;
+      border: 1px solid var(--amber-border);
+      background: var(--amber-bg);
+      color: #fde68a;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.875rem;
+    }
+    .readonly-banner svg { width: 18px; height: 18px; color: var(--amber); flex-shrink: 0; }
+
+    /* KPIs Bento arriba */
+    .kpi-grid {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    }
+    .kpi-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .kpi-label { font-size: 0.8125rem; color: var(--gray); }
+    .kpi-val-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .kpi-val { font-size: 1.5rem; font-weight: 500; letter-spacing: -0.02em; }
+    .kpi-foot { font-size: 0.75rem; color: var(--gray); }
+
+    /* Buscador y filtros */
+    .controls-panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      justify-content: space-between;
+    }
+    .search-box { position: relative; flex: 1 1 260px; max-width: 400px; }
+    .search-box svg {
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gray);
+      width: 16px;
+      height: 16px;
+    }
+    .input-control {
+      width: 100%;
+      min-height: 44px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--canvas);
+      color: var(--white);
+      padding: 10px 14px;
+      font-family: var(--font);
+      font-size: 1rem;
+    }
+    .search-input { padding-left: 40px; border-radius: 9999px; }
+
+    .filter-groups {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 12px;
+      justify-content: space-between;
+    }
+    .filter-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .filter-chip {
+      min-height: 44px;
+      padding: 8px 16px;
+      border-radius: 9999px;
+      border: 1px solid var(--border);
+      background: var(--elevated);
+      color: var(--gray);
+      font-family: var(--font);
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+    }
+    .filter-chip[aria-pressed="true"] {
+      background: var(--lime);
+      color: var(--black);
+      border-color: transparent;
+      font-weight: 600;
+    }
+
+    /* Grilla Bento de Planes */
+    .plans-grid {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+    }
+    .plan-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      min-width: 0;
+      transition: border-color 150ms ease, opacity 150ms ease;
+    }
+    .plan-card:hover { border-color: #32343b; }
+    .plan-card.inactive { opacity: 0.72; }
+
+    .plan-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      min-width: 0;
+    }
+    .plan-name {
+      margin: 0;
+      font-size: 1.125rem;
+      font-weight: 500;
+      letter-spacing: -0.015em;
+      color: var(--white);
+    }
+    .plan-price-row {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .plan-price {
+      font-size: 2rem;
+      font-weight: 300;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      color: var(--white);
+    }
+    .plan-period {
+      font-size: 0.8125rem;
+      color: var(--gray);
+    }
+
+    .plan-rules-well {
+      border-radius: 16px;
+      background: var(--elevated);
+      border: 1px solid var(--border);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .rule-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.875rem;
+    }
+    .rule-label { color: var(--gray); }
+    .rule-val { color: var(--white); font-weight: 500; text-align: right; }
+    .rule-explain {
+      margin: 0;
+      font-size: 0.8125rem;
+      color: var(--gray);
+      border-top: 1px solid var(--border);
+      padding-top: 10px;
+    }
+
+    .card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    .card-actions .btn { flex: 1 1 auto; }
+    .card-actions .btn-icon-del { flex: 0 0 auto; }
+
+    .confirm-inline {
+      width: 100%;
+      border-radius: 16px;
+      background: var(--coral-bg);
+      border: 1px solid var(--coral-border);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      font-size: 0.8125rem;
+      color: #fecaca;
+    }
+    .confirm-inline-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .empty-state {
+      border-radius: 24px;
+      border: 1px dashed var(--border);
+      background: var(--surface);
+      padding: 36px 20px;
+      text-align: center;
+      color: var(--gray);
+    }
+
+    /* Drawer lateral derecho */
+    .drawer-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.72); z-index: 80; }
+    .drawer {
+      position: fixed;
+      inset: 0 0 0 auto;
+      width: min(500px, 100vw);
+      background: var(--surface);
+      border-left: 1px solid var(--border);
+      z-index: 90;
+      display: flex;
+      flex-direction: column;
+      padding: 22px;
+      overflow-y: auto;
+      gap: 18px;
+    }
+    .drawer-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .drawer-title { margin: 0; font-size: 1.1875rem; font-weight: 500; }
+    .drawer-sub { margin: 4px 0 0; font-size: 0.8125rem; color: var(--gray); }
+
+    .form-stack { display: flex; flex-direction: column; gap: 16px; }
+    .field-label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 6px; color: var(--white); }
+    .field-hint { margin: 6px 0 0; font-size: 0.75rem; color: var(--gray); }
+    .two-cols { display: grid; gap: 12px; grid-template-columns: 1fr; }
+    @media (min-width: 480px) { .two-cols { grid-template-columns: 1fr 1fr; } }
+
+    .live-preview-box {
+      border-radius: 16px;
+      background: var(--elevated);
+      border: 1px solid var(--border);
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 0.8125rem;
+    }
+    .live-preview-title { color: var(--mint); font-weight: 500; }
+    .live-preview-copy { color: var(--gray); margin: 0; }
+
+    .form-error {
+      border-radius: 14px;
+      border: 1px solid var(--coral-border);
+      background: var(--coral-bg);
+      color: #fecaca;
+      padding: 12px 14px;
+      font-size: 0.8125rem;
+    }
+
+    .drawer-footer {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 10px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+
+    /* Toast */
+    .toast {
+      position: fixed;
+      right: 16px;
+      bottom: 16px;
+      z-index: 100;
+      max-width: 420px;
+      border-radius: 18px;
+      border: 1px solid var(--mint-border);
+      background: #0d1d1a;
+      color: #ccfbf1;
+      padding: 14px 16px;
+      display: none;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 0.875rem;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+    }
+    .toast.visible { display: flex; }
+  </style>
+</head>
+<body>
+  <!-- Barra exclusiva del boceto -->
+  <div class="preview-toolbar">
+    <div class="preview-toolbar-inner">
+      <span><strong>Boceto /planes (nuevo diseño base)</strong> · Catálogo comercial, créditos y vigencia (datos de ejemplo)</span>
+      <div class="preview-pills" role="group" aria-label="Cambiar rol simulado">
+        <span>Rol activo:</span>
+        <button type="button" class="preview-pill" data-role="admin" aria-pressed="true">Administrador (gestión completa)</button>
+        <button type="button" class="preview-pill" data-role="recep" aria-pressed="false">Recepcionista (solo consulta)</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="sidebar-backdrop" class="sidebar-backdrop hidden"></div>
+
+  <div class="app-shell">
+    <!-- Sidebar Vertical Izquierdo -->
+    <aside id="sidebar" class="sidebar" aria-label="Menú principal del Box">
+      <div>
+        <div class="brand-lockup">
+          <div class="brand-mark">
+            <span class="brand-badge-dot" aria-hidden="true">C</span>
+            <span>Centris</span>
+          </div>
+          <button type="button" id="close-mobile-menu" class="mobile-menu-btn" aria-label="Cerrar menú">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6 6 18M6 6l12 12"/></svg>
+          </button>
+        </div>
+
+        <nav class="side-nav" aria-label="Secciones del Box">
+          <a href="#inicio" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="2"/><rect x="14" y="3" width="7" height="5" rx="2"/><rect x="14" y="12" width="7" height="9" rx="2"/><rect x="3" y="16" width="7" height="5" rx="2"/></svg>
+            <span>Inicio</span>
+          </a>
+          <a href="#horarios" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+            <span>Horarios</span>
+          </a>
+          <a href="#clases" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+            <span>Clases</span>
+          </a>
+          <a href="#reservas" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            <span>Reservas</span>
+          </a>
+          <a href="#planes" class="side-link" aria-current="page">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="3"/><path d="M2 10h20"/></svg>
+            <span>Planes</span>
+          </a>
+          <a href="#atletas" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            <span>Atletas</span>
+          </a>
+          <a href="#caja" class="side-link">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            <span>Caja</span>
+          </a>
+        </nav>
+      </div>
+
+      <div class="sidebar-footer">
+        <a href="#afiliaciones" class="side-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
+          <span>Cambiar de Box</span>
+        </a>
+        <a href="#configuracion" id="nav-config" class="side-link">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.01a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.01a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.01a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>Configuración</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Columna Principal -->
+    <div class="workspace-col">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button type="button" id="open-mobile-menu" class="mobile-menu-btn" aria-label="Abrir menú">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+          </button>
+          <div class="capsule">
+            <span class="capsule-dot" aria-hidden="true"></span>
+            <strong>Box Centris Norte</strong>
+            <span class="capsule-muted">· ARS</span>
+          </div>
+          <div class="capsule">
+            <span class="capsule-muted">Sección</span>
+            <strong>Catálogo de Planes</strong>
+          </div>
+        </div>
+
+        <div class="topbar-right">
+          <div class="capsule">
+            <span class="avatar-circle" id="user-avatar">LB</span>
+            <span id="user-name">Lucía Benítez</span>
+            <span class="badge badge-lime" id="user-role-badge">Administrador</span>
+          </div>
+          <button type="button" class="btn btn-secondary" id="logout-btn">Cerrar sesión</button>
+        </div>
+      </header>
+
+      <main class="main-container">
+        <div class="page-head">
+          <div>
+            <h1 class="page-title">Planes comerciales</h1>
+            <p class="page-subtitle">Definí precios base, duración y reglas de créditos disponibles al asignar membresías.</p>
+          </div>
+          <button type="button" id="btn-new-plan" class="btn btn-primary">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" width="16" height="16"><path d="M12 5v14M5 12h14"/></svg>
+            <span>Nuevo plan</span>
+          </button>
+        </div>
+
+        <!-- Banner modo consulta (visible para Recepcionista) -->
+        <div id="readonly-banner" class="readonly-banner hidden" role="status">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          <span><strong>Modo consulta (Recepción):</strong> podés comparar precios, vigencia y reglas de créditos para asesorar atletas. Solo un administrador crea o modifica planes.</span>
+        </div>
+
+        <!-- KPIs Bento -->
+        <section class="kpi-grid" aria-label="Resumen del catálogo">
+          <div class="kpi-card">
+            <span class="kpi-label">Planes activos</span>
+            <div class="kpi-val-row">
+              <strong class="kpi-val tabular-nums" id="kpi-activos">3 / 4</strong>
+              <span class="badge badge-mint">Disponibles</span>
+            </div>
+            <span class="kpi-foot">Visibles al asignar nuevas membresías</span>
+          </div>
+
+          <div class="kpi-card">
+            <span class="kpi-label">Rango de cuota (activos)</span>
+            <div class="kpi-val-row">
+              <strong class="kpi-val tabular-nums" id="kpi-rango">$ 28.000 — $ 54.000</strong>
+            </div>
+            <span class="kpi-foot">Moneda local del Box (ARS · demo seed)</span>
+          </div>
+
+          <div class="kpi-card">
+            <span class="kpi-label">Modalidades en oferta</span>
+            <div class="kpi-val-row">
+              <strong class="kpi-val tabular-nums" id="kpi-modalidades">3 tipos</strong>
+              <span class="badge badge-zinc">Semanal · Bolsa · Libre</span>
+            </div>
+            <span class="kpi-foot">Etiquetas claras en lugar de claves técnicas</span>
+          </div>
+        </section>
+
+        <!-- Buscador y filtros -->
+        <section class="controls-panel" aria-label="Filtrar catálogo de planes">
+          <div class="controls-row">
+            <div class="search-box">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <input id="search-input" class="input-control search-input" type="search" placeholder="Buscar por nombre del plan..." aria-label="Buscar por nombre del plan" />
+            </div>
+
+            <div class="filter-chips" role="group" aria-label="Filtrar por estado">
+              <button type="button" class="filter-chip" data-status="all" aria-pressed="true">Todos (<span class="tabular-nums" id="count-all">4</span>)</button>
+              <button type="button" class="filter-chip" data-status="active" aria-pressed="false">Activos (<span class="tabular-nums" id="count-active">3</span>)</button>
+              <button type="button" class="filter-chip" data-status="inactive" aria-pressed="false">Inactivos (<span class="tabular-nums" id="count-inactive">1</span>)</button>
+            </div>
+          </div>
+
+          <div class="filter-groups">
+            <div class="filter-chips" role="group" aria-label="Filtrar por modalidad de créditos">
+              <button type="button" class="filter-chip" data-mod="ALL" aria-pressed="true">Todas las modalidades</button>
+              <button type="button" class="filter-chip" data-mod="SEMANAL" aria-pressed="false">Créditos semanales</button>
+              <button type="button" class="filter-chip" data-mod="VIGENCIA_TOTAL" aria-pressed="false">Bolsa por vigencia</button>
+              <button type="button" class="filter-chip" data-mod="ILIMITADO" aria-pressed="false">Ilimitado</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Grilla Bento de Planes -->
+        <section id="plans-grid" class="plans-grid" aria-label="Listado de planes"></section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Drawer contextual Crear / Editar Plan -->
+  <div id="drawer-backdrop" class="drawer-backdrop hidden"></div>
+  <aside id="op-drawer" class="drawer hidden" role="dialog" aria-modal="true" aria-labelledby="drawer-title">
+    <div class="drawer-head">
+      <div>
+        <h2 id="drawer-title" class="drawer-title">Nuevo plan comercial</h2>
+        <p id="drawer-sub" class="drawer-sub">Definí precio base, vigencia en días y cómo se consumen los créditos.</p>
+      </div>
+      <button type="button" id="close-drawer" class="icon-circle-btn" aria-label="Cerrar panel">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M18 6 6 18M6 6l12 12"/></svg>
+      </button>
+    </div>
+
+    <form id="plan-form" class="form-stack" novalidate>
+      <div id="form-error" class="form-error hidden" role="alert"></div>
+
+      <div>
+        <label class="field-label" for="plan-nombre">Nombre del plan</label>
+        <input id="plan-nombre" class="input-control" type="text" placeholder="Ej: CrossFit 3 veces por semana" required />
+      </div>
+
+      <div class="two-cols">
+        <div>
+          <label class="field-label" for="plan-precio">Precio base (ARS)</label>
+          <input id="plan-precio" class="input-control tabular-nums" type="number" min="1" step="100" placeholder="38000" required />
+        </div>
+        <div>
+          <label class="field-label" for="plan-dias">Vigencia (días)</label>
+          <input id="plan-dias" class="input-control tabular-nums" type="number" min="1" max="365" placeholder="30" required />
+        </div>
+      </div>
+
+      <div>
+        <label class="field-label" for="plan-modalidad">Modalidad de créditos</label>
+        <select id="plan-modalidad" class="input-control">
+          <option value="SEMANAL">Créditos semanales (se renuevan los lunes)</option>
+          <option value="VIGENCIA_TOTAL">Bolsa total para toda la vigencia</option>
+          <option value="ILIMITADO">Ilimitado (sin límite de clases)</option>
+        </select>
+      </div>
+
+      <div id="creditos-field-wrap">
+        <label class="field-label" for="plan-creditos" id="creditos-label">Créditos por semana</label>
+        <input id="plan-creditos" class="input-control tabular-nums" type="number" min="1" max="31" placeholder="3" />
+        <p class="field-hint" id="creditos-hint">Cantidad máxima de reservas por semana calendario (lunes a domingo).</p>
+      </div>
+
+      <div class="live-preview-box">
+        <span class="live-preview-title">Así lo entenderá recepción y el atleta</span>
+        <p class="live-preview-copy" id="live-preview-copy"></p>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" id="cancel-drawer" class="btn btn-secondary">Cancelar</button>
+        <button type="submit" id="submit-plan-btn" class="btn btn-primary">Guardar plan</button>
+      </div>
+    </form>
+  </aside>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" role="status" aria-live="polite">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M20 6 9 17l-5-5"/></svg>
+    <span id="toast-msg"></span>
+  </div>
+
+  <script>
+    const state = {
+      role: "admin", // "admin" | "recep"
+      search: "",
+      statusFilter: "all", // "all" | "active" | "inactive"
+      modFilter: "ALL", // "ALL" | "SEMANAL" | "VIGENCIA_TOTAL" | "ILIMITADO"
+      editingId: null,
+      confirmDeleteId: null,
+      plans: [
+        {
+          id: "plan-1",
+          nombre: "CrossFit 3 veces por semana",
+          precioBase: 38000,
+          duracionDias: 30,
+          modalidadCreditos: "SEMANAL",
+          creditosPorPeriodo: 3,
+          activo: true
+        },
+        {
+          id: "plan-2",
+          nombre: "Pase Libre Mensual",
+          precioBase: 54000,
+          duracionDias: 30,
+          modalidadCreditos: "ILIMITADO",
+          creditosPorPeriodo: null,
+          activo: true
+        },
+        {
+          id: "plan-3",
+          nombre: "Pack 12 Clases Flexible",
+          precioBase: 41500,
+          duracionDias: 45,
+          modalidadCreditos: "VIGENCIA_TOTAL",
+          creditosPorPeriodo: 12,
+          activo: true
+        },
+        {
+          id: "plan-4",
+          nombre: "Open Box Matutino (verano)",
+          precioBase: 28000,
+          duracionDias: 30,
+          modalidadCreditos: "SEMANAL",
+          creditosPorPeriodo: 2,
+          activo: false
+        }
+      ]
+    };
+
+    const MODALIDAD_META = {
+      SEMANAL: {
+        badge: "Créditos semanales",
+        badgeClass: "badge-mint",
+        labelCreditos: "Créditos por semana",
+        hint: "Cantidad máxima de reservas por semana calendario (se renuevan cada lunes)."
+      },
+      VIGENCIA_TOTAL: {
+        badge: "Bolsa por vigencia",
+        badgeClass: "badge-amber",
+        labelCreditos: "Créditos totales del período",
+        hint: "Total de clases disponibles para consumir en cualquier momento durante la vigencia."
+      },
+      ILIMITADO: {
+        badge: "Ilimitado",
+        badgeClass: "badge-lime",
+        labelCreditos: "",
+        hint: "Sin límite de clases durante toda la vigencia del plan."
+      }
+    };
+
+    const arsFormatter = new Intl.NumberFormat("es-AR", {
+      style: "currency",
+      currency: "ARS",
+      maximumFractionDigits: 0
+    });
+
+    function formatMoney(amount) {
+      return arsFormatter.format(amount);
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;");
+    }
+
+    let toastTimer = null;
+    function showToast(msg) {
+      const el = document.getElementById("toast");
+      document.getElementById("toast-msg").textContent = msg;
+      el.classList.add("visible");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove("visible"), 3400);
+    }
+
+    function explainRule(plan) {
+      if (plan.modalidadCreditos === "ILIMITADO") {
+        return `Clases ilimitadas durante ${plan.duracionDias} días desde la activación.`;
+      }
+      if (plan.modalidadCreditos === "SEMANAL") {
+        return `${plan.creditosPorPeriodo} clases por semana durante ${plan.duracionDias} días. Se renuevan cada lunes.`;
+      }
+      return `${plan.creditosPorPeriodo} clases en total para repartir libremente en ${plan.duracionDias} días.`;
+    }
+
+    function updateKPIs() {
+      const activos = state.plans.filter((p) => p.activo);
+      const total = state.plans.length;
+      document.getElementById("kpi-activos").textContent = `${activos.length} / ${total}`;
+
+      if (activos.length === 0) {
+        document.getElementById("kpi-rango").textContent = "Sin activos";
+      } else {
+        const precios = activos.map((p) => p.precioBase);
+        const minP = Math.min(...precios);
+        const maxP = Math.max(...precios);
+        document.getElementById("kpi-rango").textContent =
+          minP === maxP ? formatMoney(minP) : `${formatMoney(minP)} — ${formatMoney(maxP)}`;
+      }
+
+      const modsCount = new Set(activos.map((p) => p.modalidadCreditos)).size;
+      document.getElementById("kpi-modalidades").textContent = `${modsCount} ${modsCount === 1 ? "tipo" : "tipos"}`;
+
+      document.getElementById("count-all").textContent = String(total);
+      document.getElementById("count-active").textContent = String(activos.length);
+      document.getElementById("count-inactive").textContent = String(total - activos.length);
+    }
+
+    function renderPlans() {
+      updateKPIs();
+      const isAdmin = state.role === "admin";
+      const grid = document.getElementById("plans-grid");
+
+      const query = state.search.trim().toLowerCase();
+      const filtered = state.plans.filter((p) => {
+        if (query && !p.nombre.toLowerCase().includes(query)) return false;
+        if (state.statusFilter === "active" && !p.activo) return false;
+        if (state.statusFilter === "inactive" && p.activo) return false;
+        if (state.modFilter !== "ALL" && p.modalidadCreditos !== state.modFilter) return false;
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        grid.innerHTML = `
+          <div class="empty-state">
+            <p style="margin: 0 0 12px;">No hay planes que coincidan con los filtros actuales.</p>
+            <button type="button" class="btn btn-secondary" id="reset-filters-btn">Limpiar filtros</button>
+          </div>
+        `;
+        document.getElementById("reset-filters-btn")?.addEventListener("click", () => {
+          state.search = "";
+          state.statusFilter = "all";
+          state.modFilter = "ALL";
+          document.getElementById("search-input").value = "";
+          syncFilterChips();
+          renderPlans();
+        });
+        return;
+      }
+
+      grid.innerHTML = filtered.map((plan) => {
+        const meta = MODALIDAD_META[plan.modalidadCreditos];
+        const statusBadge = plan.activo
+          ? `<span class="badge badge-mint">Activo</span>`
+          : `<span class="badge badge-zinc">Inactivo</span>`;
+        const creditSummary = plan.modalidadCreditos === "ILIMITADO"
+          ? "Sin tope semanal"
+          : plan.modalidadCreditos === "SEMANAL"
+            ? `${plan.creditosPorPeriodo} clases / semana`
+            : `${plan.creditosPorPeriodo} clases totales`;
+
+        const confirming = state.confirmDeleteId === plan.id;
+
+        const adminFooter = !isAdmin ? "" : `
+          <div class="card-actions">
+            <button type="button" class="btn btn-secondary" data-action="edit" data-id="${plan.id}">Editar</button>
+            <button type="button" class="btn btn-secondary" data-action="toggle" data-id="${plan.id}">
+              ${plan.activo ? "Pausar" : "Activar"}
+            </button>
+            <button type="button" class="btn btn-destructive btn-icon-del" data-action="ask-delete" data-id="${plan.id}" aria-label="Dar de baja ${escapeHtml(plan.nombre)}">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14"/></svg>
+              <span>Dar de baja</span>
+            </button>
+          </div>
+        `;
+
+        const confirmBlock = !confirming ? "" : `
+          <div class="confirm-inline" role="region" aria-label="Confirmar baja del plan">
+            <span>¿Quitar <strong>${escapeHtml(plan.nombre)}</strong> del catálogo? Las membresías ya emitidas seguirán vigentes.</span>
+            <div class="confirm-inline-actions">
+              <button type="button" class="btn btn-destructive" data-action="confirm-delete" data-id="${plan.id}">Confirmar baja</button>
+              <button type="button" class="btn btn-secondary" data-action="cancel-delete">Cancelar</button>
+            </div>
+          </div>
+        `;
+
+        return `
+          <article class="plan-card ${plan.activo ? "" : "inactive"}">
+            <div style="display:flex;flex-direction:column;gap:14px;">
+              <div class="plan-card-head">
+                <div style="min-width:0;">
+                  <h2 class="plan-name">${escapeHtml(plan.nombre)}</h2>
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;">
+                  ${statusBadge}
+                  <span class="badge ${meta.badgeClass}">${meta.badge}</span>
+                </div>
+              </div>
+
+              <div class="plan-price-row">
+                <strong class="plan-price tabular-nums">${formatMoney(plan.precioBase)}</strong>
+                <span class="plan-period">ARS · por ciclo de <span class="tabular-nums">${plan.duracionDias}</span> días</span>
+              </div>
+
+              <div class="plan-rules-well">
+                <div class="rule-row">
+                  <span class="rule-label">Créditos</span>
+                  <span class="rule-val tabular-nums">${creditSummary}</span>
+                </div>
+                <div class="rule-row">
+                  <span class="rule-label">Vigencia</span>
+                  <span class="rule-val tabular-nums">${plan.duracionDias} días</span>
+                </div>
+                <p class="rule-explain">${explainRule(plan)}</p>
+              </div>
+            </div>
+
+            ${confirmBlock || adminFooter}
+          </article>
+        `;
+      }).join("");
+    }
+
+    function syncRoleUI() {
+      const isAdmin = state.role === "admin";
+      document.getElementById("btn-new-plan").classList.toggle("hidden", !isAdmin);
+      document.getElementById("readonly-banner").classList.toggle("hidden", isAdmin);
+      document.getElementById("nav-config").classList.toggle("hidden", !isAdmin);
+
+      document.getElementById("user-avatar").textContent = isAdmin ? "LB" : "MR";
+      document.getElementById("user-name").textContent = isAdmin ? "Lucía Benítez" : "Mateo Ríos";
+      document.getElementById("user-role-badge").textContent = isAdmin ? "Administrador" : "Recepcionista";
+
+      document.querySelectorAll(".preview-pill").forEach((btn) => {
+        btn.setAttribute("aria-pressed", btn.dataset.role === state.role ? "true" : "false");
+      });
+
+      if (!isAdmin) {
+        state.confirmDeleteId = null;
+        closeDrawer();
+      }
+      renderPlans();
+    }
+
+    function syncFilterChips() {
+      document.querySelectorAll("[data-status]").forEach((btn) => {
+        btn.setAttribute("aria-pressed", btn.dataset.status === state.statusFilter ? "true" : "false");
+      });
+      document.querySelectorAll("[data-mod]").forEach((btn) => {
+        btn.setAttribute("aria-pressed", btn.dataset.mod === state.modFilter ? "true" : "false");
+      });
+    }
+
+    function syncModalidadFields() {
+      const mod = document.getElementById("plan-modalidad").value;
+      const meta = MODALIDAD_META[mod];
+      const wrap = document.getElementById("creditos-field-wrap");
+      const input = document.getElementById("plan-creditos");
+
+      if (mod === "ILIMITADO") {
+        wrap.classList.add("hidden");
+        input.required = false;
+      } else {
+        wrap.classList.remove("hidden");
+        input.required = true;
+        document.getElementById("creditos-label").textContent = meta.labelCreditos;
+        document.getElementById("creditos-hint").textContent = meta.hint;
+      }
+      updateLivePreview();
+    }
+
+    function updateLivePreview() {
+      const dias = Number(document.getElementById("plan-dias").value) || 30;
+      const mod = document.getElementById("plan-modalidad").value;
+      const creditos = Number(document.getElementById("plan-creditos").value) || (mod === "SEMANAL" ? 3 : 12);
+      const precio = Number(document.getElementById("plan-precio").value) || 0;
+      const previewText = explainRule({
+        duracionDias: dias,
+        modalidadCreditos: mod,
+        creditosPorPeriodo: creditos
+      });
+      const priceNote = precio > 0 ? `Precio de lista: ${formatMoney(precio)}. ` : "";
+      document.getElementById("live-preview-copy").textContent = `${priceNote}${previewText}`;
+    }
+
+    function openDrawer(plan = null) {
+      state.editingId = plan ? plan.id : null;
+      document.getElementById("form-error").classList.add("hidden");
+      document.getElementById("drawer-title").textContent = plan ? "Editar plan comercial" : "Nuevo plan comercial";
+      document.getElementById("drawer-sub").textContent = plan
+        ? "Los cambios aplican a nuevas membresías; las vigentes conservan su saldo."
+        : "Definí precio base, vigencia en días y cómo se consumen los créditos.";
+      document.getElementById("submit-plan-btn").textContent = plan ? "Guardar cambios" : "Crear plan";
+
+      document.getElementById("plan-nombre").value = plan ? plan.nombre : "";
+      document.getElementById("plan-precio").value = plan ? String(plan.precioBase) : "38000";
+      document.getElementById("plan-dias").value = plan ? String(plan.duracionDias) : "30";
+      document.getElementById("plan-modalidad").value = plan ? plan.modalidadCreditos : "SEMANAL";
+      document.getElementById("plan-creditos").value = plan && plan.creditosPorPeriodo ? String(plan.creditosPorPeriodo) : "3";
+
+      syncModalidadFields();
+      document.getElementById("drawer-backdrop").classList.remove("hidden");
+      document.getElementById("op-drawer").classList.remove("hidden");
+      document.getElementById("plan-nombre").focus();
+    }
+
+    function closeDrawer() {
+      document.getElementById("drawer-backdrop").classList.add("hidden");
+      document.getElementById("op-drawer").classList.add("hidden");
+      state.editingId = null;
+    }
+
+    // Eventos
+    document.querySelectorAll(".preview-pill").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.role = btn.dataset.role;
+        syncRoleUI();
+      });
+    });
+
+    document.getElementById("search-input").addEventListener("input", (e) => {
+      state.search = e.target.value;
+      renderPlans();
+    });
+
+    document.querySelectorAll("[data-status]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.statusFilter = btn.dataset.status;
+        syncFilterChips();
+        renderPlans();
+      });
+    });
+
+    document.querySelectorAll("[data-mod]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        state.modFilter = btn.dataset.mod;
+        syncFilterChips();
+        renderPlans();
+      });
+    });
+
+    document.getElementById("btn-new-plan").addEventListener("click", () => openDrawer(null));
+    document.getElementById("close-drawer").addEventListener("click", closeDrawer);
+    document.getElementById("cancel-drawer").addEventListener("click", closeDrawer);
+    document.getElementById("drawer-backdrop").addEventListener("click", closeDrawer);
+
+    document.getElementById("plan-modalidad").addEventListener("change", syncModalidadFields);
+    ["plan-precio", "plan-dias", "plan-creditos"].forEach((id) => {
+      document.getElementById(id).addEventListener("input", updateLivePreview);
+    });
+
+    document.getElementById("plan-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const errBox = document.getElementById("form-error");
+      const nombre = document.getElementById("plan-nombre").value.trim();
+      const precio = Number(document.getElementById("plan-precio").value);
+      const dias = Number(document.getElementById("plan-dias").value);
+      const mod = document.getElementById("plan-modalidad").value;
+      const creditosRaw = Number(document.getElementById("plan-creditos").value);
+
+      if (nombre.length < 3) {
+        errBox.textContent = "Ingresá un nombre claro de al menos 3 caracteres.";
+        errBox.classList.remove("hidden");
+        return;
+      }
+      if (!Number.isFinite(precio) || precio <= 0) {
+        errBox.textContent = "El precio base debe ser mayor a $ 0.";
+        errBox.classList.remove("hidden");
+        return;
+      }
+      if (!Number.isInteger(dias) || dias < 1 || dias > 365) {
+        errBox.textContent = "La vigencia debe ser un número entero entre 1 y 365 días.";
+        errBox.classList.remove("hidden");
+        return;
+      }
+      if (mod !== "ILIMITADO" && (!Number.isInteger(creditosRaw) || creditosRaw < 1)) {
+        errBox.textContent = "Indicá cuántos créditos incluye esta modalidad.";
+        errBox.classList.remove("hidden");
+        return;
+      }
+
+      const creditos = mod === "ILIMITADO" ? null : creditosRaw;
+      if (state.editingId) {
+        const idx = state.plans.findIndex((p) => p.id === state.editingId);
+        if (idx >= 0) {
+          state.plans[idx] = {
+            ...state.plans[idx],
+            nombre,
+            precioBase: precio,
+            duracionDias: dias,
+            modalidadCreditos: mod,
+            creditosPorPeriodo: creditos
+          };
+          showToast(`Plan "${nombre}" actualizado.`);
+        }
+      } else {
+        state.plans.unshift({
+          id: `plan-${Date.now()}`,
+          nombre,
+          precioBase: precio,
+          duracionDias: dias,
+          modalidadCreditos: mod,
+          creditosPorPeriodo: creditos,
+          activo: true
+        });
+        showToast(`Plan "${nombre}" creado y listo para vender.`);
+      }
+
+      closeDrawer();
+      renderPlans();
+    });
+
+    document.getElementById("plans-grid").addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-action]");
+      if (!btn || state.role !== "admin") return;
+
+      const action = btn.dataset.action;
+      const id = btn.dataset.id;
+
+      if (action === "edit") {
+        const plan = state.plans.find((p) => p.id === id);
+        if (plan) openDrawer(plan);
+        return;
+      }
+      if (action === "toggle") {
+        const plan = state.plans.find((p) => p.id === id);
+        if (plan) {
+          plan.activo = !plan.activo;
+          showToast(plan.activo ? `Plan "${plan.nombre}" activado.` : `Plan "${plan.nombre}" pausado.`);
+          renderPlans();
+        }
+        return;
+      }
+      if (action === "ask-delete") {
+        state.confirmDeleteId = id;
+        renderPlans();
+        return;
+      }
+      if (action === "cancel-delete") {
+        state.confirmDeleteId = null;
+        renderPlans();
+        return;
+      }
+      if (action === "confirm-delete") {
+        const target = state.plans.find((p) => p.id === id);
+        state.plans = state.plans.filter((p) => p.id !== id);
+        state.confirmDeleteId = null;
+        renderPlans();
+        if (target) showToast(`Plan "${target.nombre}" dado de baja del catálogo.`);
+      }
+    });
+
+    // Menú móvil
+    const sidebar = document.getElementById("sidebar");
+    const sideBackdrop = document.getElementById("sidebar-backdrop");
+    document.getElementById("open-mobile-menu").addEventListener("click", () => {
+      sidebar.classList.add("mobile-open");
+      sideBackdrop.classList.remove("hidden");
+    });
+    const closeMobileMenu = () => {
+      sidebar.classList.remove("mobile-open");
+      sideBackdrop.classList.add("hidden");
+    };
+    document.getElementById("close-mobile-menu").addEventListener("click", closeMobileMenu);
+    sideBackdrop.addEventListener("click", closeMobileMenu);
+
+    document.getElementById("logout-btn").addEventListener("click", () => {
+      showToast("Simulación de cierre de sesión.");
+    });
+
+    // Inicialización
+    syncFilterChips();
+    syncRoleUI();
+  </script>
+</body>
+</html>

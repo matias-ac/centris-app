@@ -10,7 +10,10 @@ export default tseslint.config(
       "**/.turbo/**",
       "**/.features-gen/**",
       "**/playwright-report/**",
-      "**/test-results/**"
+      "**/test-results/**",
+      "**/.agents/**",
+      "**/.github/**",
+      "**/.codex/**"
     ]
   },
   js.configs.recommended,

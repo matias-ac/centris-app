@@ -1,27 +1,30 @@
-# Centris — Identidad Visual y Design System (`centris-app`)
+# Centris — Identidad Visual y Design System (`centris-app`, Versión 2 — Dark Bento Cockpit)
 
-Especificación oficial de identidad visual, paleta cromática de alto contraste deportivo, matriz de accesibilidad WCAG 2.1, sistema tipográfico y componentes semánticos para el proyecto **Centris** (`apps/web`, construido con **Next.js App Router + Tailwind CSS v4 + `shadcn/ui`**).
+Especificación oficial de identidad visual, paleta cromática *Dark Bento Cockpit*, matriz de accesibilidad WCAG 2.1, sistema tipográfico (`Inter` único), shell de navegación con sidebar vertical, reglas de estabilidad responsive y componentes semánticos para el proyecto **Centris** (`apps/web`, construido con **Next.js App Router + Tailwind CSS v4 + `shadcn/ui`**).
+
+> [!NOTE]
+> Este documento unifica la especificación de [`apps/web/DESIGN.md`](../apps/web/DESIGN.md) y los prototipos aprobados en `.scratch/propuesta-*.html`. Es la fuente de verdad compartida entre diseño (`impeccable`) y desarrollo/revisión (`/implement`, `/tdd`, `/code-review`).
 
 ---
 
 # PARTE 1 — Paleta Cromática y Contraste
 
-La identidad visual de **Centris** se basa en un esquema **100% *Dark-First* de alto impacto deportivo y contraste elevado**, inspirado en estética atlética técnica: superficies oscuras profundas (*Pure Black* y *Charcoal*) combinadas con un único acento energético de acción (**Volt Athletic `#E2F800`**).
+La identidad visual de **Centris v2** abandona el contraste duro negro/neón condensado y adopta un esquema **100% *Dark-First* de estética *Dark Bento Cockpit***: superficies oscuras graduadas (*Canvas Obsidian* `#09090B`, *Surface Card* `#111214` y *Surface Elevated* `#18191C`) separadas por bordes finos (`1px solid #232428`), combinadas con un único acento de foco y acción (**Volt Lime `#C1F429`**).
 
 ## 1.1 Tokens de Marca y Escala de Superficies Oscuras
 
-Para evitar que las tarjetas, tablas y modales se fundan con el fondo negro puro, el sistema define una escala graduada de superficies en tonos `Zinc` fríos:
-
-| Token Semántico | Nombre | HEX | Luminancia ($L$) | Clase Tailwind / Uso en la Interfaz |
+| Token Semántico | Nombre | HEX | Luminancia ($L$) | Uso en la Interfaz |
 | :--- | :--- | :---: | :---: | :--- |
-| `--background` | **Pure Black** | `#000000` | `0.000` | `bg-background` — Fondo general de aplicación, móvil y piso de entrenamiento. |
-| `--card` / `--popover` | **Charcoal Zinc** | `#121214` | `0.006` | `bg-card` — Superficie de tarjetas de Clase, tablas, *Dialogs* y *Drawers*. |
-| `--secondary` / `--muted` | **Elevated Zinc** | `#1C1C1F` | `0.012` | `bg-secondary` / `hover:bg-muted` — Botones secundarios, cabeceras de tabla y *hover* de filas. |
-| `--border` / `--input` | **Muted Zinc** | `#27272A` | `0.020` | `border-border` — Separadores de filas, bordes de tarjetas y campos de formulario en reposo. |
-| `--foreground` | **Pure White** | `#FFFFFF` | `1.000` | `text-foreground` — Títulos primarios, importes, métricas y nombres principales. |
-| `--muted-foreground` | **Cool Gray** | `#A1A1AA` | `0.359` | `text-muted-foreground` — Etiquetas secundarias, subtítulos, fechas y metadatos. |
-| `--primary` | **Volt Athletic** | `#E2F800` | `0.833` | `bg-primary text-primary-foreground` — **Exclusivo para acción principal (CTA)**, foco (`--ring`) e ítem activo. |
-| `--volt-hover` | **Volt Pressed** | `#CDE000` | `0.685` | `hover:bg-volt-500` — Estado *hover* / presionado del botón primario. |
+| `--background` | **Canvas Obsidian** | `#09090B` | `0.003` | `bg-background` — Fondo raíz de la aplicación y pozos de `<input>` / `<select>`. |
+| `--card` / `--popover` | **Surface Card** | `#111214` | `0.006` | `bg-card` — Superficie de tarjetas Bento (`rounded-3xl`), sidebar izquierdo y contenedores de listas/tablas. |
+| `--secondary` / `--muted` / `--accent` | **Surface Elevated** | `#18191C` | `0.010` | `bg-secondary` — Cápsulas del topbar, filas internas (`rounded-2xl`), botones secundarios y *hover* de filas. |
+| `--border` / `--input` | **Border Hairline** | `#232428` | `0.018` | `border-border` — Líneas divisorias `1px`, contornos de tarjetas, pills y botones circulares (`↗`). |
+| `--foreground` | **Pure White** | `#FFFFFF` | `1.000` | `text-foreground` — Títulos, cifras protagonistas, nombres y texto operativo principal. |
+| `--muted-foreground` | **Cool Gray** | `#A1A1AA` | `0.360` | `text-muted-foreground` — Subtítulos de tarjetas, metadatos, placeholders y descripciones cortas. |
+| `--primary` | **Volt Lime** | `#C1F429` | `0.762` | `bg-primary text-primary-foreground` — **Exclusivo para CTA principal**, ítem activo del sidebar y barra/indicador protagonista. |
+| `--volt-hover` | **Volt Lime Hover** | `#AEDF1B` | `0.619` | Estado *hover* / *pressed* de botones y pills Volt Lime. |
+| `--volt-tint` | **Volt Lime Tint** | `#F4FDE0` | `0.949` | Referencia clara de la escala cuando se requiera contraste extremo sobre superficies oscuras. |
+| `--primary-foreground` | **Pure Black** | `#000000` | `0.000` | Texto e íconos obligatorios sobre `#C1F429`. |
 
 ---
 
@@ -32,111 +35,118 @@ Ratios calculados mediante la fórmula de luminancia relativa de **WCAG 2.1** ($
 
 | Combinación | Ratio Medido | Texto Normal | Texto Grande | UI / Gráficos |
 | :--- | :---: | :---: | :---: | :---: |
-| **Blanco (`#FFFFFF`) sobre Pure Black (`#000000`)** | **21.00 : 1** | AAA | AAA | ✅ |
-| **Blanco (`#FFFFFF`) sobre Charcoal (`#121214`)** | **18.71 : 1** | AAA | AAA | ✅ |
-| **Negro (`#000000`) sobre Volt (`#E2F800`)** *(Botón CTA)* | **17.66 : 1** | AAA | AAA | ✅ |
-| **Volt (`#E2F800`) sobre Pure Black (`#000000`)** | **17.66 : 1** | AAA | AAA | ✅ |
-| **Volt (`#E2F800`) sobre Charcoal (`#121214`)** | **15.74 : 1** | AAA | AAA | ✅ |
-| **Cool Gray (`#A1A1AA`) sobre Charcoal (`#121214`)** | **7.29 : 1** | AAA | AAA | ✅ |
-| **⚠️ Blanco (`#FFFFFF`) sobre Volt (`#E2F800`)** | **1.19 : 1** | ❌ Falla | ❌ Falla | ❌ Falla |
+| **Pure White (`#FFFFFF`) sobre Canvas Obsidian (`#09090B`)** | **19.90 : 1** | AAA | AAA | ✅ |
+| **Pure White (`#FFFFFF`) sobre Surface Card (`#111214`)** | **18.74 : 1** | AAA | AAA | ✅ |
+| **Pure Black (`#000000`) sobre Volt Lime (`#C1F429`)** *(CTA / Sidebar activo)* | **16.24 : 1** | AAA | AAA | ✅ |
+| **Volt Lime (`#C1F429`) sobre Canvas Obsidian (`#09090B`)** | **15.39 : 1** | AAA | AAA | ✅ |
+| **Volt Lime (`#C1F429`) sobre Surface Card (`#111214`)** | **14.49 : 1** | AAA | AAA | ✅ |
+| **Cool Gray (`#A1A1AA`) sobre Surface Card (`#111214`)** | **7.31 : 1** | AAA | AAA | ✅ |
+| **Cool Gray (`#A1A1AA`) sobre Surface Elevated (`#18191C`)** | **6.86 : 1** | AA | AAA | ✅ |
+| **⚠️ Pure White (`#FFFFFF`) sobre Volt Lime (`#C1F429`)** | **1.29 : 1** | ❌ Falla | ❌ Falla | ❌ Falla |
+| **⚠️ Pure White (`#FFFFFF`) sobre Mint Active (`#18FFC8`)** | **1.30 : 1** | ❌ Falla | ❌ Falla | ❌ Falla |
 
-### ⚠️ Restricción Crítica del Acento `Volt (#E2F800)`
+### ⚠️ Reglas Cromáticas Innegociables
 
-El color **Volt (`#E2F800`)** tiene una luminancia relativa altísima (`0.833`, muy cercana al blanco). Contra el blanco (`#FFFFFF`) arroja un ratio de **`1.19 : 1`**, fallando todos los niveles de accesibilidad. Además, por su alta saturación, usarlo en exceso en elementos informativos anula la jerarquía visual de la pantalla.
+1. **The Black-on-Volt Rule**: Nunca colocar texto o íconos blancos (`#FFFFFF`) sobre `#C1F429` (`1.29 : 1`) ni sobre `#18FFC8` (`1.30 : 1`). Todo elemento sobre Volt Lime usa **Pure Black (`#000000`)** (`16.24 : 1`).
+2. **The Single-Signal Accent Rule**: `#C1F429` señala foco de navegación activo, acción primaria o barra/dato protagonista — nunca se repite en múltiples *badges* informativos de una tabla o listado.
 
-| Permitido con `Volt (#E2F800)` | Prohibido con `Volt (#E2F800)` |
+| Permitido con `Volt Lime (#C1F429)` | Prohibido con `Volt Lime (#C1F429)` |
 | :--- | :--- |
-| Fondo de botones de acción principal (`CTA`) **siempre con texto e íconos en negro `#000000`** (`--primary-foreground`) | Texto o íconos blancos (`#FFFFFF`) encima de un fondo Volt |
-| Indicador de navegación activa, pestaña seleccionada o borde de foco (`--ring`) sobre fondo oscuro (`#000000` / `#121214`) | Usarlo sobre cualquier superficie clara o blanca |
-| Acento puntual en métricas clave o contadores destacados sobre fondo oscuro | Usarlo en *Badges* de tabla repetitivos (*Confirmada*, *Vigente*, *Al día*) donde competiría con el botón CTA |
-| — | Fondos de bloques grandes, cabeceras de página o alertas de error/advertencia |
+| Botón CTA principal con texto e íconos `#000000` | Texto o íconos blancos (`#FFFFFF`) encima de `#C1F429` |
+| Cápsula del ítem activo en el sidebar izquierdo y foco (`--ring`) | Usarlo como fondo de cards completas o alertas de error |
+| Barra o porción protagonista en KPIs y gráficos (`recharts`) | Repetirlo en *Badges* de estado de fila (*Confirmada*, *Vigente*, *Al día*) |
 
 ---
 
 ## 1.3 Badges y Colores Semánticos de Dominio
 
-Para que el acento **Volt (`#E2F800`)** conserve su poder de señalar **dónde hacer clic**, los estados informativos de las entidades del [`GLOSSARY.md`](../GLOSSARY.md) utilizan colores semánticos dedicados con fondo translúcido (`15%`) y borde sutil (`30%`) sobre `#121214`:
+Los estados de negocio de [`GLOSSARY.md`](../GLOSSARY.md) utilizan chips `rounded-full` con fondo translúcido al `14%` sobre `#111214` / `#18191C` y etiqueta corta en español (*Sentence case*):
 
-| Estado Semántico | Color Texto | Ratio vs `#121214` | Clases Tailwind (`Badge`) | Entidades de Dominio Asociadas |
-| :--- | :---: | :---: | :--- | :--- |
-| **Éxito / Activo (`Emerald`)** | `#34D399` (`emerald-400`) | **10.4 : 1** (AAA) | `bg-emerald-500/15 text-emerald-400 border-emerald-500/30` | *Reserva Confirmada*, *Asistencia*, *Membresía Vigente*, *Saldo $0 (Al día)* |
-| **Advertencia (`Amber`)** | `#FBBF24` (`amber-400`) | **11.8 : 1** (AAA) | `bg-amber-500/15 text-amber-400 border-amber-500/30` | *Cancelación Tardía*, *Últimos Cupos*, *Membresía Futura (Renovación)* |
-| **Destructivo (`Rose`)** | `#FB7185` (`rose-400`) | **6.9 : 1** (AA/AAA) | `bg-rose-500/15 text-rose-400 border-rose-500/30` | *Moroso (`Saldo > 0`)*, *Ausencia*, *Clase Cancelada*, *Pago Anulado*, *Baja Anticipada* |
-| **Histórico / Neutro (`Zinc`)** | `#A1A1AA` (`zinc-400`) | **7.29 : 1** (AAA) | `bg-zinc-500/15 text-zinc-400 border-zinc-500/30` | *Reserva Cancelada (en término)*, *Membresía Vencida*, *Plan/Horario Inactivo* |
+| Estado Semántico | Color Texto | Fondo (`14%`) | Ratio vs `#111214` | Entidades de Dominio Asociadas |
+| :--- | :---: | :---: | :---: | :--- |
+| **Mint Active** (`mint`) | `#18FFC8` | `rgba(24, 255, 200, 0.14)` | **14.44 : 1** (AAA) | *Reserva Confirmada*, *Asistencia*, *Membresía Vigente*, *Al día ($0)*, *Cupos disponibles* |
+| **Amber Warning** (`amber`) | `#FBBF24` | `rgba(251, 191, 36, 0.14)` | **11.23 : 1** (AAA) | *Cancelación Tardía*, *Últimos Cupos*, *Membresía Futura*, *Sin guardar*, *Borrador* |
+| **Coral Alert** (`coral`) | `#FF6D6D` | `rgba(255, 109, 109, 0.14)` | **6.84 : 1** (AA/AAA) | *Moroso (`Saldo > 0`)*, *Ausencia*, *Clase Cancelada*, *Pago Anulado*, *Baja Anticipada*, acciones destructivas |
+| **Cool Gray / Neutro** (`zinc`) | `#A1A1AA` | `rgba(161, 161, 170, 0.14)` | **7.31 : 1** (AAA) | *Reserva Cancelada (en término)*, *Membresía Vencida*, *Plan/Horario Inactivo* |
 
 > [!NOTE]
 > **Reglas de Accesibilidad y Dominio en Estados**:
-> 1. **El color nunca es el único portador del significado**: todo estado o error de formulario debe acompañarse de su etiqueta textual explícita, ícono de apoyo y atributo `aria-invalid` cuando corresponda.
-> 2. **Desacople entre Pago y Reserva ([ADR 0006](./adr/0006-acceso-desacoplado-del-pago.md))**: El badge **`Moroso (`Saldo > 0`)`** alerta visualmente al `Recepcionista`, al `Administrador` y al propio `Atleta`, pero **jamás deshabilita ni oculta el botón primario `Reservar`** mientras la Membresía esté en `Vigencia` y posea `Créditos`.
+> 1. **El color nunca es el único portador del significado**: todo estado o error debe acompañarse de etiqueta textual clara en español, ícono de apoyo cuando aplique y `aria-invalid` en controles inválidos.
+> 2. **Desacople entre Pago y Reserva ([ADR 0006](./adr/0006-acceso-desacoplado-del-pago.md))**: El badge **`Moroso`** alerta visualmente, pero **jamás deshabilita ni oculta el botón primario `Reservar`** mientras la Membresía esté en `Vigencia` y posea `Créditos`.
+> 3. **Prohibida la jerga técnica visible**: no mostrar nombres de enum crudos (`SEMANAL`, `VIGENCIA_TOTAL`, `ILIMITADO`), códigos HTTP (`403 Forbidden`) ni prefijos técnicos (`${errorCode}: ...`) en el copy de la UI. Traducir siempre al lenguaje del usuario en español rioplatense.
 
 ---
 
 # PARTE 2 — Sistema Tipográfico
 
-Se utilizan dos familias abiertas de Google Fonts cargadas mediante `next/font/google` con `display: "swap"` y `subsets: ["latin", "latin-ext"]` (soporte completo de tildes y `ñ`):
+Centris v2 utiliza una **única familia tipográfica**: **`Inter`** cargada mediante `next/font/google` con `display: "swap"` y `subsets: ["latin", "latin-ext"]`. Se elimina `Oswald` y se abandona el uso sistemático de mayúsculas forzadas (*all-caps*) en encabezados y tarjetas.
 
-## 2.1 Familias y Techo de Pesos
+## 2.1 Familia Única y Pesos
 
-1. **Tipografía Display y Métricas Deportivas — `Oswald` (`--font-display`)**:
-   * **Pesos habilitados**: únicamente **`600` (SemiBold)** y **`700` (Bold)**.
-   * **Propósito**: Aporta verticalidad, rigor y carácter atlético en encabezados de página (`<h1>`, `<h2>`), nombres de `Tipo de Clase` (*WOD*, *Halterofilia*, *Open Box*) y cifras de resumen en tarjetas de indicadores.
-2. **Tipografía de Interfaz, Tablas y Lectura — `Inter` (`--font-sans`)**:
-   * **Pesos habilitados**: únicamente **`400` (Regular)**, **`500` (Medium)** y **`600` (SemiBold)**.
-   * **Propósito**: Máxima legibilidad en tablas densas de administración, formularios, botones, navegación y texto corrido.
+* **Tipografía Única (`--font-sans`)**: **`Inter`** (`Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif`).
+* **Pesos habilitados**: **`300` (Light)**, **`400` (Regular)**, **`500` (Medium)** y **`600` (SemiBold)**.
 
----
+## 2.2 Escala Tipográfica (*Sentence case*)
 
-## 2.2 Escala Tipográfica Fluida Mobile-First (`clamp()`)
+| Rol Tipográfico | Tamaño / `clamp()` | Peso | Line-Height | Tracking (`em`) | Uso Principal |
+| :--- | :--- | :---: | :---: | :---: | :--- |
+| **Display** | `clamp(1.75rem, 1.45rem + 1.4vw, 2.375rem)` | `500` (o `300`/`500` KPI) | `1.10` | `-0.025em` | Cifras KPI protagonistas (ingresos del mes, ocupación semanal, créditos disponibles). |
+| **Headline (`<h1>`)** | `clamp(1.375rem, 1.2rem + 0.8vw, 1.75rem)` | `500` | `1.20` | `-0.02em` | Encabezado principal de pantalla en *Sentence case*. |
+| **Title (`<h2>` / `<h3>`)** | `1.0625rem` (`17px`) | `500` | `1.30` | `-0.01em` | Títulos de cards Bento (`24px` radius) con subtítulo breve debajo en `#A1A1AA`. |
+| **Body** | `0.875rem`–`0.9375rem` (`14px`–`15px`) | `400`–`500` | `1.50` | `0em` | Copy operativo, listas, celdas de tabla y botones CTA (`15px`, `500`/`600`). |
+| **Label / Badge** | `0.75rem` (`12px`) | `500` | `1.35` | `+0.02em` | Badges semánticos en *Sentence case*, etiquetas de filtro y subtítulos de métricas. |
 
-Definida desde mobile (`360px`) hacia desktop (`1280px+`) usando `clamp()` para escalar sin saltos bruscos y con `letter-spacing` expresado en `em`:
-
-| Rol Tipográfico | Familia | Mobile | Desktop | `clamp()` / Valor | Peso | Tracking (`em`) | Line-Height |
-| :--- | :---: | :---: | :---: | :--- | :---: | :---: | :---: |
-| **Estadística / Saldo Destacado** | `Oswald` | `32px` | `44px` | `clamp(2rem, 1.6rem + 1.8vw, 2.75rem)` | `700` | `-0.02em` | `1.05` |
-| **`<h1>` Título de Pantalla** | `Oswald` | `26px` | `36px` | `clamp(1.625rem, 1.35rem + 1.2vw, 2.25rem)` | `700` | `-0.02em` | `1.15` |
-| **`<h2>` Título de Sección / Modal** | `Oswald` | `20px` | `26px` | `clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem)` | `600` | `-0.015em` | `1.20` |
-| **`<h3>` Nombre de Clase (`ClaseCard`)** | `Oswald` | `18px` | `20px` | `clamp(1.125rem, 1.05rem + 0.3vw, 1.25rem)` | `600` | `-0.01em` | `1.25` |
-| **Cuerpo General / Formulario (`Input`)** | `Inter` | `16px` | `16px` | `1rem` *(mínimo estricto en inputs)* | `400` | `normal` | `1.50` |
-| **Botón CTA / Navegación** | `Inter` | `15px` | `15px` | `0.9375rem` | `600` | `0.01em` | `1.00` |
-| **Celda de Tabla / Metadato** | `Inter` | `14px` | `14px` | `0.875rem` | `400` | `normal` | `1.45` |
-| **Header de Tabla / Eyebrow / Badge** | `Inter` | `12px` | `12px` | `0.75rem` | `600` | `+0.06em` | `1.35` |
-
----
-
-## 2.3 Números Tabulares (`tabular-nums`) y Reglas Tipográficas
+## 2.3 Reglas Tipográficas Obligatorias
 
 > [!IMPORTANT]
-> **Reglas Obligatorias verificadas en `/code-review`**:
+> **Reglas verificadas en `/code-review`**:
 
-1. **Uso obligatorio de `tabular-nums`**:
-   Toda cifra que aparezca en tablas, tarjetas o contadores debe llevar la clase `tabular-nums` (`font-variant-numeric: tabular-nums`) para alinear decenas, centenas y separadores al píxel:
-   * **Precios, Pagos y Saldos**: formateados con `Intl.NumberFormat('es-AR', { style: 'currency', currency: box.moneda, maximumFractionDigits: 0 })` (ej. `$ 35.000`).
-   * **Rangos Horarios**: `07:00 – 08:00`, `60 min`.
-   * **Contadores de Capacidad y Consumo**: `Cupos: 18/20`, `Créditos: 6/8`.
-2. **Tracking según tamaño y caja**:
-   * **Tracking negativo (`-0.02em` / `tracking-tight`) solo en `Oswald` de `18px` hacia arriba**.
-   * **Tracking positivo (`+0.06em` / `tracking-wider`) en todo texto pequeño en mayúsculas** (encabezados de tabla, *eyebrows*, *badges*), para evitar que los trazos verticales se peguen.
-3. **Mayúsculas siempre por CSS (`uppercase`)**:
-   * Nunca escribir palabras enteras en mayúsculas en el HTML/JSX ni en la base de datos (excepto siglas reales como `WOD`, `PR`, `ARS`, `USD`). Aplicar la transformación mediante la clase `uppercase` (`text-transform: uppercase`) para no degradar lectores de pantalla.
-4. **Prohibido bajar de `16px` (`1rem` / `text-base`) en `<input>`, `<select>` y `<textarea>` móviles**:
-   * Por debajo de `16px`, Safari en iOS fuerza un *auto-zoom* al enfocar el campo, descuadrando el layout móvil del `Atleta` y del `Coach`.
+1. **Sentence case en títulos, navegación y badges**: no forzar `uppercase` en títulos ni botones (salvo siglas reales como `WOD`, `PR`, `ARS`, `USD`, `KPI`).
+2. **Prohibido `font-mono` en importes de negocio**: los precios, saldos y contadores usan `Inter` + `.tabular-nums` (`font-variant-numeric: tabular-nums`), reservando tipografía monoespaciada únicamente si algún dato técnico lo requiriera (no para montos ni horarios).
+3. **Uso obligatorio de `.tabular-nums`**: todo importe (`Intl.NumberFormat('es-AR', { style: 'currency', currency: box.moneda, maximumFractionDigits: 0 })`), horario (`07:00 – 08:00`), cupo (`18/20`), porcentaje y crédito (`6/8`) debe llevar `tabular-nums`.
+4. **The 16px Input Floor Rule**: `<input>`, `<select>` y `<textarea>` deben tener tamaño de fuente mínimo **`16px` (`1rem` / `text-base`)** en móvil para evitar *auto-zoom* de Safari iOS al enfocar.
 
 ---
 
-# PARTE 3 — Arquetipos de Layout por Rol ([ADR 0007](./adr/0007-cuatro-roles-atomicos-componibles.md))
+# PARTE 3 — Geometría, Elevación y Shell de Navegación
 
-1. **Gestión en Escritorio/Tablet (`Administrador` / `Recepcionista`)**:
-   * Sidebar lateral fija (`#121214`) con el **Selector de Box** en la cabecera y navegación filtrada según la unión de roles de la `Afiliación` activa.
-   * Tablas densas sobre superficie `#121214` con bordes `#27272A`, *hover* `#1C1C1F` y filtros rápidos (ej. *"Solo Morosos"*).
-   * Modales contextuales (`Dialog`) y paneles laterales (`Sheet` / `Drawer`) para registrar Pagos, asignar Membresías y anotar *walk-ins* sin perder el contexto del listado.
-2. **Piso de Entrenamiento (`Coach`)**:
-   * Vista despejada sin datos financieros (si no posee rol de Recepcionista o Administrador, no ve Precios, Pagos ni Saldos).
-   * Foco en sus *Clases del Día*, indicador de tiempo restante de la **Ventana de Corrección de Asistencia (24 hs)** y lista interactiva de inscriptos.
-   * Botones de gran formato (*touch targets* $\ge 44\text{px} \times 44\text{px}$) para marcar o desmarcar **Asistencia** con un solo toque.
-3. **Autogestión Mobile-First (`Atleta`)**:
-   * Barra de navegación inferior fija (*Reservar*, *Mis Clases*, *Mi Membresía*).
-   * Selector horizontal de días acotado por la **Anticipación de Reserva** del Box.
-   * Tarjetas de clase (`ClaseCard`) con encabezado en `Oswald uppercase`, horario y cupos en `tabular-nums` y botón CTA directo en `Volt (#E2F800)` con texto negro `#000000`.
+## 3.1 Radios y Superficies Tonales
+
+Centris v2 usa capas tonales planas con bordes `1px solid #232428` (sin sombras pesadas):
+`#09090B` (canvas) $\rightarrow$ `#111214` (sidebar y Bento cards) $\rightarrow$ `#18191C` (cápsulas topbar, sub-ítems, pozos internos y botones secundarios).
+
+* **Bento Cards / Contenedores principales**: `24px` (`rounded-3xl`), padding `22px–24px`.
+* **Filas internas / Pozos Bento**: `16px` (`rounded-2xl`).
+* **Inputs / Selects / Textareas**: `12px` (`rounded-xl`), altura mínima `44px`.
+* **Botones primarios/secundarios/destructivos, botones circulares `↗`, chips/badges y pills del sidebar**: `9999px` (`rounded-full`), altura mínima `44px` en todo control táctil interactivo.
+* **Patrón de capacidad / progreso**: barras con relleno sólido `#C1F429` sobre pista con **rayado diagonal** sutil oscuro (`repeating-linear-gradient`).
+
+## 3.2 Shell Autenticado (`(box)/layout.tsx`) y Arquetipos por Rol ([ADR 0007](./adr/0007-cuatro-roles-atomicos-componibles.md))
+
+1. **Sidebar vertical izquierdo (desktop `>= 1024px`, ancho `248px` / `15.5rem`)**:
+   * Fondo `#111214`, borde derecho `1px solid #232428`, logotipo de Centris arriba.
+   * Muestra **ícono + nombre visible de cada sección** (prohibido ocultar etiquetas detrás de un rail solo-íconos en desktop), filtrado por los roles activos de la `Afiliación`: `Panel` (`/inicio`), `Horarios` (`/horarios`), `Calendario de Clases` (`/clases`), `Mis Reservas` (`/reservas`), `Planes` (`/planes`), `Atletas` (`/atletas`), `Caja y Morosos` (`/caja`), `Afiliaciones` (`/afiliaciones`) y `Configuración` (`/configuracion`) al pie.
+   * El ítem activo usa cápsula `rounded-full` con fondo `#C1F429` y texto/ícono `#000000`.
+   * En móvil (`< 1024px`) colapsa a un drawer táctil accesible desde el topbar con objetivos `>= 44px`.
+   * **Contrato E2E obligatorio**: preservar todos los `data-testid` de navegación existentes (`nav-link-*`, `box-activo-nombre`, `roles-activos-badges`).
+2. **Topbar contextual de cápsulas**:
+   * Cápsulas `#18191C` (`rounded-full`, `border #232428`) para cambio rápido de Box activo (`/seleccionar-box`), fecha/zona horaria operativa y menú de usuario / cierre de sesión.
+3. **Arquetipos por Rol**:
+   * **`Administrador` / `Recepcionista`**: grillas Bento asimétricas (`minmax(min(100%, 300px–340px), 1fr)`) y listas densas con filtros en chips; paneles laterales (`SideDrawer`) e interacción contextual sin diálogos nativos.
+   * **`Coach`**: foco operativo en *Clases del Día*, ventana de 24 hs de asistencia y botones de asistencia `>= 44px`, sin exponer montos ni caja si no tiene rol financiero.
+   * **`Atleta`**: diseño *mobile-first* despejado para elegir fecha dentro de la anticipación del Box, ver cupos con `tabular-nums`, reservar en 1 toque y consultar créditos/saldo vigente ([ADR 0006](./adr/0006-acceso-desacoplado-del-pago.md)).
+
+## 3.3 Reglas de Estabilidad Layout y Anti-Overflow (Notebook + Mobile)
+
+Estas reglas previenen regresiones visuales observadas durante la auditoría de las 12 pantallas:
+
+1. **Prohibido `confirm()` / `alert()` nativos del navegador**: reemplazar confirmaciones destructivas por **confirmación inline (`InlineConfirm`)** o botón/strip contextual dentro de la card o drawer.
+2. **Grillas Bento sin desborde en notebooks (`1280px–1366px`)**: usar columnas `minmax(min(100%, 300px), 1fr)` (o `320px`/`340px` según ancho mínimo de acciones) y permitir `flex-wrap: wrap` + `min-width: 0` en grupos de botones dentro de cards para que ningún botón sobresalga de la card.
+3. **Filas interactivas sin saltos al cambiar estado (`Layout Shift = 0`)**:
+   * En `/afiliaciones`, usar grilla de columnas fijas en desktop (ej. columna de acciones dedicada `264px`) y una franja/strip inferior (`border-top`) o reserva fija para el estado `"Sin guardar"` y el botón `Guardar roles`, evitando empujar controles al editar roles.
+   * En `/seleccionar-box`, separar el badge superior (`ARS` + `Activo ahora`) en su propia fila (`eyebrow`) por encima de un bloque de encabezado con altura mínima reservada para nombre del Box y ciudad/zona horaria, evitando que las cards crezcan o se desalineen entre sí en desktop.
+4. **Alineación responsive de formularios compuestos (`/configuracion`)**: apilar pares de campos `.two-cols` en 1 columna por debajo de `768px` y alinear las etiquetas superiores (`.field-label`) para que los inputs horizontales queden nivelados cuando un label ocupa 2 líneas.
+5. **Listados de caja/auditoría en mobile (`/caja`)**: permitir `flex-wrap: wrap; max-width: 100%; white-space: normal` en pills KPI de encabezado y estructurar las filas de auditoría móvil en grilla de 2 columnas balanceada sin colapso horizontal.
 
 ---
 
@@ -144,47 +154,45 @@ Definida desde mobile (`360px`) hacia desktop (`1280px+`) usando `clamp()` para 
 
 ## 4.1 Tokens y Variables en `apps/web/src/app/globals.css` (Tailwind v4)
 
-En **Tailwind CSS v4**, toda la configuración del tema y el mapeo de variables semánticas de `shadcn/ui` viven unificados en `globals.css` utilizando valores HEX directos y `@theme inline`:
-
 ```css
 @import "tailwindcss";
 @import "tw-animate-css";
 
 :root,
 .dark {
-  /* Superficies y Texto */
-  --background: #000000;
+  /* Superficies Dark Bento Cockpit */
+  --background: #09090B;
   --foreground: #FFFFFF;
 
-  --card: #121214;
+  --card: #111214;
   --card-foreground: #FFFFFF;
 
-  --popover: #121214;
+  --popover: #111214;
   --popover-foreground: #FFFFFF;
 
-  /* Acento de Acción Principal: Volt Athletic (#E2F800) con texto Negro obligatorio */
-  --primary: #E2F800;
+  /* Acento de Acción Principal: Volt Lime (#C1F429) con texto Negro obligatorio */
+  --primary: #C1F429;
   --primary-foreground: #000000;
 
-  /* Superficies Secundarias y Atenuadas */
-  --secondary: #1C1C1F;
+  /* Superficies Elevadas y Atenuadas */
+  --secondary: #18191C;
   --secondary-foreground: #FFFFFF;
 
-  --muted: #1C1C1F;
+  --muted: #18191C;
   --muted-foreground: #A1A1AA;
 
-  --accent: #1C1C1F;
+  --accent: #18191C;
   --accent-foreground: #FFFFFF;
 
-  /* Estados Destructivos y Bordes */
-  --destructive: #FB7185;
+  /* Estados Semánticos y Bordes Hairline */
+  --destructive: #FF6D6D;
   --destructive-foreground: #000000;
 
-  --border: #27272A;
-  --input: #27272A;
-  --ring: #E2F800;
+  --border: #232428;
+  --input: #232428;
+  --ring: #C1F429;
 
-  --radius: 0.5rem;
+  --radius: 1.5rem; /* 24px base para Bento Cards */
 }
 
 @theme inline {
@@ -208,54 +216,34 @@ En **Tailwind CSS v4**, toda la configuración del tema y el mapeo de variables 
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  /* Escala explícita de Volt para utilidades puntuales */
-  --color-volt-50: #FCFFE5;
-  --color-volt-400: #E2F800;
-  --color-volt-500: #CDE000;
+  /* Tokens explícitos Centris v2 */
+  --color-volt-lime: #C1F429;
+  --color-volt-hover: #AEDF1B;
+  --color-volt-tint: #F4FDE0;
+  --color-canvas-obsidian: #09090B;
+  --color-surface-card: #111214;
+  --color-surface-elevated: #18191C;
+  --color-border-hairline: #232428;
+  --color-mint-active: #18FFC8;
+  --color-amber-warning: #FBBF24;
+  --color-coral-alert: #FF6D6D;
 
-  /* Familias Tipográficas */
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-display: var(--font-oswald), ui-sans-serif, system-ui, sans-serif;
-
-  /* Escala Tipográfica Fluida */
-  --text-stat: clamp(2rem, 1.6rem + 1.8vw, 2.75rem);
-  --text-stat--line-height: 1.05;
-  --text-stat--letter-spacing: -0.02em;
-
-  --text-h1: clamp(1.625rem, 1.35rem + 1.2vw, 2.25rem);
-  --text-h1--line-height: 1.15;
-  --text-h1--letter-spacing: -0.02em;
-
-  --text-h2: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
-  --text-h2--line-height: 1.2;
-  --text-h2--letter-spacing: -0.015em;
-
-  --text-h3: clamp(1.125rem, 1.05rem + 0.3vw, 1.25rem);
-  --text-h3--line-height: 1.25;
-  --text-h3--letter-spacing: -0.01em;
+  /* Familia Tipográfica Única */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 ```
 
----
-
-## 4.2 Configuración de Fuentes en `apps/web/src/app/layout.tsx`
+## 4.2 Configuración de Fuente en `apps/web/src/app/layout.tsx`
 
 ```tsx
 import type { Metadata } from "next";
-import { Inter, Oswald } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
-  weight: ["400", "500", "600"],
+  weight: ["300", "400", "500", "600"],
   variable: "--font-inter",
-  display: "swap",
-});
-
-const oswald = Oswald({
-  subsets: ["latin", "latin-ext"],
-  weight: ["600", "700"],
-  variable: "--font-oswald",
   display: "swap",
 });
 
@@ -270,7 +258,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es" className={`${inter.variable} ${oswald.variable} dark`}>
+    <html lang="es" className={`${inter.variable} dark`}>
       <body className="bg-background text-foreground font-sans antialiased min-h-screen">
         {children}
       </body>
@@ -281,14 +269,14 @@ export default function RootLayout({
 
 ---
 
-## Resumen Operativo
+## Resumen Operativo (v2)
 
-| Parámetro | Definición Oficial en Centris |
+| Parámetro | Definición Oficial en Centris v2 |
 | :--- | :--- |
-| **Esquema de Tema** | 100% *Dark-First* (`Pure Black #000000` + `Charcoal #121214` + `Elevated #1C1C1F`) |
-| **Color Primario de Acción** | **Volt Athletic `#E2F800`** (Reservado para CTA, foco e ítem activo) |
-| **Restricción Crítica de Contraste** | Prohibido texto blanco sobre `Volt #E2F800` (`1.19:1`). Todo texto sobre Volt va en `#000000` (`17.66:1` AAA) |
-| **Badges Semánticos** | Éxito en `Emerald #34D399` (`10.4:1`), Aviso en `Amber #FBBF24` (`11.8:1`), Error/Moroso en `Rose #FB7185` (`6.9:1`) |
-| **Familias Tipográficas** | **Oswald** (`600`, `700`) para Display/Clases · **Inter** (`400`, `500`, `600`) para UI/Tablas |
-| **Reglas Tipográficas** | `tabular-nums` obligatorio en cifras/horarios · `uppercase` solo por CSS · Inputs móviles $\ge 16\text{px}$ (`1rem`) |
-| **Configuración CSS** | **Tailwind CSS v4** unificado en `app/globals.css` mediante `@theme inline` |
+| **Estética y Tema** | *Dark Bento Cockpit*: `Canvas Obsidian #09090B`, `Surface Card #111214`, `Surface Elevated #18191C`, borde `1px solid #232428` |
+| **Acento Primario** | **Volt Lime `#C1F429`** (hover `#AEDF1B`) — siempre con texto e íconos `#000000` (`16.24:1` AAA) |
+| **Contraste Prohibido** | Prohibido texto `#FFFFFF` sobre `#C1F429` (`1.29:1`) o sobre `#18FFC8` (`1.30:1`) |
+| **Badges Semánticos** | `Mint #18FFC8` (`14.44:1`), `Amber #FBBF24` (`11.23:1`), `Coral #FF6D6D` (`6.84:1`), `Zinc #A1A1AA` (`7.31:1`) sobre fondo `14%` |
+| **Tipografía** | **Únicamente `Inter`** (`300`, `400`, `500`, `600`) en *Sentence case* · `tabular-nums` en montos, horarios, cupos y créditos · inputs $\ge 16\text{px}$ |
+| **Geometría y Touch** | Cards `24px` (`rounded-3xl`), sub-ítems `16px` (`rounded-2xl`), inputs `12px` (`rounded-xl`), botones/chips `rounded-full` con altura $\ge 44\text{px}$ |
+| **Navegación** | Sidebar vertical izquierdo `248px` en desktop (`>= 1024px`) con ícono + etiqueta visible; drawer táctil en móvil (`< 1024px`) |
