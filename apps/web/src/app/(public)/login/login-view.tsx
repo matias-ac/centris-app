@@ -94,7 +94,7 @@ export function LoginView({
       <header className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/login"
-          className="inline-flex min-h-11 items-center gap-2.5 rounded-xl text-[1.125rem] font-semibold tracking-[-0.02em] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex min-h-11 items-center gap-2.5 rounded-xl text-[1.0625rem] font-semibold tracking-[-0.02em] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <span
             aria-hidden="true"
@@ -105,7 +105,7 @@ export function LoginView({
           <span>Centris</span>
         </Link>
 
-        <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-[0.8125rem] text-muted-foreground">
+        <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-sm text-muted-foreground">
           <span
             aria-hidden="true"
             className="h-2 w-2 shrink-0 rounded-full bg-[#18FFC8]"
@@ -120,7 +120,7 @@ export function LoginView({
             <div>
               <h1
                 id="login-title"
-                className="text-[clamp(1.5rem,1.3rem+0.8vw,1.875rem)] font-medium leading-[1.2] tracking-[-0.02em] text-foreground"
+                className="text-[clamp(1.375rem,1.2rem+0.8vw,1.75rem)] font-medium leading-[1.2] tracking-[-0.02em] text-foreground"
               >
                 Iniciar sesión
               </h1>
@@ -201,10 +201,9 @@ export function LoginView({
                   <button
                     type="button"
                     onClick={() => setMostrarContrasena((actual) => !actual)}
+                    aria-controls="login-password"
                     aria-label={
-                      mostrarContrasena
-                        ? "Ocultar contraseña"
-                        : "Mostrar contraseña"
+                      mostrarContrasena ? "Ocultar clave" : "Mostrar clave"
                     }
                     aria-pressed={mostrarContrasena}
                     className="absolute right-1 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -252,7 +251,7 @@ export function LoginView({
                   </span>
                   <span>Una cuenta para todos tus Boxes</span>
                 </div>
-                <p className="text-[0.8125rem] leading-relaxed text-muted-foreground">
+                <p className="text-sm leading-relaxed text-muted-foreground">
                   Si entrenás o trabajás en más de un Box, después de ingresar
                   elegís con cuál operar.
                 </p>
@@ -268,7 +267,7 @@ export function LoginView({
                   </span>
                   <span>Permisos según tu rol</span>
                 </div>
-                <p className="text-[0.8125rem] leading-relaxed text-muted-foreground">
+                <p className="text-sm leading-relaxed text-muted-foreground">
                   Ves únicamente las secciones que corresponden a tu perfil:
                   Atleta, Coach, Recepción o Administración.
                 </p>
@@ -279,7 +278,7 @@ export function LoginView({
               <h2 className="text-[0.9375rem] font-medium text-foreground">
                 ¿Te dieron de alta en recepción?
               </h2>
-              <p className="text-[0.8125rem] leading-relaxed text-muted-foreground">
+              <p className="text-sm leading-relaxed text-muted-foreground">
                 Si todavía no creaste tu contraseña personal, activá tu cuenta
                 por única vez con el correo registrado en el Box.
               </p>

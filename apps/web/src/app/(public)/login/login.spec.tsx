@@ -104,7 +104,7 @@ describe("Rediseño Dark Bento Cockpit de /login", () => {
       expect(html).toContain("Correo electrónico");
       expect(html).toContain('for="login-password"');
       expect(html).toContain("Contraseña");
-      expect(html).toContain('aria-label="Mostrar contraseña"');
+      expect(html).toContain('aria-label="Mostrar clave"');
       expect(html).toContain('aria-pressed="false"');
       expect(html).toContain('href="/activar-cuenta"');
       expect(html).toContain("Activar mi cuenta");
@@ -166,7 +166,7 @@ describe("Rediseño Dark Bento Cockpit de /login", () => {
       );
 
       expect(htmlVisible).toMatch(/id="login-password"[^>]*type="text"/);
-      expect(htmlVisible).toContain('aria-label="Ocultar contraseña"');
+      expect(htmlVisible).toContain('aria-label="Ocultar clave"');
       expect(htmlVisible).toContain('aria-pressed="true"');
     });
   });
