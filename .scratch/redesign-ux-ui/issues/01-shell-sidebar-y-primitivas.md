@@ -1,6 +1,6 @@
 # 01 — Shell Autenticado, Sidebar Vertical v2 y Primitivas Bento
 
-**Status:** ready-for-agent
+**Status:** done
 **Branch:** `feat/ui-01-shell-sidebar-y-primitivas`
 **Blocked by:** —
 
@@ -36,11 +36,11 @@ Es la rama fundacional obligatoria antes de migrar cualquiera de las 12 pantalla
 
 ## Acceptance Criteria (TDD / BDD)
 
-- [ ] **Tokens y Tipografía Única**: En **Red $\rightarrow$ Green**, actualizar `globals.css` y `layout.tsx` cargando únicamente `Inter` (`300`, `400`, `500`, `600`), eliminando `Oswald`, aplicando `#09090B` / `#111214` / `#18191C` / `#232428` / `#C1F429` (`#000000` foreground) y respetando fuente `>= 16px` (`text-base`) en inputs/selects/textareas.
-- [ ] **Primitivas UI Profundas (Vitest)**: Escribir specs unitarias (`Vitest`) en Red $\rightarrow$ Green para `Button` (`min-h-11`, `rounded-full`, variantes `primary` negro sobre `#C1F429`, `secondary`, `destructive`, `ghost`, `iconCircle`), `Badge` (`mint`, `amber`, `coral`, `zinc`, `volt`), `Card` (`rounded-3xl`, borde `#232428`), `InlineConfirm` (dispara confirmación y cancelación sin usar `window.confirm` ni `alert`), `SideDrawer` (cierra con `Escape` y backdrop) y `FilterChips`.
-- [ ] **Shell `(box)/layout.tsx` Dark Bento Cockpit**: Implementar sidebar vertical izquierdo (`248px` en `>= 1024px`) mostrando **ícono + nombre visible** en *Sentence case* filtrado por roles ([ADR 0007](../../../docs/adr/0007-cuatro-roles-atomicos-componibles.md)), estado activo `#C1F429` + `#000000`, `Configuración` al pie, drawer táctil en `< 1024px` (`min-h-11`) y topbar de cápsulas con `selector-box-header.tsx` + cierre de sesión.
-- [ ] **Contrato `data-testid` intacto**: Conservar `box-activo-nombre`, `roles-activos-badges` y todos los `nav-link-*` existentes en desktop y mobile sin regresiones.
-- [ ] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` (`Vitest` + las 12 suites `playwright-bdd`) y `/code-review`.
+- [x] **Tokens y Tipografía Única**: En **Red $\rightarrow$ Green**, actualizar `globals.css` y `layout.tsx` cargando únicamente `Inter` (`300`, `400`, `500`, `600`), eliminando `Oswald`, aplicando `#09090B` / `#111214` / `#18191C` / `#232428` / `#C1F429` (`#000000` foreground) y respetando fuente `>= 16px` (`text-base`) en inputs/selects/textareas.
+- [x] **Primitivas UI Profundas (Vitest)**: Escribir specs unitarias (`Vitest`) en Red $\rightarrow$ Green para `Button` (`min-h-11`, `rounded-full`, variantes `primary` negro sobre `#C1F429`, `secondary`, `destructive`, `ghost`, `iconCircle`), `Badge` (`mint`, `amber`, `coral`, `zinc`, `volt`), `Card` (`rounded-3xl`, borde `#232428`), `InlineConfirm` (dispara confirmación y cancelación sin usar `window.confirm` ni `alert`), `SideDrawer` (cierra con `Escape` y backdrop) y `FilterChips`.
+- [x] **Shell `(box)/layout.tsx` Dark Bento Cockpit**: Implementar sidebar vertical izquierdo (`248px` en `>= 1024px`) mostrando **ícono + nombre visible** en *Sentence case* filtrado por roles ([ADR 0007](../../../docs/adr/0007-cuatro-roles-atomicos-componibles.md)), estado activo `#C1F429` + `#000000`, `Configuración` al pie, drawer táctil en `< 1024px` (`min-h-11`) y topbar de cápsulas con `selector-box-header.tsx` + cierre de sesión.
+- [x] **Contrato `data-testid` intacto**: Conservar `box-activo-nombre`, `roles-activos-badges` y todos los `nav-link-*` existentes en desktop y mobile sin regresiones.
+- [x] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` (`Vitest` + las 12 suites `playwright-bdd`) y `/code-review`.
 
 ## Comments
 

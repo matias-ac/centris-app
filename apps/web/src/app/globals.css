@@ -2,35 +2,44 @@
 
 :root,
 .dark {
-  --background: #000000;
-  --foreground: #ffffff;
+  color-scheme: dark;
 
-  --card: #121214;
-  --card-foreground: #ffffff;
+  /* Superficies Dark Bento Cockpit */
+  --background: #09090B;
+  --foreground: #FFFFFF;
 
-  --popover: #121214;
-  --popover-foreground: #ffffff;
+  --card: #111214;
+  --card-foreground: #FFFFFF;
 
-  --primary: #e2f800;
+  --popover: #111214;
+  --popover-foreground: #FFFFFF;
+
+  /* Acento de Acción Principal: Volt Lime (#C1F429) con texto Negro obligatorio */
+  --primary: #C1F429;
   --primary-foreground: #000000;
 
-  --secondary: #1c1c1f;
-  --secondary-foreground: #ffffff;
+  /* Superficies Elevadas y Atenuadas */
+  --secondary: #18191C;
+  --secondary-foreground: #FFFFFF;
 
-  --muted: #1c1c1f;
-  --muted-foreground: #a1a1aa;
+  --muted: #18191C;
+  --muted-foreground: #A1A1AA;
 
-  --accent: #1c1c1f;
-  --accent-foreground: #ffffff;
+  --accent: #18191C;
+  --accent-foreground: #FFFFFF;
 
-  --destructive: #fb7185;
+  /* Estados Semánticos y Bordes Hairline */
+  --destructive: #FF6D6D;
   --destructive-foreground: #000000;
 
-  --border: #27272a;
-  --input: #27272a;
-  --ring: #e2f800;
+  --border: #232428;
+  --input: #232428;
+  --ring: #C1F429;
 
-  --radius: 0.5rem;
+  --volt-hover: #AEDF1B;
+  --volt-tint: #F4FDE0;
+
+  --radius: 1.5rem;
 }
 
 @theme inline {
@@ -54,34 +63,48 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --color-volt-50: #fcffe5;
-  --color-volt-400: #e2f800;
-  --color-volt-500: #cde000;
+  /* Tokens explícitos Centris v2 */
+  --color-volt-lime: #C1F429;
+  --color-volt-hover: #AEDF1B;
+  --color-volt-tint: #F4FDE0;
+  --color-volt-400: #C1F429;
+  --color-volt-500: #AEDF1B;
+  --color-canvas-obsidian: #09090B;
+  --color-surface-card: #111214;
+  --color-surface-elevated: #18191C;
+  --color-border-hairline: #232428;
+  --color-mint-active: #18FFC8;
+  --color-amber-warning: #FBBF24;
+  --color-coral-alert: #FF6D6D;
 
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  --font-display: "Oswald", ui-sans-serif, system-ui, sans-serif;
+  /* Familia Tipográfica Única */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-display: var(--font-sans);
 
-  --text-stat: clamp(2rem, 1.6rem + 1.8vw, 2.75rem);
-  --text-stat--line-height: 1.05;
-  --text-stat--letter-spacing: -0.02em;
+  --text-display: clamp(1.75rem, 1.45rem + 1.4vw, 2.375rem);
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.025em;
 
-  --text-h1: clamp(1.625rem, 1.35rem + 1.2vw, 2.25rem);
-  --text-h1--line-height: 1.15;
+  --text-h1: clamp(1.375rem, 1.2rem + 0.8vw, 1.75rem);
+  --text-h1--line-height: 1.2;
   --text-h1--letter-spacing: -0.02em;
+}
 
-  --text-h2: clamp(1.25rem, 1.1rem + 0.7vw, 1.625rem);
-  --text-h2--line-height: 1.2;
-  --text-h2--letter-spacing: -0.015em;
+::selection {
+  background-color: #C1F429;
+  color: #000000;
+}
 
-  --text-h3: clamp(1.125rem, 1.05rem + 0.3vw, 1.25rem);
-  --text-h3--line-height: 1.25;
-  --text-h3--letter-spacing: -0.01em;
+html {
+  scrollbar-color: #232428 #09090B;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  caret-color: #C1F429;
+  -webkit-font-smoothing: antialiased;
 }
 
 .tabular-nums {

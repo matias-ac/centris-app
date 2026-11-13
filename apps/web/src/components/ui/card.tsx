@@ -1,6 +1,9 @@
 import type * as React from "react";
 import { cn } from "@/lib/utils";
 
+/**
+ * Contenedor Bento principal sobre superficie #111214 con borde hairline y radio 24px.
+ */
 export function Card({
   className,
   ...props
@@ -8,7 +11,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-xl border border-border bg-card text-card-foreground shadow-sm",
+        "min-w-0 rounded-3xl border border-border bg-card text-card-foreground",
         className
       )}
       {...props}
@@ -28,19 +31,24 @@ export function CardHeader({
   );
 }
 
+export const BENTO_TITLE_CLASSES =
+  "text-[1.0625rem] font-medium leading-[1.3] tracking-[-0.01em] text-foreground";
+
+export const BENTO_DESCRIPTION_CLASSES =
+  "text-sm leading-normal text-muted-foreground";
+
 export function CardTitle({
   className,
   ...props
 }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return (
-    <h2
-      className={cn(
-        "font-display text-lg font-semibold leading-tight tracking-tight text-foreground",
-        className
-      )}
-      {...props}
-    />
-  );
+  return <h2 className={cn(BENTO_TITLE_CLASSES, className)} {...props} />;
+}
+
+export function CardDescription({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLParagraphElement>) {
+  return <p className={cn(BENTO_DESCRIPTION_CLASSES, className)} {...props} />;
 }
 
 export function CardContent({
@@ -48,4 +56,16 @@ export function CardContent({
   ...props
 }: React.HTMLAttributes<HTMLDivElement>) {
   return <div className={cn("p-6 pt-0", className)} {...props} />;
+}
+
+export function CardFooter({
+  className,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={cn("flex flex-wrap items-center justify-between gap-3 p-6 pt-0", className)}
+      {...props}
+    />
+  );
 }
