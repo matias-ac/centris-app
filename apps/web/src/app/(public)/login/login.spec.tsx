@@ -14,7 +14,8 @@ import {
   traducirErrorAutenticacion,
   validarCredencialesLogin
 } from "./login-estado";
-import LoginPage, { FormularioLogin } from "./page";
+import { LoginView } from "./login-view";
+import LoginPage from "./page";
 
 describe("Rediseño Dark Bento Cockpit de /login", () => {
   describe("Módulo login-estado (validación y errores humanos)", () => {
@@ -128,7 +129,7 @@ describe("Rediseño Dark Bento Cockpit de /login", () => {
 
     it("aplica aria-invalid solo al campo con error y renderiza alerta accesible cuando hay error general", () => {
       const htmlErrorEmail = renderToStaticMarkup(
-        createElement(FormularioLogin, {
+        createElement(LoginView, {
           erroresIniciales: {
             email: "Ingresá un correo electrónico válido."
           }
@@ -143,7 +144,7 @@ describe("Rediseño Dark Bento Cockpit de /login", () => {
       );
 
       const htmlErrorGeneral = renderToStaticMarkup(
-        createElement(FormularioLogin, {
+        createElement(LoginView, {
           erroresIniciales: {
             general:
               "El correo o la contraseña no coinciden. Verificá los datos e intentá nuevamente."
@@ -159,7 +160,7 @@ describe("Rediseño Dark Bento Cockpit de /login", () => {
 
     it("permite mostrar la contraseña como texto con aria-pressed=true en el toggle", () => {
       const htmlVisible = renderToStaticMarkup(
-        createElement(FormularioLogin, {
+        createElement(LoginView, {
           mostrarContrasenaInicial: true
         })
       );
