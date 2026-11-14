@@ -8,7 +8,10 @@ export const dynamic = "force-dynamic";
 
 export default async function PlanesPage() {
   const contexto = await obtenerContextoOperativoWeb();
-  if (!contexto || !contexto.afiliacionActiva) {
+  if (!contexto) {
+    redirect("/login");
+  }
+  if (!contexto.afiliacionActiva) {
     redirect("/seleccionar-box");
   }
 

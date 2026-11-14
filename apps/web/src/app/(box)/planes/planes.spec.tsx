@@ -117,7 +117,7 @@ describe("Rediseño Dark Bento Cockpit de /planes", () => {
           modalidadCreditos: "SEMANAL",
           creditosPorPeriodo: 3
         })
-      ).toContain("se renuevan cada lunes");
+      ).toContain("Se renuevan cada lunes");
       expect(
         explicarReglaPlan({
           duracionDias: 45,
