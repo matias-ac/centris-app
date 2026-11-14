@@ -81,8 +81,8 @@ Then(
 When(
   'da de baja lógica el Tipo de Clase {string}',
   async ({ page }, nombre: string) => {
-    page.on("dialog", (dialog) => dialog.accept());
     await page.getByTestId(`btn-eliminar-tipo-clase-${nombre}`).click();
+    await page.getByTestId(`baja-tipo-clase-${nombre}-confirm`).click();
   }
 );
 
@@ -143,8 +143,8 @@ Then(
 When(
   'da de baja lógica el bloque horario de las {string}',
   async ({ page }, hora: string) => {
-    page.on("dialog", (dialog) => dialog.accept());
     await page.getByTestId(`btn-eliminar-horario-${hora}`).click();
+    await page.getByTestId(`baja-horario-${hora}-confirm`).click();
   }
 );
 
