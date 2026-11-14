@@ -1,6 +1,6 @@
 # 03 — Rediseño UX/UI de `/activar-cuenta`
 
-**Status:** ready-for-agent
+**Status:** in-progress
 **Branch:** `feat/ui-03-activar-cuenta`
 **Blocked by:** `01`
 
