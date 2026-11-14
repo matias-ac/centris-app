@@ -1,4 +1,4 @@
-import { expect } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
 import { SEED_BOX_IDS } from "@centris/shared";
 import pg from "pg";
@@ -42,10 +42,7 @@ async function ejecutarSqlOwner(
   }
 }
 
-function filaAtletaEnDirectorio(
-  page: import("@playwright/test").Page,
-  texto: string
-) {
+function filaAtletaEnDirectorio(page: Page, texto: string) {
   return page
     .getByTestId("tabla-atletas")
     .locator('[data-testid^="fila-atleta-"]', { hasText: texto });
