@@ -10,6 +10,17 @@ export type ResultadoValidacionLogin =
   | { ok: true; datos: LoginInput }
   | { ok: false; errores: ErroresLogin };
 
+export type ResultadoEnvioLogin =
+  | { ok: true; destino: string }
+  | { ok: false; errores: ErroresLogin };
+
+export interface AccionLoginFn {
+  (
+    email: string,
+    password: string
+  ): Promise<{ ok: boolean; errorCode?: string; destino?: string }>;
+}
+
 const MENSAJES_ERROR_AUTENTICACION: Record<string, string> = {
   [ERROR_CODES.CREDENCIALES_INVALIDAS]:
     "El correo o la contraseña no coinciden, o tu cuenta todavía no fue activada.",
@@ -46,8 +57,7 @@ export function validarCredencialesLogin(
   }
 
   if (!errores.email && !errores.password) {
-    errores.general =
-      "Revisá los datos ingresados e intentá nuevamente.";
+    errores.general = "Revisá los datos ingresados e intentá nuevamente.";
   }
 
   return { ok: false, errores };
@@ -57,12 +67,43 @@ export function validarCredencialesLogin(
  * Traduce códigos de error del servidor a copy humano en español rioplatense,
  * evitando exponer identificadores técnicos o códigos HTTP en la UI.
  */
-export function traducirErrorAutenticacion(
-  errorCode?: string,
-  _message?: string
-): string {
+export function traducirErrorAutenticacion(errorCode?: string): string {
   if (errorCode && errorCode in MENSAJES_ERROR_AUTENTICACION) {
     return MENSAJES_ERROR_AUTENTICACION[errorCode] ?? MENSAJE_ERROR_RESPALDO;
   }
   return MENSAJE_ERROR_RESPALDO;
+}
+
+/**
+ * Ejecuta validación local y envío al servidor devolviendo un resultado uniforme
+ * de navegación o errores accesibles sin exponer excepciones crudas.
+ */
+export async function procesarEnvioLogin(
+  email: string,
+  password: string,
+  accionLogin: AccionLoginFn
+): Promise<ResultadoEnvioLogin> {
+  const validacion = validarCredencialesLogin(email, password);
+  if (!validacion.ok) {
+    return { ok: false, errores: validacion.errores };
+  }
+
+  try {
+    const res = await accionLogin(
+      validacion.datos.email,
+      validacion.datos.password
+    );
+    if (!res.ok) {
+      return {
+        ok: false,
+        errores: { general: traducirErrorAutenticacion(res.errorCode) }
+      };
+    }
+    return { ok: true, destino: res.destino ?? "/inicio" };
+  } catch {
+    return {
+      ok: false,
+      errores: { general: traducirErrorAutenticacion() }
+    };
+  }
 }

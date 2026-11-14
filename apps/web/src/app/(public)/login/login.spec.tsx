@@ -11,6 +11,7 @@ vi.mock("@/lib/actions", () => ({
 }));
 
 import {
+  procesarEnvioLogin,
   traducirErrorAutenticacion,
   validarCredencialesLogin
 } from "./login-estado";
@@ -69,27 +70,69 @@ describe("Rediseño Dark Bento Cockpit de /login", () => {
     });
 
     it("traduce códigos de error del servidor a copy humano sin exponer errorCode ni códigos HTTP", () => {
-      const msgCredenciales = traducirErrorAutenticacion(
-        "CREDENCIALES_INVALIDAS",
-        "Credenciales inválidas"
-      );
+      const msgCredenciales = traducirErrorAutenticacion("CREDENCIALES_INVALIDAS");
       expect(msgCredenciales).not.toContain("CREDENCIALES_INVALIDAS");
       expect(msgCredenciales).toContain("correo o la contraseña");
 
-      const msgValidacion = traducirErrorAutenticacion(
-        "VALIDACION_FALLIDA",
-        "Datos inválidos."
-      );
+      const msgValidacion = traducirErrorAutenticacion("VALIDACION_FALLIDA");
       expect(msgValidacion).not.toContain("VALIDACION_FALLIDA");
       expect(msgValidacion.length).toBeGreaterThan(10);
 
-      const msgInterno = traducirErrorAutenticacion(
-        "ERROR_INTERNO",
-        "Error HTTP 500"
-      );
+      const msgInterno = traducirErrorAutenticacion("ERROR_INTERNO");
       expect(msgInterno).not.toContain("ERROR_INTERNO");
       expect(msgInterno).not.toContain("500");
       expect(msgInterno).toContain("Intentá nuevamente");
+    });
+
+    it("procesa el envío completo: valida antes de invocar la acción, traduce errores y retorna destino", async () => {
+      const accionMock = vi.fn();
+
+      const invalido = await procesarEnvioLogin("mal", "123", accionMock);
+      expect(invalido.ok).toBe(false);
+      expect(accionMock).not.toHaveBeenCalled();
+
+      accionMock.mockResolvedValueOnce({
+        ok: false,
+        errorCode: "CREDENCIALES_INVALIDAS"
+      });
+      const rechazado = await procesarEnvioLogin(
+        "atleta@centris.app",
+        "ClaveIncorrecta1!",
+        accionMock
+      );
+      expect(rechazado).toEqual({
+        ok: false,
+        errores: {
+          general:
+            "El correo o la contraseña no coinciden, o tu cuenta todavía no fue activada."
+        }
+      });
+
+      accionMock.mockRejectedValueOnce(new Error("Network error"));
+      const caido = await procesarEnvioLogin(
+        "atleta@centris.app",
+        "Centris123!",
+        accionMock
+      );
+      expect(caido).toEqual({
+        ok: false,
+        errores: {
+          general:
+            "No pudimos iniciar sesión en este momento. Intentá nuevamente en unos segundos."
+        }
+      });
+
+      accionMock.mockResolvedValueOnce({ ok: true, destino: "/seleccionar-box" });
+      const exitoso = await procesarEnvioLogin(
+        "  atleta@centris.app ",
+        "Centris123!",
+        accionMock
+      );
+      expect(accionMock).toHaveBeenLastCalledWith(
+        "atleta@centris.app",
+        "Centris123!"
+      );
+      expect(exitoso).toEqual({ ok: true, destino: "/seleccionar-box" });
     });
   });
 

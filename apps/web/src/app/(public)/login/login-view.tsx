@@ -10,13 +10,13 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Button, buttonClassName } from "@/components/ui/button";
+import { BENTO_TITLE_CLASSES, Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { iniciarSesionAction } from "@/lib/actions";
 import {
-  traducirErrorAutenticacion,
+  procesarEnvioLogin,
   validarCredencialesLogin,
   type ErroresLogin
 } from "./login-estado";
@@ -25,6 +25,23 @@ export interface LoginViewProps {
   erroresIniciales?: ErroresLogin;
   mostrarContrasenaInicial?: boolean;
 }
+
+const BENEFICIOS_ACCESO = [
+  {
+    id: "acceso-boxes",
+    titulo: "Un acceso único para todos tus Boxes",
+    descripcion:
+      "Si entrenás o trabajás en más de un Box, después de ingresar elegís con cuál operar.",
+    Icono: LayoutGrid
+  },
+  {
+    id: "permisos-rol",
+    titulo: "Permisos según tu rol",
+    descripcion:
+      "Ves únicamente las secciones que corresponden a tu perfil: Atleta, Coach, Recepción o Administración.",
+    Icono: ShieldCheck
+  }
+] as const;
 
 /**
  * Vista pública de inicio de sesión Dark Bento Cockpit con validación por campo,
@@ -68,24 +85,17 @@ export function LoginView({
     setErrores({});
 
     startTransition(async () => {
-      try {
-        const res = await iniciarSesionAction(
-          validacion.datos.email,
-          validacion.datos.password
-        );
-        if (!res.ok) {
-          setErrores({
-            general: traducirErrorAutenticacion(res.errorCode, res.message)
-          });
-          return;
-        }
-        router.push(res.destino ?? "/inicio");
-        router.refresh();
-      } catch {
-        setErrores({
-          general: traducirErrorAutenticacion()
-        });
+      const resultado = await procesarEnvioLogin(
+        validacion.datos.email,
+        validacion.datos.password,
+        iniciarSesionAction
+      );
+      if (!resultado.ok) {
+        setErrores(resultado.errores);
+        return;
       }
+      router.push(resultado.destino);
+      router.refresh();
     });
   }
 
@@ -98,14 +108,14 @@ export function LoginView({
         >
           <span
             aria-hidden="true"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-primary text-[1.0625rem] font-semibold text-primary-foreground"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-[1.0625rem] font-semibold text-primary-foreground"
           >
             C
           </span>
           <span>Centris</span>
         </Link>
 
-        <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-sm text-muted-foreground">
+        <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-medium tracking-[0.02em] text-muted-foreground">
           <span
             aria-hidden="true"
             className="h-2 w-2 shrink-0 rounded-full bg-[#18FFC8]"
@@ -116,7 +126,7 @@ export function LoginView({
 
       <div className="grid grid-cols-1 items-stretch gap-5 min-[860px]:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
         <section aria-labelledby="login-title" className="min-w-0 flex">
-          <Card className="flex w-full flex-col gap-5 p-6 sm:p-[30px]">
+          <Card className="flex w-full flex-col gap-5 p-6">
             <div>
               <h1
                 id="login-title"
@@ -139,7 +149,7 @@ export function LoginView({
                 <div
                   role="alert"
                   data-testid="alerta-error-auth"
-                  className="flex items-start gap-2.5 rounded-[14px] border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-3.5 py-3 text-sm text-[#FECACA]"
+                  className="flex items-start gap-2.5 rounded-2xl border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-3.5 py-3 text-sm text-[#FF6D6D]"
                 >
                   <AlertCircle
                     className="mt-0.5 h-[18px] w-[18px] shrink-0 text-[#FF6D6D]"
@@ -206,7 +216,7 @@ export function LoginView({
                       mostrarContrasena ? "Ocultar clave" : "Mostrar clave"
                     }
                     aria-pressed={mostrarContrasena}
-                    className="absolute right-1 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-[10px] text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    className="absolute right-1 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     {mostrarContrasena ? (
                       <EyeOff className="h-[18px] w-[18px]" aria-hidden={true} />
@@ -226,12 +236,7 @@ export function LoginView({
                 ) : null}
               </div>
 
-              <Button
-                type="submit"
-                variant="primary"
-                className="min-h-[46px] w-full"
-                disabled={isPending}
-              >
+              <Button type="submit" variant="primary" className="w-full" disabled={isPending}>
                 {isPending ? "Ingresando..." : "Iniciar sesión"}
               </Button>
             </form>
@@ -239,52 +244,40 @@ export function LoginView({
         </section>
 
         <aside aria-label="Información de acceso" className="min-w-0 flex">
-          <Card className="flex w-full flex-col justify-between gap-4 p-6 sm:p-[30px]">
+          <Card className="flex w-full flex-col justify-between gap-4 p-6">
             <div className="flex flex-col gap-3">
-              <div className="flex flex-col gap-2 rounded-2xl border border-border bg-secondary p-[18px]">
-                <div className="flex items-center gap-2.5 text-[0.9375rem] font-medium text-foreground">
-                  <span
-                    aria-hidden="true"
-                    className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full border border-border bg-card text-primary"
-                  >
-                    <LayoutGrid className="h-4 w-4" aria-hidden={true} />
-                  </span>
-                  <span>Una cuenta para todos tus Boxes</span>
+              {BENEFICIOS_ACCESO.map(({ id, titulo, descripcion, Icono }) => (
+                <div
+                  key={id}
+                  className="flex flex-col gap-2 rounded-2xl border border-border bg-secondary p-4"
+                >
+                  <div className="flex items-center gap-2.5 text-[0.9375rem] font-medium text-foreground">
+                    <span
+                      aria-hidden="true"
+                      className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full border border-border bg-card text-primary"
+                    >
+                      <Icono className="h-4 w-4" aria-hidden={true} />
+                    </span>
+                    <span>{titulo}</span>
+                  </div>
+                  <p className="text-sm leading-relaxed text-muted-foreground">
+                    {descripcion}
+                  </p>
                 </div>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  Si entrenás o trabajás en más de un Box, después de ingresar
-                  elegís con cuál operar.
-                </p>
-              </div>
-
-              <div className="flex flex-col gap-2 rounded-2xl border border-border bg-secondary p-[18px]">
-                <div className="flex items-center gap-2.5 text-[0.9375rem] font-medium text-foreground">
-                  <span
-                    aria-hidden="true"
-                    className="grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full border border-border bg-card text-primary"
-                  >
-                    <ShieldCheck className="h-4 w-4" aria-hidden={true} />
-                  </span>
-                  <span>Permisos según tu rol</span>
-                </div>
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  Ves únicamente las secciones que corresponden a tu perfil:
-                  Atleta, Coach, Recepción o Administración.
-                </p>
-              </div>
+              ))}
             </div>
 
-            <div className="mt-auto flex flex-col gap-3 rounded-2xl border border-border bg-secondary p-[18px]">
-              <h2 className="text-[0.9375rem] font-medium text-foreground">
+            <div className="mt-auto flex flex-col gap-3 rounded-2xl border border-border bg-background p-4">
+              <h2 className={BENTO_TITLE_CLASSES}>
                 ¿Te dieron de alta en recepción?
               </h2>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                Si todavía no creaste tu contraseña personal, activá tu cuenta
+                Si todavía no creaste tu contraseña personal, activá tu acceso
                 por única vez con el correo registrado en el Box.
               </p>
               <Link
                 href="/activar-cuenta"
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-border bg-card px-[18px] py-2.5 text-sm font-semibold text-foreground transition-colors hover:border-[#3A3C42] hover:bg-[#222328] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className={buttonClassName("secondary", "w-full")}
               >
                 Activar mi cuenta
               </Link>
