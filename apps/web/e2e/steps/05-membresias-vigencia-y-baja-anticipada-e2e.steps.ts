@@ -204,9 +204,10 @@ Then(
 Then(
   "la ficha informa que la Vigencia se solapa con otra Membresía del Atleta",
   async ({ page }) => {
-    await expect(page.getByTestId("alerta-error-membresias")).toContainText(
-      "MEMBRESIA_SUPERPUESTA"
-    );
+    const alerta = page.getByTestId("alerta-error-membresias");
+    await expect(alerta).toBeVisible();
+    await expect(alerta).toContainText(/superpone|solapa/i);
+    await expect(alerta).not.toContainText("MEMBRESIA_SUPERPUESTA");
   }
 );
 

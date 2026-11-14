@@ -1,6 +1,6 @@
 # 08 — Rediseño UX/UI de `/atletas` y Ficha de Membresías
 
-**Status:** ready-for-agent
+**Status:** done
 **Branch:** `feat/ui-08-atletas`
 **Blocked by:** `01`
 
@@ -32,11 +32,11 @@ Migra el directorio `/atletas` y la ficha lateral de membresías (`ficha-membres
 
 ## Acceptance Criteria (TDD / BDD)
 
-- [ ] **Red $\rightarrow$ Green en E2E (`InlineConfirm` y sin `"403 Forbidden"`)**: Actualizar `04-directorio-y-alta-atletas-e2e.steps.ts` para usar `InlineConfirm` (eliminando `page.on("dialog", ...)`) y verificar el mensaje de negocio accesible cuando un rol sin permiso intenta operar (eliminando `"403 Forbidden"` literal).
-- [ ] **Soporte Deep-Link `?afiliacionId=`**: Al navegar a `/atletas?afiliacionId=<uuid>`, abrir automáticamente el `SideDrawer` con la ficha de membresías, saldo y pagos del atleta seleccionado (requerido por Ticket `09`).
-- [ ] **Estética Dark Bento Cockpit + Estabilidad**: Listado con filtros en `FilterChips` (`Todos`, `Al día`, `Morosos`, `Sin membresía`), tracks de grilla fijos en desktop, `tabular-nums` en saldos/créditos/fechas, badges semánticos (`mint` / `coral` / `amber` / `zinc`), e inputs `>= 16px` en alta de atleta, asignación de membresía y baja anticipada dentro de `SideDrawer`.
-- [ ] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` (`Vitest` + todas las suites `playwright-bdd`) y `/code-review`.
+- [x] **Red $\rightarrow$ Green en E2E (`InlineConfirm` y sin `"403 Forbidden"`)**: Actualizar `04-directorio-y-alta-atletas-e2e.steps.ts` para usar `InlineConfirm` (eliminando `page.on("dialog", ...)`) y verificar el mensaje de negocio accesible cuando un rol sin permiso intenta operar (eliminando `"403 Forbidden"` literal).
+- [x] **Soporte Deep-Link `?afiliacionId=`**: Al navegar a `/atletas?afiliacionId=<uuid>`, abrir automáticamente el `SideDrawer` con la ficha de membresías, saldo y pagos del atleta seleccionado (requerido por Ticket `09`).
+- [x] **Estética Dark Bento Cockpit + Estabilidad**: Listado con filtros en `FilterChips` (`Todos`, `Al día`, `Morosos`, `Sin membresía`), tracks de grilla fijos en desktop, `tabular-nums` en saldos/créditos/fechas, badges semánticos (`mint` / `coral` / `amber` / `zinc`), e inputs `>= 16px` en alta de atleta, asignación de membresía y baja anticipada dentro de `SideDrawer`.
+- [x] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` (`Vitest` + todas las suites `playwright-bdd`) y `/code-review`.
 
 ## Comments
 
-- *Sin comentarios aún.*
+- Implementación completada en `feat/ui-08-atletas` siguiendo `Dark Bento Cockpit`, con auditoría en Playwright (`1440px`, `1280px`, `375px`), revisión `/code-review` (`Standards` + `Spec`) aplicada y verificación completa de `pnpm lint`, `pnpm typecheck` y `pnpm test` (unitarios + 47 escenarios `playwright-bdd`).
