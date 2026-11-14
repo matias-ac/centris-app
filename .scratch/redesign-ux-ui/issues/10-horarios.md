@@ -1,6 +1,6 @@
 # 10 — Rediseño UX/UI de `/horarios` (Tipos de Clase y Plantilla Semanal)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 **Branch:** `feat/ui-10-horarios`
 **Blocked by:** `01`
 
