@@ -1,62 +1,379 @@
 "use client";
 
-import { AlertCircle, CheckCircle, Edit3, Eye, Search, Trash2, UserPlus, Users, X } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useMemo, useState, useTransition } from "react";
 import {
-  ActualizarAtletaSchema,
-  CrearAtletaSchema,
-  type Atleta,
-  type Membresia,
-  type Moroso,
-  type PagoConRegistrador,
-  type Plan
+  AlertCircle,
+  CheckCircle2,
+  Edit3,
+  Eye,
+  Search,
+  Trash2,
+  UserPlus,
+  Users
+} from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import type {
+  Atleta,
+  Membresia,
+  Moroso,
+  PagoConRegistrador,
+  Plan
 } from "@centris/shared";
+import { AccesoRestringidoCard } from "@/components/ui/acceso-restringido-card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
+import {
+  FilterChips,
+  type FilterChipOption
+} from "@/components/ui/filter-chips";
+import {
+  InlineConfirmPanel,
+  useInlineConfirm
+} from "@/components/ui/inline-confirm";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { SideDrawer } from "@/components/ui/side-drawer";
 import {
   actualizarAtletaAction,
   crearAtletaAction,
   eliminarAtletaAction
 } from "@/lib/actions";
+import { obtenerEtiquetaRol } from "@/lib/identidad-ui";
+import { cn, formatearMoneda } from "@/lib/utils";
+import {
+  calcularKpisAtletas,
+  construirResumenesAtletas,
+  filtrarAtletasDirectorio,
+  procesarAltaAtleta,
+  procesarBajaAtleta,
+  procesarEdicionAtleta,
+  resolverAtletaDeepLink,
+  type FiltroDirectorioAtletas,
+  type ResumenAtletaDirectorio
+} from "./atletas-estado";
 import { FichaMembresiasAtleta } from "./ficha-membresias-atleta";
 
-interface DirectorioAtletasBoxProps {
+export interface DirectorioAtletasBoxProps {
   boxId: string;
   moneda: string;
   esAdministrador: boolean;
+  fechaHoyBox?: string;
+  afiliacionIdInicial?: string | null;
   atletasIniciales: Atleta[];
   planes: Plan[];
   membresias: Membresia[];
   morosos?: Moroso[];
   pagosPorMembresia?: Record<string, PagoConRegistrador[]>;
+  confirmandoBajaInicialId?: string | null;
 }
 
+type DrawerAtletaState =
+  | { tipo: "alta" }
+  | { tipo: "editar"; atletaId: string }
+  | { tipo: "ficha"; atletaId: string }
+  | null;
+
+const FORM_ALTA_ID = "form-alta-atleta";
+const FORM_EDICION_ID = "form-editar-atleta";
+
+/**
+ * Vista accesible cuando el usuario no posee permisos de Recepción o Administración.
+ */
+export function AccesoRestringidoAtletas({
+  nombreBox
+}: {
+  nombreBox: string;
+}) {
+  return (
+    <AccesoRestringidoCard
+      headingAs="h1"
+      titulo="Acceso restringido a Recepción y Administración"
+      badgeLabel="Permiso requerido"
+      descripcion={`Tu afiliación en ${nombreBox} no posee permisos de Recepción o Administración para consultar o gestionar el directorio de atletas.`}
+    />
+  );
+}
+
+function TarjetaKpiAtletas({
+  etiqueta,
+  valor,
+  badgeLabel,
+  badgeVariant,
+  pie
+}: {
+  etiqueta: string;
+  valor: number;
+  badgeLabel: string;
+  badgeVariant: "mint" | "coral" | "zinc";
+  pie: string;
+}) {
+  return (
+    <Card className="min-w-0 p-5">
+      <div className="flex flex-col gap-2">
+        <span className="text-sm text-muted-foreground">{etiqueta}</span>
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
+          <strong className="text-[clamp(1.375rem,1.2rem+0.8vw,1.75rem)] font-medium leading-[1.2] tracking-[-0.02em] text-foreground tabular-nums">
+            {valor}
+          </strong>
+          <Badge variant={badgeVariant}>{badgeLabel}</Badge>
+        </div>
+        <span className="text-xs text-muted-foreground">{pie}</span>
+      </div>
+    </Card>
+  );
+}
+
+function FilaAtleta({
+  resumen,
+  moneda,
+  isPending,
+  confirmandoInicial,
+  onAbrirFicha,
+  onAbrirEditar,
+  onConfirmarBaja
+}: {
+  resumen: ResumenAtletaDirectorio;
+  moneda: string;
+  isPending: boolean;
+  confirmandoInicial: boolean;
+  onAbrirFicha: (atleta: Atleta) => void;
+  onAbrirEditar: (atleta: Atleta) => void;
+  onConfirmarBaja: (atleta: Atleta) => Promise<void>;
+}) {
+  const {
+    atleta,
+    iniciales,
+    membresiaPrincipal,
+    nombrePlanPrincipal,
+    estadoMembresiaPrincipal,
+    saldoTotal,
+    esMoroso
+  } = resumen;
+
+  const confirmBaja = useInlineConfirm({
+    defaultOpen: confirmandoInicial,
+    pending: isPending,
+    onConfirm: async () => {
+      await onConfirmarBaja(atleta);
+    }
+  });
+
+  return (
+    <article
+      data-testid={`fila-atleta-${atleta.id}`}
+      className={cn(
+        "flex flex-col gap-3.5 rounded-2xl border border-border bg-secondary p-4 transition-colors hover:border-[#32343B] lg:grid lg:grid-cols-[minmax(210px,1.35fr)_minmax(180px,1fr)_170px_auto] lg:items-center lg:gap-4",
+        !atleta.activo && "opacity-70"
+      )}
+    >
+      {/* Identidad del Atleta */}
+      <div className="flex min-w-0 items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-border bg-card text-xs font-semibold text-foreground"
+        >
+          {iniciales}
+        </span>
+        <div className="min-w-0 space-y-1">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span
+              data-testid={`atleta-nombre-${atleta.id}`}
+              className="truncate font-medium text-foreground"
+            >
+              {atleta.nombre}
+            </span>
+            {atleta.activo ? (
+              <Badge
+                variant="mint"
+                data-testid={`badge-estado-activo-${atleta.id}`}
+              >
+                Activo
+              </Badge>
+            ) : (
+              <Badge
+                variant="zinc"
+                data-testid={`badge-estado-inactivo-${atleta.id}`}
+              >
+                Inactivo
+              </Badge>
+            )}
+            {atleta.roles.map((rol) => {
+              const meta = obtenerEtiquetaRol(rol);
+              return (
+                <Badge key={rol} variant={meta.variant}>
+                  {meta.label}
+                </Badge>
+              );
+            })}
+          </div>
+          <p
+            data-testid={`atleta-email-${atleta.id}`}
+            className="truncate text-xs text-muted-foreground"
+          >
+            {atleta.email}
+          </p>
+        </div>
+      </div>
+
+      {/* Plan y Vigencia */}
+      <div className="min-w-0 space-y-0.5 text-xs">
+        {membresiaPrincipal ? (
+          <>
+            <div className="truncate text-sm font-medium text-foreground">
+              {nombrePlanPrincipal}
+            </div>
+            <div className="text-muted-foreground tabular-nums">
+              {estadoMembresiaPrincipal === "FUTURA"
+                ? `Inicia ${membresiaPrincipal.fechaInicio}`
+                : `Hasta ${membresiaPrincipal.fechaFin}`}
+              {membresiaPrincipal.creditosExtra !== 0
+                ? ` · ${membresiaPrincipal.creditosExtra > 0 ? `+${membresiaPrincipal.creditosExtra}` : membresiaPrincipal.creditosExtra} extra`
+                : ""}
+            </div>
+          </>
+        ) : (
+          <span className="text-sm text-muted-foreground">
+            Sin membresía asignada
+          </span>
+        )}
+      </div>
+
+      {/* Estado Contable / Saldo */}
+      <div className="flex flex-wrap items-center gap-2">
+        {esMoroso ? (
+          <Badge
+            variant="coral"
+            data-testid="badge-atleta-moroso"
+            className="tabular-nums"
+          >
+            Debe {formatearMoneda(saldoTotal, moneda)}
+          </Badge>
+        ) : estadoMembresiaPrincipal === "VIGENTE" ||
+          estadoMembresiaPrincipal === "FUTURA" ? (
+          <Badge variant="mint">Al día</Badge>
+        ) : (
+          <Badge variant="amber">Pendiente de alta</Badge>
+        )}
+      </div>
+
+      {/* Acciones por Fila */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button
+          type="button"
+          variant="secondary"
+          data-testid={`btn-ficha-atleta-${atleta.id}`}
+          disabled={isPending}
+          onClick={() => onAbrirFicha(atleta)}
+        >
+          <Eye className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>Ficha y pagos</span>
+        </Button>
+
+        <Button
+          type="button"
+          variant="iconCircle"
+          aria-label={`Editar ${atleta.nombre}`}
+          title="Editar atleta"
+          data-testid={`btn-editar-atleta-${atleta.id}`}
+          disabled={isPending}
+          onClick={() => onAbrirEditar(atleta)}
+        >
+          <Edit3 className="h-4 w-4" aria-hidden="true" />
+        </Button>
+
+        {atleta.activo ? (
+          <Button
+            ref={confirmBaja.triggerRef}
+            type="button"
+            variant="iconCircle"
+            aria-label={`Desactivar ${atleta.nombre}`}
+            title="Desactivar atleta"
+            data-testid={`btn-eliminar-atleta-${atleta.id}`}
+            disabled={isPending}
+            onClick={confirmBaja.abrir}
+            className="border-[#FF6D6D]/28 bg-[#FF6D6D]/14 text-[#FF6D6D] hover:border-[#FF6D6D]/45 hover:bg-[#FF6D6D]/22"
+          >
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        ) : null}
+      </div>
+
+      {confirmBaja.confirmando ? (
+        <InlineConfirmPanel
+          ariaLabel={`Confirmar desactivación de ${atleta.nombre}`}
+          message={
+            <span>
+              ¿Desactivar a <strong>{atleta.nombre}</strong> en este Box?
+            </span>
+          }
+          confirmLabel="Confirmar baja"
+          cancelLabel="Mantener"
+          bloqueado={confirmBaja.bloqueado}
+          cancelRef={confirmBaja.cancelRef}
+          onConfirm={() => {
+            void confirmBaja.confirmar();
+          }}
+          onCancel={confirmBaja.cancelar}
+          testIdPrefix={`baja-atleta-${atleta.id}`}
+          className="col-span-full border-[#FF6D6D]/28 bg-[#FF6D6D]/14"
+          messageClassName="text-[#FECACA]"
+        />
+      ) : null}
+    </article>
+  );
+}
+
+/**
+ * Directorio de Atletas del Box en estética Dark Bento Cockpit con SideDrawer y baja inline.
+ */
 export function DirectorioAtletasBox({
   boxId,
   moneda,
   esAdministrador,
+  fechaHoyBox = new Date().toISOString().slice(0, 10),
+  afiliacionIdInicial = null,
   atletasIniciales,
   planes,
   membresias,
   morosos = [],
-  pagosPorMembresia = {}
+  pagosPorMembresia = {},
+  confirmandoBajaInicialId = null
 }: DirectorioAtletasBoxProps) {
   const router = useRouter();
-  const [mostrarFormularioAlta, setMostrarFormularioAlta] = useState(false);
-  const [atletaEditando, setAtletaEditando] = useState<Atleta | null>(null);
-  const [atletaFicha, setAtletaFicha] = useState<Atleta | null>(null);
+  const [busqueda, setBusqueda] = useState("");
+  const [filtro, setFiltro] = useState<FiltroDirectorioAtletas>("ACTIVOS");
 
-  // Filtros de búsqueda
-  const [terminoBusqueda, setTerminoBusqueda] = useState("");
-  const [soloActivos, setSoloActivos] = useState(true);
+  const atletaDeepLinkInicial = resolverAtletaDeepLink(
+    atletasIniciales,
+    afiliacionIdInicial
+  );
+  const [drawer, setDrawer] = useState<DrawerAtletaState>(() =>
+    atletaDeepLinkInicial
+      ? { tipo: "ficha", atletaId: atletaDeepLinkInicial.id }
+      : null
+  );
+  const ultimoDeepLinkRef = useRef<string | null>(afiliacionIdInicial ?? null);
+
+  useEffect(() => {
+    if (
+      afiliacionIdInicial &&
+      afiliacionIdInicial !== ultimoDeepLinkRef.current
+    ) {
+      ultimoDeepLinkRef.current = afiliacionIdInicial;
+      const encontrado = resolverAtletaDeepLink(
+        atletasIniciales,
+        afiliacionIdInicial
+      );
+      if (encontrado) {
+        setDrawer({ tipo: "ficha", atletaId: encontrado.id });
+      }
+    }
+  }, [afiliacionIdInicial, atletasIniciales]);
 
   // Estados de alta
-  const [nombre, setNombre] = useState("");
-  const [email, setEmail] = useState("");
+  const [nombreAlta, setNombreAlta] = useState("");
+  const [emailAlta, setEmailAlta] = useState("");
 
   // Estados de edición
   const [editNombre, setEditNombre] = useState("");
@@ -66,152 +383,198 @@ export function DirectorioAtletasBox({
   const [exitoMsg, setExitoMsg] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // Filtrado de atletas en memoria
-  const atletasFiltrados = useMemo(() => {
-    return atletasIniciales.filter((atleta) => {
-      if (soloActivos && !atleta.activo) {
-        return false;
-      }
-      if (!terminoBusqueda) {
-        return true;
-      }
-      const busqueda = terminoBusqueda.toLowerCase();
-      return (
-        atleta.nombre.toLowerCase().includes(busqueda) ||
-        atleta.email.toLowerCase().includes(busqueda)
-      );
-    });
-  }, [atletasIniciales, terminoBusqueda, soloActivos]);
-
-  const atletasMorososIds = useMemo(
-    () => new Set(morosos.map((m) => m.afiliacionId)),
-    [morosos]
+  const resumenes = useMemo(
+    () =>
+      construirResumenesAtletas({
+        atletas: atletasIniciales,
+        planes,
+        membresias,
+        pagosPorMembresia,
+        morosos,
+        fechaHoyBox
+      }),
+    [atletasIniciales, planes, membresias, pagosPorMembresia, morosos, fechaHoyBox]
   );
+
+  const kpis = useMemo(() => calcularKpisAtletas(resumenes), [resumenes]);
+
+  const resumenesFiltrados = useMemo(
+    () => filtrarAtletasDirectorio(resumenes, { busqueda, filtro }),
+    [resumenes, busqueda, filtro]
+  );
+
+  const atletaEnEdicion = useMemo(() => {
+    if (drawer?.tipo !== "editar") return null;
+    return atletasIniciales.find((a) => a.id === drawer.atletaId) ?? null;
+  }, [drawer, atletasIniciales]);
+
+  const atletaEnFicha = useMemo(() => {
+    if (drawer?.tipo !== "ficha") return null;
+    return atletasIniciales.find((a) => a.id === drawer.atletaId) ?? null;
+  }, [drawer, atletasIniciales]);
+
+  const opcionesFiltro: readonly FilterChipOption<FiltroDirectorioAtletas>[] = [
+    {
+      value: "ACTIVOS",
+      label: "Activos",
+      count: kpis.activos,
+      testId: "filtro-atletas-activos"
+    },
+    {
+      value: "AL_DIA",
+      label: "Al día",
+      count: kpis.alDia,
+      testId: "filtro-atletas-al-dia"
+    },
+    {
+      value: "MOROSOS",
+      label: "Morosos",
+      count: kpis.morosos,
+      testId: "filtro-atletas-morosos"
+    },
+    {
+      value: "SIN_MEMBRESIA",
+      label: "Sin membresía",
+      count: kpis.sinMembresia,
+      testId: "filtro-atletas-sin-membresia"
+    },
+    {
+      value: "TODOS",
+      label: "Todos",
+      count: kpis.todos,
+      testId: "filtro-atletas-todos"
+    }
+  ];
+
+  function abrirDrawerAlta() {
+    setErrorMsg(null);
+    setExitoMsg(null);
+    setNombreAlta("");
+    setEmailAlta("");
+    setDrawer({ tipo: "alta" });
+  }
+
+  function abrirDrawerEditar(atleta: Atleta) {
+    setErrorMsg(null);
+    setExitoMsg(null);
+    setEditNombre(atleta.nombre);
+    setEditActivo(atleta.activo);
+    setDrawer({ tipo: "editar", atletaId: atleta.id });
+  }
+
+  function abrirDrawerFicha(atleta: Atleta) {
+    setErrorMsg(null);
+    setExitoMsg(null);
+    setDrawer({ tipo: "ficha", atletaId: atleta.id });
+  }
+
+  function cerrarDrawer() {
+    const veniaDeDeepLink = Boolean(afiliacionIdInicial);
+    setDrawer(null);
+    if (veniaDeDeepLink) {
+      ultimoDeepLinkRef.current = null;
+      router.replace("/atletas", { scroll: false });
+    }
+  }
 
   function handleCrearAtleta(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
     setExitoMsg(null);
 
-    const validacion = CrearAtletaSchema.safeParse({ nombre, email });
-    if (!validacion.success) {
-      setErrorMsg(
-        validacion.error.issues[0]?.message ?? "Error en los datos del atleta."
-      );
-      return;
-    }
-
     startTransition(async () => {
-      const res = await crearAtletaAction(boxId, validacion.data);
-      if (!res.ok) {
-        setErrorMsg(`${res.errorCode ?? "ERROR"}: ${res.message ?? ""}`);
+      const resultado = await procesarAltaAtleta(
+        boxId,
+        { nombre: nombreAlta, email: emailAlta },
+        crearAtletaAction
+      );
+      if (!resultado.ok) {
+        setErrorMsg(resultado.error);
         return;
       }
 
-      setExitoMsg(`Atleta "${nombre}" registrado con éxito.`);
-      setNombre("");
-      setEmail("");
-      setMostrarFormularioAlta(false);
+      setExitoMsg(resultado.mensajeExito);
+      setNombreAlta("");
+      setEmailAlta("");
+      cerrarDrawer();
       router.refresh();
     });
   }
 
   function handleActualizarAtleta(e: React.FormEvent) {
     e.preventDefault();
-    if (!atletaEditando) return;
+    if (!atletaEnEdicion) return;
     setErrorMsg(null);
     setExitoMsg(null);
 
-    const validacion = ActualizarAtletaSchema.safeParse({
-      nombre: editNombre,
-      activo: editActivo
-    });
-
-    if (!validacion.success) {
-      setErrorMsg(
-        validacion.error.issues[0]?.message ??
-          "Error en los datos de actualización."
-      );
-      return;
-    }
-
     startTransition(async () => {
-      const res = await actualizarAtletaAction(
+      const resultado = await procesarEdicionAtleta(
         boxId,
-        atletaEditando.id,
-        validacion.data
+        atletaEnEdicion.id,
+        { nombre: editNombre, activo: editActivo },
+        actualizarAtletaAction
       );
-      if (!res.ok) {
-        setErrorMsg(`${res.errorCode ?? "ERROR"}: ${res.message ?? ""}`);
+      if (!resultado.ok) {
+        setErrorMsg(resultado.error);
         return;
       }
 
-      setExitoMsg(`Atleta actualizado con éxito.`);
-      setAtletaEditando(null);
+      setExitoMsg(resultado.mensajeExito);
+      cerrarDrawer();
       router.refresh();
     });
   }
 
-  function handleEliminarAtleta(atletaId: string, nombreAtleta: string) {
-    if (
-      !confirm(
-        `¿Confirmás la desactivación de "${nombreAtleta}" en este Box?`
-      )
-    ) {
-      return;
-    }
-
+  async function handleConfirmarBaja(atleta: Atleta) {
     setErrorMsg(null);
     setExitoMsg(null);
 
-    startTransition(async () => {
-      const res = await eliminarAtletaAction(boxId, atletaId);
-      if (!res.ok) {
-        setErrorMsg(`${res.errorCode ?? "ERROR"}: ${res.message ?? ""}`);
-        return;
-      }
+    const resultado = await procesarBajaAtleta(
+      boxId,
+      atleta,
+      eliminarAtletaAction
+    );
+    if (!resultado.ok) {
+      setErrorMsg(resultado.error);
+      return;
+    }
 
-      setExitoMsg(`Atleta desactivado con éxito.`);
+    setExitoMsg(resultado.mensajeExito);
+    startTransition(() => {
       router.refresh();
     });
   }
 
   return (
     <div className="space-y-6">
-      {/* Encabezado y Acción Principal */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-bold uppercase tracking-tight text-foreground sm:text-3xl">
-            Directorio de Atletas
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0 space-y-1">
+          <h1 className="text-[clamp(1.375rem,1.2rem+0.8vw,1.75rem)] font-medium leading-[1.2] tracking-[-0.02em] text-foreground">
+            Directorio de atletas
           </h1>
-          <p className="text-sm text-muted-foreground">
-            Alta y gestión del padrón de atletas del Box
+          <p className="max-w-[65ch] text-sm text-muted-foreground">
+            Buscá socios del Box, consultá su membresía vigente o abrí su ficha para cobrar y asignar planes.
           </p>
         </div>
 
         <Button
           type="button"
+          variant="primary"
           data-testid="btn-nuevo-atleta"
-          onClick={() => {
-            setMostrarFormularioAlta(!mostrarFormularioAlta);
-            setAtletaEditando(null);
-            setErrorMsg(null);
-            setExitoMsg(null);
-          }}
-          className="flex items-center gap-2 bg-primary text-primary-foreground hover:bg-volt-500 font-semibold"
+          onClick={abrirDrawerAlta}
         >
-          <UserPlus className="h-4 w-4" />
-          {mostrarFormularioAlta ? "Cerrar Formulario" : "Nuevo Atleta"}
+          <UserPlus className="h-4 w-4 shrink-0" aria-hidden="true" />
+          <span>Nuevo atleta</span>
         </Button>
-      </div>
+      </header>
 
-      {/* Alertas de error o éxito */}
-      {errorMsg ? (
+      {errorMsg && drawer?.tipo !== "alta" && drawer?.tipo !== "editar" ? (
         <div
           data-testid="alerta-error"
-          className="flex items-center gap-3 rounded-md border border-rose-500/30 bg-rose-500/15 p-4 text-sm text-rose-400"
+          role="alert"
+          className="flex items-center gap-2.5 rounded-2xl border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-4 py-3 text-sm text-[#FF6D6D]"
         >
-          <AlertCircle className="h-5 w-5 shrink-0" />
+          <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span>{errorMsg}</span>
         </div>
       ) : null}
@@ -219,381 +582,367 @@ export function DirectorioAtletasBox({
       {exitoMsg ? (
         <div
           data-testid="alerta-exito"
-          className="flex items-center gap-3 rounded-md border border-emerald-500/30 bg-emerald-500/15 p-4 text-sm text-emerald-400"
+          role="status"
+          className="flex items-center gap-2.5 rounded-2xl border border-[#18FFC8]/28 bg-[#18FFC8]/14 px-4 py-3 text-sm text-[#18FFC8]"
         >
-          <CheckCircle className="h-5 w-5 shrink-0" />
+          <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span>{exitoMsg}</span>
         </div>
       ) : null}
 
-      {/* Formulario de Alta de Atleta */}
-      {mostrarFormularioAlta ? (
-        <Card className="border-border bg-card shadow-sm" data-testid="form-alta-atleta">
-          <CardHeader>
-            <CardTitle className="font-display text-lg uppercase tracking-tight text-foreground">
-              Registrar Nuevo Atleta en Mostrador
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCrearAtleta} className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="atleta-nombre">Nombre y Apellido</Label>
-                  <Input
-                    id="atleta-nombre"
-                    data-testid="input-atleta-nombre"
-                    placeholder="Ej. Rodrigo De Paul"
-                    value={nombre}
-                    onChange={(e) => setNombre(e.target.value)}
-                    required
-                    disabled={isPending}
-                  />
-                </div>
+      {/* KPIs Resumen */}
+      <section
+        aria-label="Resumen del padrón"
+        className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,220px),1fr))] gap-4"
+      >
+        <TarjetaKpiAtletas
+          etiqueta="Atletas activos"
+          valor={kpis.activos}
+          badgeLabel="Padrón"
+          badgeVariant="mint"
+          pie="Con afiliación activa en este Box"
+        />
+        <TarjetaKpiAtletas
+          etiqueta="Con plan vigente"
+          valor={kpis.conPlanVigente}
+          badgeLabel="Membresías"
+          badgeVariant="zinc"
+          pie="Vigencia en curso o renovación futura"
+        />
+        <TarjetaKpiAtletas
+          etiqueta="Con saldo pendiente"
+          valor={kpis.morosos}
+          badgeLabel={kpis.morosos > 0 ? "Seguimiento" : "Al día"}
+          badgeVariant={kpis.morosos > 0 ? "coral" : "mint"}
+          pie="No bloquea reservas ni asistencias"
+        />
+      </section>
 
-                <div className="space-y-2">
-                  <Label htmlFor="atleta-email">Correo Electrónico</Label>
-                  <Input
-                    id="atleta-email"
-                    type="email"
-                    data-testid="input-atleta-email"
-                    placeholder="atleta@correo.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={isPending}
-                  />
-                </div>
-              </div>
+      {/* Buscador y Filtros */}
+      <Card className="p-4">
+        <div className="flex flex-col gap-3">
+          <div className="relative max-w-md flex-1">
+            <Search
+              className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+              aria-hidden="true"
+            />
+            <Input
+              type="search"
+              aria-label="Buscar atleta por nombre o correo"
+              placeholder="Buscar por nombre o correo..."
+              data-testid="input-buscar-atleta"
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              className="rounded-full pl-10"
+            />
+          </div>
 
-              <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  data-testid="btn-cancelar-alta"
-                  onClick={() => setMostrarFormularioAlta(false)}
-                  disabled={isPending}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  data-testid="btn-guardar-atleta"
-                  disabled={isPending}
-                  className="bg-primary text-primary-foreground hover:bg-volt-500 font-semibold"
-                >
-                  {isPending ? "Guardando..." : "Registrar Atleta"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      ) : null}
+          <FilterChips
+            ariaLabel="Filtrar atletas por estado"
+            options={opcionesFiltro}
+            value={filtro}
+            onChange={setFiltro}
+          />
+        </div>
+      </Card>
 
-      {/* Formulario de Edición de Atleta */}
-      {atletaEditando ? (
-        <Card className="border-border bg-card shadow-sm" data-testid="form-editar-atleta">
-          <CardHeader>
-            <CardTitle className="font-display text-lg uppercase tracking-tight text-foreground">
-              Editar Ficha de Atleta
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleActualizarAtleta} className="space-y-4">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="edit-atleta-nombre">Nombre y Apellido</Label>
-                  <Input
-                    id="edit-atleta-nombre"
-                    data-testid="input-edit-atleta-nombre"
-                    value={editNombre}
-                    onChange={(e) => setEditNombre(e.target.value)}
-                    required
-                    disabled={isPending}
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="edit-atleta-email">Email (No modificable)</Label>
-                  <Input
-                    id="edit-atleta-email"
-                    value={atletaEditando.email}
-                    disabled
-                    className="opacity-70"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                <input
-                  type="checkbox"
-                  id="edit-atleta-activo"
-                  data-testid="input-edit-atleta-activo"
-                  checked={editActivo}
-                  onChange={(e) => setEditActivo(e.target.checked)}
-                  disabled={isPending}
-                  className="h-4 w-4 rounded border-border bg-secondary text-primary focus:ring-primary"
-                />
-                <Label htmlFor="edit-atleta-activo" className="text-sm font-medium">
-                  Atleta con Afiliación Activa en este Box
-                </Label>
-              </div>
-
-              <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
-                <Button
-                  type="button"
-                  variant="secondary"
-                  data-testid="btn-cancelar-edicion-atleta"
-                  onClick={() => setAtletaEditando(null)}
-                  disabled={isPending}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  type="submit"
-                  data-testid="btn-guardar-edicion-atleta"
-                  disabled={isPending}
-                  className="bg-primary text-primary-foreground hover:bg-volt-500 font-semibold"
-                >
-                  {isPending ? "Guardando..." : "Guardar Cambios"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {/* Ficha Individual del Atleta */}
-      {atletaFicha ? (
-        <Card className="border-border bg-card shadow-sm" data-testid="modal-ficha-atleta">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0">
-            <div>
-              <CardTitle className="font-display text-lg uppercase tracking-tight text-foreground">
-                Ficha Individual del Atleta
-              </CardTitle>
-              <p className="text-xs text-muted-foreground">Datos de identidad y afiliación al Box</p>
+      {/* Listado de Atletas en Bento */}
+      <section
+        aria-label="Listado de atletas"
+        data-testid="tabla-atletas"
+        className="space-y-2.5 rounded-3xl border border-border bg-card p-3.5"
+      >
+        {resumenesFiltrados.length === 0 ? (
+          <div className="flex flex-col items-center justify-center gap-3 px-4 py-10 text-center">
+            <Users className="h-8 w-8 text-muted-foreground/60" aria-hidden="true" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">
+                No se encontraron atletas con esos filtros
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Probá cambiando el término de búsqueda o seleccionando otro filtro.
+              </p>
             </div>
+            {busqueda.trim().length > 0 || filtro !== "ACTIVOS" ? (
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={() => {
+                  setBusqueda("");
+                  setFiltro("ACTIVOS");
+                }}
+              >
+                Limpiar filtros
+              </Button>
+            ) : null}
+          </div>
+        ) : (
+          resumenesFiltrados.map((resumen) => (
+            <FilaAtleta
+              key={resumen.atleta.id}
+              resumen={resumen}
+              moneda={moneda}
+              isPending={isPending}
+              confirmandoInicial={confirmandoBajaInicialId === resumen.atleta.id}
+              onAbrirFicha={abrirDrawerFicha}
+              onAbrirEditar={abrirDrawerEditar}
+              onConfirmarBaja={handleConfirmarBaja}
+            />
+          ))
+        )}
+      </section>
+
+      {/* SideDrawer: Alta de Atleta */}
+      <SideDrawer
+        open={drawer?.tipo === "alta"}
+        onClose={cerrarDrawer}
+        title="Nuevo atleta en mostrador"
+        description="Creá la ficha del atleta para vincularlo al Box y asignarle su plan."
+        testId="drawer-alta-atleta"
+        footer={
+          <>
             <Button
               type="button"
-              variant="ghost"
-              data-testid="btn-cerrar-ficha-atleta"
-              onClick={() => setAtletaFicha(null)}
-              className="min-h-8 px-2 py-1"
+              variant="secondary"
+              data-testid="btn-cancelar-alta"
+              disabled={isPending}
+              onClick={cerrarDrawer}
             >
-              <X className="h-4 w-4" />
+              Cancelar
             </Button>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Button
+              type="submit"
+              form={FORM_ALTA_ID}
+              variant="primary"
+              data-testid="btn-guardar-atleta"
+              disabled={isPending}
+            >
+              {isPending ? "Guardando..." : "Registrar atleta"}
+            </Button>
+          </>
+        }
+      >
+        <form
+          id={FORM_ALTA_ID}
+          data-testid="form-alta-atleta"
+          onSubmit={handleCrearAtleta}
+          className="space-y-4"
+        >
+          {errorMsg ? (
+            <div
+              data-testid="alerta-error"
+              role="alert"
+              className="flex items-center gap-2.5 rounded-2xl border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-4 py-3 text-sm text-[#FF6D6D]"
+            >
+              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>{errorMsg}</span>
+            </div>
+          ) : null}
+
+          <div className="space-y-1.5">
+            <Label htmlFor="atleta-nombre">Nombre y apellido</Label>
+            <Input
+              id="atleta-nombre"
+              data-testid="input-atleta-nombre"
+              placeholder="Ej. Valentina Gómez"
+              value={nombreAlta}
+              onChange={(e) => setNombreAlta(e.target.value)}
+              required
+              disabled={isPending}
+            />
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="atleta-email">Correo electrónico</Label>
+            <Input
+              id="atleta-email"
+              type="email"
+              data-testid="input-atleta-email"
+              placeholder="atleta@correo.com"
+              value={emailAlta}
+              onChange={(e) => setEmailAlta(e.target.value)}
+              required
+              disabled={isPending}
+            />
+            <p className="text-xs text-muted-foreground">
+              Si el usuario no tenía cuenta en Centris, podrá activar su contraseña en el primer ingreso.
+            </p>
+          </div>
+        </form>
+      </SideDrawer>
+
+      {/* SideDrawer: Edición de Atleta */}
+      <SideDrawer
+        open={drawer?.tipo === "editar" && atletaEnEdicion !== null}
+        onClose={cerrarDrawer}
+        title="Editar ficha de atleta"
+        description={atletaEnEdicion?.email}
+        testId="drawer-editar-atleta"
+        footer={
+          <>
+            <Button
+              type="button"
+              variant="secondary"
+              data-testid="btn-cancelar-edicion-atleta"
+              disabled={isPending}
+              onClick={cerrarDrawer}
+            >
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              form={FORM_EDICION_ID}
+              variant="primary"
+              data-testid="btn-guardar-edicion-atleta"
+              disabled={isPending}
+            >
+              {isPending ? "Guardando..." : "Guardar cambios"}
+            </Button>
+          </>
+        }
+      >
+        {atletaEnEdicion ? (
+          <form
+            id={FORM_EDICION_ID}
+            data-testid="form-editar-atleta"
+            onSubmit={handleActualizarAtleta}
+            className="space-y-4"
+          >
+            {errorMsg ? (
+              <div
+                data-testid="alerta-error"
+                role="alert"
+                className="flex items-center gap-2.5 rounded-2xl border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-4 py-3 text-sm text-[#FF6D6D]"
+              >
+                <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                <span>{errorMsg}</span>
+              </div>
+            ) : null}
+
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-atleta-nombre">Nombre y apellido</Label>
+              <Input
+                id="edit-atleta-nombre"
+                data-testid="input-edit-atleta-nombre"
+                value={editNombre}
+                onChange={(e) => setEditNombre(e.target.value)}
+                required
+                disabled={isPending}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-atleta-email">
+                Correo electrónico (identidad global)
+              </Label>
+              <Input
+                id="edit-atleta-email"
+                value={atletaEnEdicion.email}
+                disabled
+              />
+            </div>
+
+            <label
+              htmlFor="edit-atleta-activo"
+              className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-border bg-secondary px-3.5 py-2 text-sm font-medium text-foreground"
+            >
+              <input
+                type="checkbox"
+                id="edit-atleta-activo"
+                data-testid="input-edit-atleta-activo"
+                checked={editActivo}
+                onChange={(e) => setEditActivo(e.target.checked)}
+                disabled={isPending}
+                className="h-4 w-4 rounded border-border bg-background accent-[#C1F429]"
+              />
+              <span>Atleta con afiliación activa en este Box</span>
+            </label>
+          </form>
+        ) : null}
+      </SideDrawer>
+
+      {/* SideDrawer: Ficha Individual del Atleta y Membresías */}
+      <SideDrawer
+        open={drawer?.tipo === "ficha" && atletaEnFicha !== null}
+        onClose={cerrarDrawer}
+        title={atletaEnFicha?.nombre ?? "Ficha de atleta"}
+        description={atletaEnFicha?.email}
+        testId="modal-ficha-atleta"
+        closeTestId="btn-cerrar-ficha-atleta"
+        className="lg:max-w-2xl"
+      >
+        {atletaEnFicha ? (
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 gap-3 rounded-2xl border border-border bg-secondary p-4 sm:grid-cols-2">
               <div>
-                <span className="text-xs text-muted-foreground block">Nombre y Apellido</span>
-                <span className="font-semibold text-foreground" data-testid="ficha-atleta-nombre">
-                  {atletaFicha.nombre}
+                <span className="block text-xs text-muted-foreground">
+                  Nombre y apellido
+                </span>
+                <span
+                  className="font-medium text-foreground"
+                  data-testid="ficha-atleta-nombre"
+                >
+                  {atletaEnFicha.nombre}
                 </span>
               </div>
               <div>
-                <span className="text-xs text-muted-foreground block">Correo Electrónico</span>
-                <span className="text-foreground" data-testid="ficha-atleta-email">
-                  {atletaFicha.email}
+                <span className="block text-xs text-muted-foreground">
+                  Correo electrónico
+                </span>
+                <span
+                  className="break-all text-sm text-foreground"
+                  data-testid="ficha-atleta-email"
+                >
+                  {atletaEnFicha.email}
                 </span>
               </div>
               <div>
-                <span className="text-xs text-muted-foreground block">Identificador de Afiliación</span>
-                <span className="font-mono text-xs text-muted-foreground">
-                  {atletaFicha.id}
+                <span className="block text-xs text-muted-foreground">
+                  Roles y estado en el Box
                 </span>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Roles en este Box</span>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {atletaFicha.roles.map((rol) => (
-                    <Badge key={rol} variant="emerald">
-                      {rol}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <span className="text-xs text-muted-foreground block">Estado de la Afiliación</span>
-                <div className="mt-1">
-                  {atletaFicha.activo ? (
-                    <Badge variant="emerald">Activo</Badge>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {atletaEnFicha.activo ? (
+                    <Badge variant="mint">Activo</Badge>
                   ) : (
                     <Badge variant="zinc">Inactivo</Badge>
                   )}
+                  {atletaEnFicha.roles.map((rol) => {
+                    const meta = obtenerEtiquetaRol(rol);
+                    return (
+                      <Badge key={rol} variant={meta.variant}>
+                        {meta.label}
+                      </Badge>
+                    );
+                  })}
                 </div>
               </div>
               <div>
-                <span className="text-xs text-muted-foreground block">Fecha de Registro</span>
-                <span className="text-xs tabular-nums text-muted-foreground">
-                  {new Date(atletaFicha.createdAt).toLocaleDateString("es-AR")}
+                <span className="block text-xs text-muted-foreground">
+                  Fecha de registro
+                </span>
+                <span className="text-sm text-foreground tabular-nums">
+                  {new Date(atletaEnFicha.createdAt).toLocaleDateString("es-AR")}
                 </span>
               </div>
             </div>
+
             <FichaMembresiasAtleta
-              key={atletaFicha.afiliacionId}
+              key={atletaEnFicha.afiliacionId}
               boxId={boxId}
               moneda={moneda}
-              afiliacionId={atletaFicha.afiliacionId}
+              afiliacionId={atletaEnFicha.afiliacionId}
               planes={planes}
               membresias={membresias.filter(
-                (membresia) => membresia.afiliacionId === atletaFicha.afiliacionId
+                (membresia) =>
+                  membresia.afiliacionId === atletaEnFicha.afiliacionId
               )}
               pagosPorMembresia={pagosPorMembresia}
               esAdministrador={esAdministrador}
+              fechaHoyBox={fechaHoyBox}
             />
-          </CardContent>
-        </Card>
-      ) : null}
-
-      {/* Barra de Filtros y Búsqueda */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Buscar atleta por nombre o correo..."
-            data-testid="input-buscar-atleta"
-            value={terminoBusqueda}
-            onChange={(e) => setTerminoBusqueda(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-
-        <div className="flex items-center gap-3">
-          <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer select-none">
-            <input
-              type="checkbox"
-              data-testid="checkbox-solo-activos"
-              checked={soloActivos}
-              onChange={(e) => setSoloActivos(e.target.checked)}
-              className="h-4 w-4 rounded border-border bg-secondary text-primary focus:ring-primary"
-            />
-            Solo activos
-          </label>
-        </div>
-      </div>
-
-      {/* Listado / Tabla de Atletas */}
-      <div className="rounded-md border border-border bg-card overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm" data-testid="tabla-atletas">
-            <thead className="border-b border-border bg-secondary/60 text-xs uppercase tracking-wider text-muted-foreground">
-              <tr>
-                <th className="px-4 py-3">Nombre</th>
-                <th className="px-4 py-3">Email</th>
-                <th className="px-4 py-3">Roles</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3 text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {atletasFiltrados.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className="px-4 py-8 text-center text-muted-foreground">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <Users className="h-8 w-8 text-muted-foreground/50" />
-                      <span>No se encontraron atletas registrados.</span>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                atletasFiltrados.map((atleta) => (
-                  <tr
-                    key={atleta.id}
-                    data-testid={`fila-atleta-${atleta.id}`}
-                    className="hover:bg-secondary/40 transition-colors"
-                  >
-                    <td className="px-4 py-3 font-medium text-foreground">
-                      <div className="flex items-center gap-2">
-                        <span data-testid={`atleta-nombre-${atleta.id}`}>
-                          {atleta.nombre}
-                        </span>
-                        {atletasMorososIds.has(atleta.id) ||
-                        atletasMorososIds.has(atleta.afiliacionId) ? (
-                          <Badge variant="rose" data-testid="badge-atleta-moroso">
-                            Moroso
-                          </Badge>
-                        ) : null}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3 text-muted-foreground">
-                      <span data-testid={`atleta-email-${atleta.id}`}>
-                        {atleta.email}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex flex-wrap gap-1">
-                        {atleta.roles.map((rol) => (
-                          <Badge key={rol} variant="emerald">
-                            {rol}
-                          </Badge>
-                        ))}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      {atleta.activo ? (
-                        <Badge variant="emerald" data-testid={`badge-estado-activo-${atleta.id}`}>
-                          Activo
-                        </Badge>
-                      ) : (
-                        <Badge variant="zinc" data-testid={`badge-estado-inactivo-${atleta.id}`}>
-                          Inactivo
-                        </Badge>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          data-testid={`btn-ficha-atleta-${atleta.id}`}
-                          onClick={() => {
-                            setAtletaFicha(atleta);
-                            setAtletaEditando(null);
-                            setMostrarFormularioAlta(false);
-                          }}
-                          className="min-h-8 px-2.5 py-1 text-xs text-foreground"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          <span className="sr-only sm:not-sr-only sm:ml-1.5">Ficha</span>
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          data-testid={`btn-editar-atleta-${atleta.id}`}
-                          onClick={() => {
-                            setAtletaEditando(atleta);
-                            setEditNombre(atleta.nombre);
-                            setEditActivo(atleta.activo);
-                            setAtletaFicha(null);
-                            setMostrarFormularioAlta(false);
-                            setErrorMsg(null);
-                            setExitoMsg(null);
-                          }}
-                          className="min-h-8 px-2.5 py-1 text-xs"
-                        >
-                          <Edit3 className="h-3.5 w-3.5" />
-                          <span className="sr-only sm:not-sr-only sm:ml-1.5">Editar</span>
-                        </Button>
-                        <Button
-                          type="button"
-                          variant="destructive"
-                          data-testid={`btn-eliminar-atleta-${atleta.id}`}
-                          onClick={() => handleEliminarAtleta(atleta.id, atleta.nombre)}
-                          className="min-h-8 px-2.5 py-1 text-xs"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          <span className="sr-only sm:not-sr-only sm:ml-1.5">Desactivar</span>
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
+          </div>
+        ) : null}
+      </SideDrawer>
     </div>
   );
 }
