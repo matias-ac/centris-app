@@ -1,6 +1,6 @@
 # 05 — Rediseño UX/UI de `/configuracion`
 
-**Status:** ready-for-agent
+**Status:** in-progress
 **Branch:** `feat/ui-05-configuracion`
 **Blocked by:** `01`
 
