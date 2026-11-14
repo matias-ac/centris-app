@@ -1487,9 +1487,9 @@ describe("Seam 2 — Motor Transaccional de Reservas, Concurrencia, Timezone y R
     expect(resMem.status).toBe(201);
     const membresiaId = resMem.body.id;
 
-    // Consumir el único Crédito semanal asignándole una Reserva previa en otra clase
+    // Consumir el único Crédito semanal asignándole una Reserva previa en otra clase del mismo día/semana
     const clasePreviaId = await insertarClaseDirecta({
-      fechaLocal: hoyLocal,
+      fechaLocal: pasadoMananaLocal,
       horaInicio: "09:00",
       cupos: 15
     });
