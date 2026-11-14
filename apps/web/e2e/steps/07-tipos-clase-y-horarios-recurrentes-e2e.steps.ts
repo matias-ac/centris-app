@@ -1,4 +1,4 @@
-import { expect } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
 import pg from "pg";
 
@@ -29,6 +29,9 @@ async function ejecutarSqlOwner(
 }
 
 async function limpiarDatosE2E(): Promise<void> {
+  await ejecutarSqlOwner(
+    `DELETE FROM clases WHERE tipo_clase_id IN (SELECT id FROM tipos_clase WHERE nombre ILIKE '%E2E%')`
+  );
   await ejecutarSqlOwner(
     `DELETE FROM horarios WHERE tipo_clase_id IN (SELECT id FROM tipos_clase WHERE nombre ILIKE '%E2E%')`
   );
@@ -81,8 +84,8 @@ Then(
 When(
   'da de baja lógica el Tipo de Clase {string}',
   async ({ page }, nombre: string) => {
-    page.on("dialog", (dialog) => dialog.accept());
     await page.getByTestId(`btn-eliminar-tipo-clase-${nombre}`).click();
+    await page.getByTestId(`baja-tipo-clase-${nombre}-confirm`).click();
   }
 );
 
@@ -95,6 +98,44 @@ Then(
   }
 );
 
+async function programarHorarioDesdeDrawer(
+  page: Page,
+  params: {
+    tipoLabel?: string;
+    dia: number;
+    hora: string;
+    duracion: number;
+    cupos: number;
+  }
+): Promise<void> {
+  await page.getByTestId("btn-nuevo-horario").click();
+  const selectTipo = page.getByTestId("select-horario-tipo-clase");
+  if (params.tipoLabel) {
+    await selectTipo.selectOption({ label: params.tipoLabel });
+  } else {
+    const opcionesTipo = await selectTipo.locator("option").all();
+    if (opcionesTipo.length > 1) {
+      await selectTipo.selectOption({ index: 1 });
+    }
+  }
+
+  const selectCoach = page.getByTestId("select-horario-coach");
+  const opcionesCoach = await selectCoach.locator("option").all();
+  if (opcionesCoach.length > 1) {
+    await selectCoach.selectOption({ index: 1 });
+  }
+
+  await page
+    .getByTestId("select-horario-dia")
+    .selectOption(params.dia.toString());
+  await page.getByTestId("input-horario-hora").fill(params.hora);
+  await page
+    .getByTestId("input-horario-duracion")
+    .fill(params.duracion.toString());
+  await page.getByTestId("input-horario-cupos").fill(params.cupos.toString());
+  await page.getByTestId("btn-guardar-horario").click();
+}
+
 When(
   'programa un Horario recurrente con tipo {string}, día {int} a las {string} con duración de {int} minutos y {int} cupos',
   async (
@@ -105,29 +146,7 @@ When(
     duracion: number,
     cupos: number
   ) => {
-    await page.getByTestId("btn-nuevo-horario").click();
-    // Seleccionar primer tipo de clase disponible si no hay seleccionado
-    const selectTipo = page.getByTestId("select-horario-tipo-clase");
-    const opcionesTipo = await selectTipo.locator("option").all();
-    if (opcionesTipo.length > 1) {
-      await selectTipo.selectOption({ index: 1 });
-    }
-    // Seleccionar primer coach disponible
-    const selectCoach = page.getByTestId("select-horario-coach");
-    const opcionesCoach = await selectCoach.locator("option").all();
-    if (opcionesCoach.length > 1) {
-      await selectCoach.selectOption({ index: 1 });
-    }
-
-    await page
-      .getByTestId("select-horario-dia")
-      .selectOption(dia.toString());
-    await page.getByTestId("input-horario-hora").fill(hora);
-    await page
-      .getByTestId("input-horario-duracion")
-      .fill(duracion.toString());
-    await page.getByTestId("input-horario-cupos").fill(cupos.toString());
-    await page.getByTestId("btn-guardar-horario").click();
+    await programarHorarioDesdeDrawer(page, { dia, hora, duracion, cupos });
   }
 );
 
@@ -143,8 +162,8 @@ Then(
 When(
   'da de baja lógica el bloque horario de las {string}',
   async ({ page }, hora: string) => {
-    page.on("dialog", (dialog) => dialog.accept());
     await page.getByTestId(`btn-eliminar-horario-${hora}`).click();
+    await page.getByTestId(`baja-horario-${hora}-confirm`).click();
   }
 );
 
@@ -154,6 +173,95 @@ Then(
     await expect(
       page.getByTestId("bloque-horario-dia-1-07:00")
     ).not.toBeVisible();
+  }
+);
+
+When(
+  'edita el Tipo de Clase {string} a nombre {string} y descripción {string}',
+  async (
+    { page },
+    nombreActual: string,
+    nuevoNombre: string,
+    nuevaDescripcion: string
+  ) => {
+    await page.getByTestId(`btn-editar-tipo-clase-${nombreActual}`).click();
+    await expect(page.getByTestId("drawer-tipo-clase")).toBeVisible();
+    await page.getByTestId("input-tipo-clase-nombre").fill(nuevoNombre);
+    await page
+      .getByTestId("input-tipo-clase-descripcion")
+      .fill(nuevaDescripcion);
+    await page.getByTestId("btn-guardar-tipo-clase").click();
+    await expect(page.getByTestId("drawer-tipo-clase")).not.toBeVisible();
+    await expect(
+      page.getByTestId(`item-tipo-clase-${nuevoNombre}`)
+    ).toBeVisible();
+  }
+);
+
+When(
+  'programa un Horario para el Tipo de Clase {string} el día {int} a las {string} con {int} minutos y {int} cupos',
+  async (
+    { page },
+    tipoNombre: string,
+    dia: number,
+    hora: string,
+    duracion: number,
+    cupos: number
+  ) => {
+    await programarHorarioDesdeDrawer(page, {
+      tipoLabel: tipoNombre,
+      dia,
+      hora,
+      duracion,
+      cupos
+    });
+    await expect(
+      page.getByTestId(`bloque-horario-dia-${dia}-${hora}`)
+    ).toBeVisible();
+  }
+);
+
+When(
+  'edita el Horario del día {int} a las {string} a {int} cupos desde el panel lateral y filtra por el día {int}',
+  async (
+    { page },
+    dia: number,
+    hora: string,
+    nuevosCupos: number,
+    diaFiltro: number
+  ) => {
+    const bloque = page.getByTestId(`bloque-horario-dia-${dia}-${hora}`);
+    await bloque.getByRole("button", { name: new RegExp(`Editar horario ${hora}`, "i") }).click();
+    await expect(page.getByTestId("drawer-horario")).toBeVisible();
+    await page.getByTestId("input-horario-cupos").fill(nuevosCupos.toString());
+    await page.getByTestId("btn-guardar-horario").click();
+    await expect(page.getByTestId("drawer-horario")).not.toBeVisible();
+    await expect(page.getByTestId("banner-sincronizacion-clases")).toBeVisible();
+
+    await page.getByTestId(`filtro-dia-${diaFiltro}`).click();
+  }
+);
+
+Then(
+  'visualiza el Tipo de Clase {string} y la franja {string} con {string} en desktop y mobile sin desborde horizontal',
+  async ({ page }, tipoNombre: string, franja: string, cuposTexto: string) => {
+    const bloque = page.getByTestId("bloque-horario-dia-2-08:00");
+    await expect(bloque).toBeVisible();
+    await expect(bloque).toContainText(tipoNombre);
+    await expect(bloque).toContainText(franja);
+    await expect(bloque).toContainText(cuposTexto);
+    await expect(page.getByTestId(`item-tipo-clase-${tipoNombre}`)).toBeVisible();
+
+    for (const width of [1280, 1440, 375]) {
+      await page.setViewportSize({ width, height: 850 });
+      const overflow = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth
+      );
+      expect(overflow).toBe(false);
+    }
+    await page.setViewportSize({ width: 1280, height: 850 });
   }
 );
 

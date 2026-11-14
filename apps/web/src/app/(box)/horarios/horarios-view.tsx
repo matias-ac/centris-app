@@ -2,15 +2,26 @@
 
 import {
   AlertCircle,
+  ArrowUpRight,
   Calendar,
-  CheckCircle,
+  CheckCircle2,
   Dumbbell,
+  Edit3,
+  Info,
   Plus,
+  RefreshCw,
   Trash2,
   Users
 } from "lucide-react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import {
+  useMemo,
+  useState,
+  useTransition,
+  type ReactNode,
+  type RefObject
+} from "react";
 import {
   DIAS_SEMANA,
   NOMBRES_DIAS_SEMANA,
@@ -19,18 +30,54 @@ import {
   type TipoClase
 } from "@centris/shared";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button, buttonClassName } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import {
+  FilterChips,
+  type FilterChipOption
+} from "@/components/ui/filter-chips";
+import {
+  InlineConfirmPanel,
+  useInlineConfirm
+} from "@/components/ui/inline-confirm";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select } from "@/components/ui/select";
+import { SideDrawer } from "@/components/ui/side-drawer";
 import {
+  actualizarHorarioAction,
+  actualizarTipoClaseAction,
   crearHorarioAction,
   crearTipoClaseAction,
   eliminarHorarioAction,
-  eliminarTipoClaseAction
+  eliminarTipoClaseAction,
+  materializarClasesAction
 } from "@/lib/actions";
+import { cn } from "@/lib/utils";
+import {
+  agruparHorariosPorDia,
+  calcularResumenHorarios,
+  contarHorariosPorTipoClase,
+  crearBorradorHorario,
+  crearBorradorTipoClase,
+  filtrarDiasVisibles,
+  formatearCuposHorario,
+  formatearFranjaHoraria,
+  normalizarHoraCorta,
+  obtenerTiposClaseActivos,
+  procesarBajaHorario,
+  procesarBajaTipoClase,
+  procesarGuardadoHorario,
+  procesarGuardadoTipoClase,
+  procesarMaterializacionClases,
+  type BorradorHorario,
+  type BorradorTipoClase,
+  type ErroresHorarioFormulario,
+  type ErroresTipoClaseFormulario,
+  type FiltroDiaSemana
+} from "./horarios-estado";
 
-interface HorariosViewProps {
+export interface HorariosViewProps {
   boxId: string;
   esAdmin: boolean;
   tiposClaseIniciales: TipoClase[];
@@ -38,6 +85,578 @@ interface HorariosViewProps {
   coaches: AfiliacionConUsuario[];
 }
 
+const FORM_TIPO_ID = "formulario-tipo-clase";
+const FORM_HORARIO_ID = "formulario-horario-semanal";
+
+function BotonBajaCoral({
+  triggerRef,
+  ariaLabel,
+  testId,
+  disabled,
+  onClick
+}: {
+  triggerRef: RefObject<HTMLButtonElement | null>;
+  ariaLabel: string;
+  testId: string;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      ref={triggerRef}
+      type="button"
+      variant="iconCircle"
+      aria-label={ariaLabel}
+      data-testid={testId}
+      disabled={disabled}
+      onClick={onClick}
+      className="border-[#FF6D6D]/28 bg-[#FF6D6D]/14 text-[#FF6D6D] hover:border-[#FF6D6D]/45 hover:bg-[#FF6D6D]/22"
+    >
+      <Trash2 className="h-4 w-4" aria-hidden="true" />
+    </Button>
+  );
+}
+
+function ConfirmacionBajaCoral({
+  ariaLabel,
+  message,
+  testIdPrefix,
+  bloqueado,
+  cancelRef,
+  onConfirm,
+  onCancel
+}: {
+  ariaLabel: string;
+  message: ReactNode;
+  testIdPrefix: string;
+  bloqueado: boolean;
+  cancelRef: RefObject<HTMLButtonElement | null>;
+  onConfirm: () => Promise<void>;
+  onCancel: () => void;
+}) {
+  return (
+    <InlineConfirmPanel
+      ariaLabel={ariaLabel}
+      message={message}
+      confirmLabel="Confirmar baja"
+      cancelLabel="Mantener"
+      bloqueado={bloqueado}
+      cancelRef={cancelRef}
+      onConfirm={() => {
+        void onConfirm();
+      }}
+      onCancel={onCancel}
+      testIdPrefix={testIdPrefix}
+      className="border-[#FF6D6D]/28 bg-[#FF6D6D]/14"
+      messageClassName="text-white"
+    />
+  );
+}
+
+export function BloqueHorarioCard({
+  horario,
+  esAdmin,
+  isPending,
+  confirmandoInicial = false,
+  onEditar,
+  onConfirmarBaja
+}: {
+  horario: Horario;
+  esAdmin: boolean;
+  isPending: boolean;
+  confirmandoInicial?: boolean;
+  onEditar: (horario: Horario) => void;
+  onConfirmarBaja: (horario: Horario) => Promise<void>;
+}) {
+  const horaCorta = normalizarHoraCorta(horario.horaInicio);
+  const franja = formatearFranjaHoraria(
+    horario.horaInicio,
+    horario.duracionMinutos
+  );
+  const confirmBaja = useInlineConfirm({
+    defaultOpen: confirmandoInicial,
+    pending: isPending,
+    onConfirm: async () => {
+      await onConfirmarBaja(horario);
+    }
+  });
+
+  return (
+    <div
+      data-testid={`bloque-horario-dia-${horario.diaSemana}-${horaCorta}`}
+      className="flex min-w-0 flex-col gap-3 rounded-2xl border border-border bg-secondary p-4 transition-colors hover:border-[#32343B]"
+    >
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-2.5">
+        <div className="flex min-w-0 flex-wrap items-center gap-2">
+          <span className="text-[1.0625rem] font-medium tracking-[-0.01em] text-foreground tabular-nums">
+            {franja}
+          </span>
+          <Badge variant="zinc">
+            {horario.tipoClaseNombre ?? "Tipo de Clase"}
+          </Badge>
+          <Badge variant="mint" className="tabular-nums">
+            {horario.duracionMinutos} min
+          </Badge>
+        </div>
+
+        {esAdmin && !confirmBaja.confirmando ? (
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Button
+              type="button"
+              variant="iconCircle"
+              aria-label={`Editar horario ${horaCorta} de ${horario.tipoClaseNombre ?? "Tipo de Clase"}`}
+              data-testid={`btn-editar-horario-${horario.id}`}
+              disabled={isPending}
+              onClick={() => onEditar(horario)}
+            >
+              <Edit3 className="h-4 w-4" aria-hidden="true" />
+            </Button>
+            <BotonBajaCoral
+              triggerRef={confirmBaja.triggerRef}
+              ariaLabel={`Dar de baja horario ${horaCorta}`}
+              testId={`btn-eliminar-horario-${horaCorta}`}
+              disabled={isPending}
+              onClick={confirmBaja.abrir}
+            />
+          </div>
+        ) : null}
+      </div>
+
+      <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 text-sm text-muted-foreground">
+        <span className="min-w-0 truncate">
+          Coach:{" "}
+          <strong className="font-medium text-foreground">
+            {horario.coachNombre ?? "Sin asignar"}
+          </strong>
+        </span>
+        <span className="inline-flex shrink-0 items-center gap-1.5 font-medium text-foreground tabular-nums">
+          <Users className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+          <span>{formatearCuposHorario(horario.cuposDefault)}</span>
+        </span>
+      </div>
+
+      {esAdmin && confirmBaja.confirmando ? (
+        <ConfirmacionBajaCoral
+          ariaLabel={`Confirmar baja del horario ${horaCorta}`}
+          message="¿Dar de baja este horario fijo? Las clases futuras sin reservas dejarán de generarse."
+          bloqueado={confirmBaja.bloqueado}
+          cancelRef={confirmBaja.cancelRef}
+          onConfirm={confirmBaja.confirmar}
+          onCancel={confirmBaja.cancelar}
+          testIdPrefix={`baja-horario-${horaCorta}`}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+export function TipoClaseCard({
+  tipoClase,
+  cantidadHorarios,
+  esAdmin,
+  isPending,
+  confirmandoInicial = false,
+  onEditar,
+  onConfirmarBaja
+}: {
+  tipoClase: TipoClase;
+  cantidadHorarios: number;
+  esAdmin: boolean;
+  isPending: boolean;
+  confirmandoInicial?: boolean;
+  onEditar: (tipo: TipoClase) => void;
+  onConfirmarBaja: (tipo: TipoClase) => Promise<void>;
+}) {
+  const confirmBaja = useInlineConfirm({
+    defaultOpen: confirmandoInicial,
+    pending: isPending,
+    onConfirm: async () => {
+      await onConfirmarBaja(tipoClase);
+    }
+  });
+
+  return (
+    <article
+      data-testid={`item-tipo-clase-${tipoClase.nombre}`}
+      className="flex min-w-0 flex-col justify-between gap-4 rounded-3xl border border-border bg-card p-5 text-card-foreground transition-colors hover:border-[#32343B]"
+    >
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1.5">
+          <h3 className="break-words text-[1.0625rem] font-medium leading-[1.3] tracking-[-0.01em] text-foreground">
+            {tipoClase.nombre}
+          </h3>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            {tipoClase.descripcion?.trim() || "Sin descripción cargada."}
+          </p>
+        </div>
+
+        {esAdmin && !confirmBaja.confirmando ? (
+          <div className="flex shrink-0 items-center gap-1.5">
+            <Button
+              type="button"
+              variant="iconCircle"
+              aria-label={`Editar Tipo de Clase ${tipoClase.nombre}`}
+              data-testid={`btn-editar-tipo-clase-${tipoClase.nombre}`}
+              disabled={isPending}
+              onClick={() => onEditar(tipoClase)}
+            >
+              <Edit3 className="h-4 w-4" aria-hidden="true" />
+            </Button>
+            <BotonBajaCoral
+              triggerRef={confirmBaja.triggerRef}
+              ariaLabel={`Dar de baja Tipo de Clase ${tipoClase.nombre}`}
+              testId={`btn-eliminar-tipo-clase-${tipoClase.nombre}`}
+              disabled={isPending}
+              onClick={confirmBaja.abrir}
+            />
+          </div>
+        ) : null}
+      </div>
+
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <Badge variant={cantidadHorarios > 0 ? "mint" : "zinc"} className="tabular-nums">
+          {cantidadHorarios}{" "}
+          {cantidadHorarios === 1 ? "horario semanal" : "horarios semanales"}
+        </Badge>
+      </div>
+
+      {esAdmin && confirmBaja.confirmando ? (
+        <ConfirmacionBajaCoral
+          ariaLabel={`Confirmar baja de ${tipoClase.nombre}`}
+          message={
+            <span>
+              ¿Dar de baja <strong>{tipoClase.nombre}</strong> del catálogo?
+            </span>
+          }
+          bloqueado={confirmBaja.bloqueado}
+          cancelRef={confirmBaja.cancelRef}
+          onConfirm={confirmBaja.confirmar}
+          onCancel={confirmBaja.cancelar}
+          testIdPrefix={`baja-tipo-clase-${tipoClase.nombre}`}
+        />
+      ) : null}
+    </article>
+  );
+}
+
+export function DrawerTipoClase({
+  open,
+  editando,
+  isPending,
+  borrador,
+  errores,
+  onClose,
+  onChange,
+  onSubmit
+}: {
+  open: boolean;
+  editando: boolean;
+  isPending: boolean;
+  borrador: BorradorTipoClase;
+  errores: ErroresTipoClaseFormulario;
+  onClose: () => void;
+  onChange: (updater: (prev: BorradorTipoClase) => BorradorTipoClase) => void;
+  onSubmit: (e: React.FormEvent) => void;
+}) {
+  return (
+    <SideDrawer
+      open={open}
+      onClose={onClose}
+      title={editando ? "Editar Tipo de Clase" : "Nuevo Tipo de Clase"}
+      description="Categoría de entrenamiento que define qué se dicta en el Box, sin fijar día ni hora."
+      testId="drawer-tipo-clase"
+      footer={
+        <>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={isPending}
+            onClick={onClose}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            form={FORM_TIPO_ID}
+            variant="primary"
+            data-testid="btn-guardar-tipo-clase"
+            disabled={isPending}
+          >
+            {isPending
+              ? "Guardando..."
+              : editando
+                ? "Guardar cambios"
+                : "Guardar Tipo de Clase"}
+          </Button>
+        </>
+      }
+    >
+      <form id={FORM_TIPO_ID} onSubmit={onSubmit} className="space-y-4">
+        {errores.general ? (
+          <div
+            role="alert"
+            className="rounded-2xl border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-3.5 py-2.5 text-sm text-[#FF6D6D]"
+          >
+            {errores.general}
+          </div>
+        ) : null}
+
+        <div className="space-y-2">
+          <Label htmlFor="tipo-nombre">Nombre del Tipo de Clase</Label>
+          <Input
+            id="tipo-nombre"
+            data-testid="input-tipo-clase-nombre"
+            placeholder="Ej: WOD, Halterofilia, Open Box"
+            aria-invalid={Boolean(errores.nombre)}
+            value={borrador.nombre}
+            onChange={(e) =>
+              onChange((prev) => ({ ...prev, nombre: e.target.value }))
+            }
+            required
+          />
+          {errores.nombre ? (
+            <p className="text-xs text-[#FF6D6D]">{errores.nombre}</p>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="tipo-descripcion">Descripción breve (opcional)</Label>
+          <Input
+            id="tipo-descripcion"
+            data-testid="input-tipo-clase-descripcion"
+            placeholder="Ej: Entrenamiento funcional metabólico y de fuerza"
+            aria-invalid={Boolean(errores.descripcion)}
+            value={borrador.descripcion}
+            onChange={(e) =>
+              onChange((prev) => ({ ...prev, descripcion: e.target.value }))
+            }
+          />
+          {errores.descripcion ? (
+            <p className="text-xs text-[#FF6D6D]">{errores.descripcion}</p>
+          ) : null}
+        </div>
+      </form>
+    </SideDrawer>
+  );
+}
+
+export function DrawerHorario({
+  open,
+  editando,
+  isPending,
+  borrador,
+  errores,
+  tiposActivos,
+  coaches,
+  onClose,
+  onChange,
+  onSubmit
+}: {
+  open: boolean;
+  editando: boolean;
+  isPending: boolean;
+  borrador: BorradorHorario;
+  errores: ErroresHorarioFormulario;
+  tiposActivos: TipoClase[];
+  coaches: AfiliacionConUsuario[];
+  onClose: () => void;
+  onChange: (updater: (prev: BorradorHorario) => BorradorHorario) => void;
+  onSubmit: (e: React.FormEvent) => void;
+}) {
+  return (
+    <SideDrawer
+      open={open}
+      onClose={onClose}
+      title={editando ? "Editar Horario semanal" : "Nuevo Horario semanal"}
+      description="Regla recurrente que alimenta la creación de Clases en el Calendario."
+      testId="drawer-horario"
+      footer={
+        <>
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={isPending}
+            onClick={onClose}
+          >
+            Cancelar
+          </Button>
+          <Button
+            type="submit"
+            form={FORM_HORARIO_ID}
+            variant="primary"
+            data-testid="btn-guardar-horario"
+            disabled={isPending}
+          >
+            {isPending
+              ? "Guardando..."
+              : editando
+                ? "Guardar cambios"
+                : "Guardar Horario"}
+          </Button>
+        </>
+      }
+    >
+      <form id={FORM_HORARIO_ID} onSubmit={onSubmit} className="space-y-4">
+        {errores.general ? (
+          <div
+            role="alert"
+            className="rounded-2xl border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-3.5 py-2.5 text-sm text-[#FF6D6D]"
+          >
+            {errores.general}
+          </div>
+        ) : null}
+
+        <div className="space-y-2">
+          <Label htmlFor="horario-tipo">Tipo de Clase</Label>
+          <Select
+            id="horario-tipo"
+            data-testid="select-horario-tipo-clase"
+            aria-invalid={Boolean(errores.tipoClaseId)}
+            value={borrador.tipoClaseId}
+            onChange={(e) =>
+              onChange((prev) => ({ ...prev, tipoClaseId: e.target.value }))
+            }
+            required
+          >
+            <option value="">Seleccionar Tipo de Clase...</option>
+            {tiposActivos.map((tc) => (
+              <option key={tc.id} value={tc.id}>
+                {tc.nombre}
+              </option>
+            ))}
+          </Select>
+          {errores.tipoClaseId ? (
+            <p className="text-xs text-[#FF6D6D]">{errores.tipoClaseId}</p>
+          ) : null}
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="horario-coach">Coach por defecto</Label>
+          <Select
+            id="horario-coach"
+            data-testid="select-horario-coach"
+            aria-invalid={Boolean(errores.coachAfiliacionId)}
+            value={borrador.coachAfiliacionId}
+            onChange={(e) =>
+              onChange((prev) => ({
+                ...prev,
+                coachAfiliacionId: e.target.value
+              }))
+            }
+            required
+          >
+            <option value="">Seleccionar Coach...</option>
+            {coaches.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.usuario.nombre}
+              </option>
+            ))}
+          </Select>
+          {errores.coachAfiliacionId ? (
+            <p className="text-xs text-[#FF6D6D]">
+              {errores.coachAfiliacionId}
+            </p>
+          ) : null}
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="horario-dia">Día de la semana</Label>
+            <Select
+              id="horario-dia"
+              data-testid="select-horario-dia"
+              aria-invalid={Boolean(errores.diaSemana)}
+              value={borrador.diaSemana}
+              onChange={(e) =>
+                onChange((prev) => ({ ...prev, diaSemana: e.target.value }))
+              }
+              required
+            >
+              {DIAS_SEMANA.map((dia) => (
+                <option key={dia} value={String(dia)}>
+                  {NOMBRES_DIAS_SEMANA[dia]}
+                </option>
+              ))}
+            </Select>
+            {errores.diaSemana ? (
+              <p className="text-xs text-[#FF6D6D]">{errores.diaSemana}</p>
+            ) : null}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="horario-hora">Hora de inicio</Label>
+            <Input
+              id="horario-hora"
+              type="time"
+              data-testid="input-horario-hora"
+              className="tabular-nums"
+              aria-invalid={Boolean(errores.horaInicio)}
+              value={borrador.horaInicio}
+              onChange={(e) =>
+                onChange((prev) => ({ ...prev, horaInicio: e.target.value }))
+              }
+              required
+            />
+            {errores.horaInicio ? (
+              <p className="text-xs text-[#FF6D6D]">{errores.horaInicio}</p>
+            ) : null}
+          </div>
+        </div>
+
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="horario-duracion">Duración (min)</Label>
+            <Input
+              id="horario-duracion"
+              data-testid="input-horario-duracion"
+              type="number"
+              min="1"
+              className="tabular-nums"
+              aria-invalid={Boolean(errores.duracionMinutos)}
+              value={borrador.duracionMinutos}
+              onChange={(e) =>
+                onChange((prev) => ({
+                  ...prev,
+                  duracionMinutos: e.target.value
+                }))
+              }
+              required
+            />
+            {errores.duracionMinutos ? (
+              <p className="text-xs text-[#FF6D6D]">
+                {errores.duracionMinutos}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="horario-cupos">Cupos por defecto</Label>
+            <Input
+              id="horario-cupos"
+              data-testid="input-horario-cupos"
+              type="number"
+              min="1"
+              className="tabular-nums"
+              aria-invalid={Boolean(errores.cuposDefault)}
+              value={borrador.cuposDefault}
+              onChange={(e) =>
+                onChange((prev) => ({ ...prev, cuposDefault: e.target.value }))
+              }
+              required
+            />
+            {errores.cuposDefault ? (
+              <p className="text-xs text-[#FF6D6D]">{errores.cuposDefault}</p>
+            ) : null}
+          </div>
+        </div>
+      </form>
+    </SideDrawer>
+  );
+}
+
+/**
+ * Gestión Dark Bento Cockpit de Tipos de Clase y plantilla semanal de Horarios.
+ */
 export function HorariosView({
   boxId,
   esAdmin,
@@ -48,486 +667,509 @@ export function HorariosView({
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
-  const [mostrarFormTipoClase, setMostrarFormTipoClase] = useState(false);
-  const [mostrarFormHorario, setMostrarFormHorario] = useState(false);
+  const [filtroDia, setFiltroDia] = useState<FiltroDiaSemana>("TODOS");
+  const [pendienteSincronizar, setPendienteSincronizar] = useState(false);
 
-  // Form Tipo de Clase
-  const [tipoNombre, setTipoNombre] = useState("");
-  const [tipoDescripcion, setTipoDescripcion] = useState("");
+  const [drawerModo, setDrawerModo] = useState<"tipo" | "horario" | null>(null);
+  const [tipoEditando, setTipoEditando] = useState<TipoClase | null>(null);
+  const [horarioEditando, setHorarioEditando] = useState<Horario | null>(null);
 
-  // Form Horario
-  const [horarioTipoClaseId, setHorarioTipoClaseId] = useState(
-    tiposClaseIniciales[0]?.id ?? ""
+  const tiposActivos = useMemo(
+    () => obtenerTiposClaseActivos(tiposClaseIniciales),
+    [tiposClaseIniciales]
   );
-  const [horarioCoachId, setHorarioCoachId] = useState(
-    coaches[0]?.id ?? ""
+
+  const [borradorTipo, setBorradorTipo] = useState<BorradorTipoClase>(() =>
+    crearBorradorTipoClase(null)
   );
-  const [horarioDia, setHorarioDia] = useState<number>(1);
-  const [horarioHora, setHorarioHora] = useState("07:00");
-  const [horarioDuracion, setHorarioDuracion] = useState("60");
-  const [horarioCupos, setHorarioCupos] = useState("16");
+  const [erroresTipo, setErroresTipo] = useState<ErroresTipoClaseFormulario>({});
+
+  const [borradorHorario, setBorradorHorario] = useState<BorradorHorario>(() =>
+    crearBorradorHorario(null, {
+      tipoClaseId: tiposActivos[0]?.id ?? "",
+      coachAfiliacionId: coaches[0]?.id ?? ""
+    })
+  );
+  const [erroresHorario, setErroresHorario] =
+    useState<ErroresHorarioFormulario>({});
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [exitoMsg, setExitoMsg] = useState<string | null>(null);
 
-  function handleCrearTipoClase(e: React.FormEvent) {
-    e.preventDefault();
-    setErrorMsg(null);
-    setExitoMsg(null);
+  const horariosPorDia = useMemo(
+    () => agruparHorariosPorDia(horariosIniciales),
+    [horariosIniciales]
+  );
 
-    startTransition(async () => {
-      const res = await crearTipoClaseAction(boxId, {
-        nombre: tipoNombre,
-        descripcion: tipoDescripcion || undefined
+  const conteoPorTipo = useMemo(
+    () => contarHorariosPorTipoClase(horariosIniciales),
+    [horariosIniciales]
+  );
+
+  const resumen = useMemo(
+    () => calcularResumenHorarios(horariosIniciales, tiposClaseIniciales),
+    [horariosIniciales, tiposClaseIniciales]
+  );
+
+  const diasVisibles = useMemo(
+    () => filtrarDiasVisibles(filtroDia),
+    [filtroDia]
+  );
+
+  const opcionesDias = useMemo<FilterChipOption<FiltroDiaSemana>[]>(() => {
+    const base: FilterChipOption<FiltroDiaSemana>[] = [
+      {
+        value: "TODOS",
+        label: "Toda la semana",
+        count: resumen.totalHorariosActivos,
+        testId: "filtro-dia-todos"
+      }
+    ];
+    for (const dia of DIAS_SEMANA) {
+      base.push({
+        value: `${dia}`,
+        label: NOMBRES_DIAS_SEMANA[dia],
+        count: horariosPorDia[dia].length,
+        testId: `filtro-dia-${dia}`
       });
+    }
+    return base;
+  }, [horariosPorDia, resumen.totalHorariosActivos]);
 
-      if (!res.ok) {
-        setErrorMsg(res.message ?? "Error al crear Tipo de Clase.");
-      } else {
-        setExitoMsg("Tipo de Clase creado exitosamente.");
-        setTipoNombre("");
-        setTipoDescripcion("");
-        setMostrarFormTipoClase(false);
-        router.refresh();
-      }
-    });
-  }
-
-  function handleEliminarTipoClase(tipoClaseId: string) {
-    if (!confirm("¿Dar de baja este Tipo de Clase?")) return;
+  function abrirDrawerTipo(tipo?: TipoClase) {
     setErrorMsg(null);
     setExitoMsg(null);
-
-    startTransition(async () => {
-      const res = await eliminarTipoClaseAction(boxId, tipoClaseId);
-      if (!res.ok) {
-        setErrorMsg(res.message ?? "Error al dar de baja Tipo de Clase.");
-      } else {
-        setExitoMsg("Tipo de Clase dado de baja.");
-        router.refresh();
-      }
-    });
+    setErroresTipo({});
+    setTipoEditando(tipo ?? null);
+    setBorradorTipo(crearBorradorTipoClase(tipo ?? null));
+    setDrawerModo("tipo");
   }
 
-  function handleCrearHorario(e: React.FormEvent) {
+  function abrirDrawerHorario(horario?: Horario) {
+    setErrorMsg(null);
+    setExitoMsg(null);
+    setErroresHorario({});
+    setHorarioEditando(horario ?? null);
+    setBorradorHorario(
+      crearBorradorHorario(horario ?? null, {
+        tipoClaseId: tiposActivos[0]?.id ?? "",
+        coachAfiliacionId: coaches[0]?.id ?? ""
+      })
+    );
+    setDrawerModo("horario");
+  }
+
+  function cerrarDrawer() {
+    if (isPending) {
+      return;
+    }
+    setDrawerModo(null);
+    setTipoEditando(null);
+    setHorarioEditando(null);
+    setErroresTipo({});
+    setErroresHorario({});
+  }
+
+  function handleGuardarTipoClase(e: React.FormEvent) {
     e.preventDefault();
     setErrorMsg(null);
     setExitoMsg(null);
+    setErroresTipo({});
 
-    const tipoClaseId = horarioTipoClaseId || tiposClaseIniciales[0]?.id;
-    const coachAfiliacionId = horarioCoachId || coaches[0]?.id;
+    startTransition(async () => {
+      const resultado = await procesarGuardadoTipoClase(
+        boxId,
+        tipoEditando?.id ?? null,
+        borradorTipo,
+        crearTipoClaseAction,
+        actualizarTipoClaseAction
+      );
 
-    if (!tipoClaseId || !coachAfiliacionId) {
-      setErrorMsg("Debe haber al menos un Tipo de Clase y un Coach disponibles.");
+      if (!resultado.ok) {
+        setErroresTipo(resultado.errores);
+        if (resultado.errores.general) {
+          setErrorMsg(resultado.errores.general);
+        }
+        return;
+      }
+
+      setExitoMsg(resultado.mensajeExito);
+      setDrawerModo(null);
+      setTipoEditando(null);
+      setBorradorTipo(crearBorradorTipoClase(null));
+      router.refresh();
+    });
+  }
+
+  async function handleConfirmarBajaTipoClase(tipo: TipoClase) {
+    setErrorMsg(null);
+    setExitoMsg(null);
+
+    const resultado = await procesarBajaTipoClase(
+      boxId,
+      tipo,
+      eliminarTipoClaseAction
+    );
+    if (!resultado.ok) {
+      setErrorMsg(resultado.error);
       return;
     }
 
-    startTransition(async () => {
-      const res = await crearHorarioAction(boxId, {
-        tipoClaseId,
-        coachAfiliacionId,
-        diaSemana: Number(horarioDia),
-        horaInicio: horarioHora,
-        duracionMinutos: Number(horarioDuracion),
-        cuposDefault: Number(horarioCupos)
-      });
-
-      if (!res.ok) {
-        setErrorMsg(res.message ?? "Error al programar Horario.");
-      } else {
-        setExitoMsg("Horario recurrente creado exitosamente.");
-        setMostrarFormHorario(false);
-        router.refresh();
-      }
+    setExitoMsg(resultado.mensajeExito);
+    startTransition(() => {
+      router.refresh();
     });
   }
 
-  function handleEliminarHorario(horarioId: string) {
-    if (!confirm("¿Dar de baja este Horario recurrente?")) return;
+  function handleGuardarHorario(e: React.FormEvent) {
+    e.preventDefault();
+    setErrorMsg(null);
+    setExitoMsg(null);
+    setErroresHorario({});
+
+    startTransition(async () => {
+      const resultado = await procesarGuardadoHorario(
+        boxId,
+        horarioEditando?.id ?? null,
+        borradorHorario,
+        crearHorarioAction,
+        actualizarHorarioAction
+      );
+
+      if (!resultado.ok) {
+        setErroresHorario(resultado.errores);
+        if (resultado.errores.general) {
+          setErrorMsg(resultado.errores.general);
+        }
+        return;
+      }
+
+      setExitoMsg(resultado.mensajeExito);
+      setPendienteSincronizar(true);
+      setDrawerModo(null);
+      setHorarioEditando(null);
+      router.refresh();
+    });
+  }
+
+  async function handleConfirmarBajaHorario(horario: Horario) {
+    setErrorMsg(null);
+    setExitoMsg(null);
+
+    const resultado = await procesarBajaHorario(
+      boxId,
+      horario,
+      eliminarHorarioAction
+    );
+    if (!resultado.ok) {
+      setErrorMsg(resultado.error);
+      return;
+    }
+
+    setExitoMsg(resultado.mensajeExito);
+    setPendienteSincronizar(true);
+    startTransition(() => {
+      router.refresh();
+    });
+  }
+
+  function handleGenerarProximasClases() {
     setErrorMsg(null);
     setExitoMsg(null);
 
     startTransition(async () => {
-      const res = await eliminarHorarioAction(boxId, horarioId);
-      if (!res.ok) {
-        setErrorMsg(res.message ?? "Error al dar de baja Horario.");
-      } else {
-        setExitoMsg("Horario recurrente dado de baja.");
-        router.refresh();
+      const resultado = await procesarMaterializacionClases(
+        boxId,
+        materializarClasesAction
+      );
+      if (!resultado.ok) {
+        setErrorMsg(resultado.error);
+        return;
       }
+
+      setPendienteSincronizar(false);
+      setExitoMsg(resultado.mensajeExito);
+      router.refresh();
     });
   }
 
-  // Agrupar horarios por día de la semana
-  const horariosPorDia = DIAS_SEMANA.reduce((acc, dia) => {
-    acc[dia] = horariosIniciales
-      .filter((h) => h.diaSemana === dia && h.activo && !h.deletedAt)
-      .sort((a, b) => a.horaInicio.localeCompare(b.horaInicio));
-    return acc;
-  }, {} as Record<number, Horario[]>);
-
-  const tiposActivos = tiposClaseIniciales.filter(
-    (tc) => tc.activo && !tc.deletedAt
-  );
-
   return (
-    <div className="space-y-8">
-      {/* Encabezado */}
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-6">
-        <div>
-          <h1 className="font-display text-3xl font-bold tracking-tight text-foreground">
+    <div className="space-y-6">
+      <header className="flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-0 space-y-1.5">
+          <h1 className="text-[clamp(1.375rem,1.2rem+0.8vw,1.75rem)] font-medium leading-[1.2] tracking-[-0.02em] text-foreground">
             Horarios y Tipos de Clase
           </h1>
-          <p className="text-sm text-muted-foreground">
-            Configuración de plantilla semanal recurrente y Tipos de Clase del Box
+          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+            Definí los horarios semanales fijos del Box y su catálogo de Tipos de
+            Clase. Desde esta plantilla se generan las clases del Calendario.
           </p>
         </div>
 
-        {esAdmin && (
-          <div className="flex flex-wrap gap-2">
+        {esAdmin ? (
+          <div className="flex flex-wrap items-center gap-2.5">
             <Button
-              data-testid="btn-nuevo-tipo-clase"
+              type="button"
               variant="secondary"
-              onClick={() => {
-                setMostrarFormTipoClase(!mostrarFormTipoClase);
-                setMostrarFormHorario(false);
-              }}
+              data-testid="btn-nuevo-tipo-clase"
+              disabled={isPending}
+              onClick={() => abrirDrawerTipo()}
             >
-              <Dumbbell className="mr-2 h-4 w-4" />
-              {mostrarFormTipoClase ? "Cancelar Tipo" : "Nuevo Tipo de Clase"}
+              <Dumbbell className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>Nuevo Tipo de Clase</span>
             </Button>
             <Button
-              data-testid="btn-nuevo-horario"
-              onClick={() => {
-                setMostrarFormHorario(!mostrarFormHorario);
-                setMostrarFormTipoClase(false);
-              }}
+              type="button"
+              variant="secondary"
+              data-testid="btn-generar-clases"
+              disabled={isPending}
+              onClick={handleGenerarProximasClases}
             >
-              <Plus className="mr-2 h-4 w-4" />
-              {mostrarFormHorario ? "Cancelar Horario" : "Nuevo Horario"}
+              <RefreshCw
+                className={cn("h-4 w-4 shrink-0", isPending && "animate-spin")}
+                aria-hidden="true"
+              />
+              <span>Generar próximas clases</span>
+            </Button>
+            <Button
+              type="button"
+              variant="primary"
+              data-testid="btn-nuevo-horario"
+              disabled={isPending}
+              onClick={() => abrirDrawerHorario()}
+            >
+              <Plus className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <span>Nuevo Horario</span>
             </Button>
           </div>
-        )}
-      </div>
+        ) : null}
+      </header>
 
-      {/* Mensajes de feedback */}
-      {errorMsg && (
+      {!esAdmin ? (
+        <div
+          data-testid="banner-solo-lectura"
+          role="status"
+          className="flex items-start gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 text-sm text-muted-foreground"
+        >
+          <Info
+            className="mt-0.5 h-4 w-4 shrink-0 text-[#FBBF24]"
+            aria-hidden="true"
+          />
+          <span>
+            Estás consultando la plantilla semanal en modo lectura. Solo un
+            Administrador del Box puede crear, editar o dar de baja Horarios y
+            Tipos de Clase.
+          </span>
+        </div>
+      ) : null}
+
+      {esAdmin && pendienteSincronizar ? (
+        <div
+          data-testid="banner-sincronizacion-clases"
+          role="status"
+          className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3.5 text-sm text-foreground"
+        >
+          <span>
+            Actualizaste la plantilla semanal. Generá las próximas clases para
+            reflejar los cambios en el <strong>Calendario de Clases</strong>.
+          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              href="/clases"
+              className={buttonClassName("secondary")}
+            >
+              <span>Ver Calendario</span>
+              <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+            </Link>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={isPending}
+              onClick={handleGenerarProximasClases}
+            >
+              <RefreshCw
+                className={cn("h-4 w-4 shrink-0", isPending && "animate-spin")}
+                aria-hidden="true"
+              />
+              <span>Aplicar al Calendario</span>
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {errorMsg ? (
         <div
           data-testid="alerta-error"
-          className="flex items-center gap-2 rounded-md bg-destructive/10 p-3 text-sm text-destructive"
+          role="alert"
+          className="flex items-center gap-2.5 rounded-2xl border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-4 py-3 text-sm text-[#FF6D6D]"
         >
-          <AlertCircle className="h-4 w-4 shrink-0" />
+          <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span>{errorMsg}</span>
         </div>
-      )}
-      {exitoMsg && (
+      ) : null}
+
+      {exitoMsg ? (
         <div
           data-testid="alerta-exito"
-          className="flex items-center gap-2 rounded-md bg-emerald-500/10 p-3 text-sm text-emerald-600 dark:text-emerald-400"
+          role="status"
+          className="flex items-center gap-2.5 rounded-2xl border border-[#18FFC8]/28 bg-[#18FFC8]/14 px-4 py-3 text-sm text-[#18FFC8]"
         >
-          <CheckCircle className="h-4 w-4 shrink-0" />
+          <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
           <span>{exitoMsg}</span>
         </div>
-      )}
+      ) : null}
 
-      {/* Formulario Crear Tipo de Clase */}
-      {esAdmin && mostrarFormTipoClase && (
-        <Card className="border-border bg-card">
-          <CardHeader>
-            <CardTitle className="text-lg">Alta de Tipo de Clase</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCrearTipoClase} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="tipo-nombre">Nombre del Tipo de Clase</Label>
-                  <Input
-                    id="tipo-nombre"
-                    data-testid="input-tipo-clase-nombre"
-                    placeholder="Ej: WOD, Halterofilia, Open Box"
-                    value={tipoNombre}
-                    onChange={(e) => setTipoNombre(e.target.value)}
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tipo-descripcion">Descripción</Label>
-                  <Input
-                    id="tipo-descripcion"
-                    data-testid="input-tipo-clase-descripcion"
-                    placeholder="Breve descripción del Tipo de Clase"
-                    value={tipoDescripcion}
-                    onChange={(e) => setTipoDescripcion(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="submit"
-                  data-testid="btn-guardar-tipo-clase"
-                  disabled={isPending}
-                >
-                  {isPending ? "Guardando..." : "Guardar Tipo de Clase"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+      <section className="space-y-4" aria-labelledby="sec-plantilla-semanal">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Calendar className="h-5 w-5 text-primary" aria-hidden="true" />
+            <h2
+              id="sec-plantilla-semanal"
+              className="text-[1.0625rem] font-medium tracking-[-0.01em] text-foreground"
+            >
+              Plantilla semanal de Horarios
+            </h2>
+            <Badge variant="zinc" className="tabular-nums">
+              {resumen.totalHorariosActivos}{" "}
+              {resumen.totalHorariosActivos === 1
+                ? "horario activo"
+                : "horarios activos"}
+            </Badge>
+            <Badge variant="zinc" className="tabular-nums">
+              {resumen.cuposSemanalesTotales} cupos semanales
+            </Badge>
+          </div>
 
-      {/* Formulario Crear Horario */}
-      {esAdmin && mostrarFormHorario && (
-        <Card className="border-border bg-card">
-          <CardHeader>
-            <CardTitle className="text-lg">Programar Horario Recurrente</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleCrearHorario} className="space-y-4">
-              <div className="grid gap-4 sm:grid-cols-3">
-                <div className="space-y-2">
-                  <Label htmlFor="horario-tipo">Tipo de Clase</Label>
-                  <select
-                    id="horario-tipo"
-                    data-testid="select-horario-tipo-clase"
-                    className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-base sm:text-sm ring-offset-background"
-                    value={horarioTipoClaseId}
-                    onChange={(e) => setHorarioTipoClaseId(e.target.value)}
-                    required
-                  >
-                    <option value="">Seleccionar Tipo...</option>
-                    {tiposActivos.map((tc) => (
-                      <option key={tc.id} value={tc.id}>
-                        {tc.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="horario-coach">Coach por Defecto</Label>
-                  <select
-                    id="horario-coach"
-                    data-testid="select-horario-coach"
-                    className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-base sm:text-sm ring-offset-background"
-                    value={horarioCoachId}
-                    onChange={(e) => setHorarioCoachId(e.target.value)}
-                    required
-                  >
-                    <option value="">Seleccionar Coach...</option>
-                    {coaches.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.usuario.nombre}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="horario-dia">Día de la Semana</Label>
-                  <select
-                    id="horario-dia"
-                    data-testid="select-horario-dia"
-                    className="flex h-11 w-full rounded-lg border border-input bg-background px-3 py-2 text-base sm:text-sm ring-offset-background"
-                    value={horarioDia}
-                    onChange={(e) => setHorarioDia(Number(e.target.value))}
-                    required
-                  >
-                    {DIAS_SEMANA.map((dia) => (
-                      <option key={dia} value={dia}>
-                        {NOMBRES_DIAS_SEMANA[dia]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="horario-hora">Hora Inicio (HH:mm local)</Label>
-                  <Input
-                    id="horario-hora"
-                    data-testid="input-horario-hora"
-                    placeholder="07:00"
-                    value={horarioHora}
-                    onChange={(e) => setHorarioHora(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="horario-duracion">Duración (minutos)</Label>
-                  <Input
-                    id="horario-duracion"
-                    data-testid="input-horario-duracion"
-                    type="number"
-                    min="1"
-                    value={horarioDuracion}
-                    onChange={(e) => setHorarioDuracion(e.target.value)}
-                    required
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="horario-cupos">Cupos por Defecto</Label>
-                  <Input
-                    id="horario-cupos"
-                    data-testid="input-horario-cupos"
-                    type="number"
-                    min="1"
-                    value={horarioCupos}
-                    onChange={(e) => setHorarioCupos(e.target.value)}
-                    required
-                  />
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2">
-                <Button
-                  type="submit"
-                  data-testid="btn-guardar-horario"
-                  disabled={isPending}
-                >
-                  {isPending ? "Programando..." : "Guardar Horario"}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Sección 1: Grilla Semanal de Horarios */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold tracking-tight text-foreground">
-            Plantilla Semanal Recurrente
-          </h2>
+          <Link
+            href="/clases"
+            className={buttonClassName("secondary")}
+          >
+            <span>Ir al Calendario de Clases</span>
+            <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+          </Link>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-7">
-          {DIAS_SEMANA.map((dia) => {
+        <Card className="p-4">
+          <FilterChips
+            options={opcionesDias}
+            value={filtroDia}
+            onChange={setFiltroDia}
+            ariaLabel="Filtrar día de la semana"
+          />
+        </Card>
+
+        <div
+          data-testid="plantilla-horarios-semana"
+          className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] gap-4"
+        >
+          {diasVisibles.map((dia) => {
             const listaDia = horariosPorDia[dia] ?? [];
             return (
-              <div
-                key={dia}
-                className="flex flex-col rounded-lg border border-border bg-card/60 p-3"
-              >
-                <div className="mb-3 border-b border-border pb-2 text-center">
-                  <span className="text-sm font-bold text-foreground">
+              <Card key={dia} className="flex min-w-0 flex-col gap-4 p-5">
+                <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
+                  <h3 className="text-[1.0625rem] font-medium tracking-[-0.01em] text-foreground">
                     {NOMBRES_DIAS_SEMANA[dia]}
-                  </span>
-                  <span className="block text-xs text-muted-foreground">
-                    {listaDia.length} {listaDia.length === 1 ? "bloque" : "bloques"}
-                  </span>
+                  </h3>
+                  <Badge
+                    variant={listaDia.length > 0 ? "mint" : "zinc"}
+                    className="tabular-nums"
+                  >
+                    {listaDia.length}{" "}
+                    {listaDia.length === 1 ? "horario" : "horarios"}
+                  </Badge>
                 </div>
 
-                <div className="space-y-2.5">
-                  {listaDia.length === 0 ? (
-                    <div className="py-6 text-center text-xs text-muted-foreground">
-                      Sin horarios
-                    </div>
-                  ) : (
-                    listaDia.map((h) => {
-                      const horaCorta = h.horaInicio.slice(0, 5);
-                      return (
-                        <div
-                          key={h.id}
-                          data-testid={`bloque-horario-dia-${h.diaSemana}-${horaCorta}`}
-                          className="group relative rounded-md border border-border/80 bg-background p-2.5 shadow-sm transition hover:border-primary/50"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-mono text-sm font-bold tracking-tight text-foreground tabular-nums">
-                              {horaCorta}
-                            </span>
-                            <Badge variant="zinc" className="text-[0.6875rem] tabular-nums">
-                              {h.duracionMinutos} min
-                            </Badge>
-                          </div>
-
-                          <div className="mt-1.5 font-medium text-xs text-foreground">
-                            {h.tipoClaseNombre ?? "Clase"}
-                          </div>
-
-                          <div className="mt-1 flex items-center justify-between text-[0.6875rem] text-muted-foreground">
-                            <span className="truncate">
-                              {h.coachNombre ?? "Coach"}
-                            </span>
-                            <span className="flex items-center gap-0.5 tabular-nums">
-                              <Users className="h-3 w-3" />
-                              {h.cuposDefault}
-                            </span>
-                          </div>
-
-                          {esAdmin && (
-                            <div className="mt-2 flex justify-end border-t border-border/50 pt-1.5">
-                              <button
-                                type="button"
-                                data-testid={`btn-eliminar-horario-${horaCorta}`}
-                                onClick={() => handleEliminarHorario(h.id)}
-                                className="text-muted-foreground transition hover:text-destructive"
-                                title="Dar de baja este bloque"
-                              >
-                                <Trash2 className="h-3.5 w-3.5" />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })
-                  )}
-                </div>
-              </div>
+                {listaDia.length === 0 ? (
+                  <div className="flex flex-1 flex-col items-center justify-center rounded-2xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">
+                    <span>Sin horarios fijos este día.</span>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-3">
+                    {listaDia.map((horario) => (
+                      <BloqueHorarioCard
+                        key={horario.id}
+                        horario={horario}
+                        esAdmin={esAdmin}
+                        isPending={isPending}
+                        onEditar={abrirDrawerHorario}
+                        onConfirmarBaja={handleConfirmarBajaHorario}
+                      />
+                    ))}
+                  </div>
+                )}
+              </Card>
             );
           })}
         </div>
-      </div>
+      </section>
 
-      {/* Sección 2: Catálogo de Tipos de Clase */}
-      <div className="space-y-4">
-        <div className="flex items-center gap-2">
-          <Dumbbell className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold tracking-tight text-foreground">
+      <section className="space-y-4" aria-labelledby="sec-tipos-clase">
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Dumbbell className="h-5 w-5 text-primary" aria-hidden="true" />
+          <h2
+            id="sec-tipos-clase"
+            className="text-[1.0625rem] font-medium tracking-[-0.01em] text-foreground"
+          >
             Catálogo de Tipos de Clase
           </h2>
+          <Badge variant="zinc" className="tabular-nums">
+            {resumen.totalTiposActivos}{" "}
+            {resumen.totalTiposActivos === 1 ? "tipo activo" : "tipos activos"}
+          </Badge>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3">
+        <div
+          data-testid="catalogo-tipos-clase"
+          className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,300px),1fr))] gap-4"
+        >
           {tiposActivos.length === 0 ? (
-            <div className="col-span-full rounded-md border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-              No hay Tipos de Clase activos en el catálogo.
-            </div>
+            <Card className="col-span-full border-dashed p-8 text-center">
+              <p className="text-sm text-muted-foreground">
+                Todavía no hay Tipos de Clase activos en el catálogo.
+                {esAdmin
+                  ? " Creá el primero para empezar a programar la semana."
+                  : ""}
+              </p>
+            </Card>
           ) : (
             tiposActivos.map((tc) => (
-              <div
+              <TipoClaseCard
                 key={tc.id}
-                data-testid={`item-tipo-clase-${tc.nombre}`}
-                className="flex items-center justify-between rounded-lg border border-border bg-card p-4 shadow-sm"
-              >
-                <div>
-                  <h3 className="font-semibold text-sm text-foreground">
-                    {tc.nombre}
-                  </h3>
-                  {tc.descripcion && (
-                    <p className="mt-0.5 text-xs text-muted-foreground">
-                      {tc.descripcion}
-                    </p>
-                  )}
-                </div>
-
-                {esAdmin && (
-                  <button
-                    type="button"
-                    data-testid={`btn-eliminar-tipo-clase-${tc.nombre}`}
-                    onClick={() => handleEliminarTipoClase(tc.id)}
-                    className="ml-3 rounded p-1 text-muted-foreground transition hover:text-destructive"
-                    title="Dar de baja Tipo de Clase"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                )}
-              </div>
+                tipoClase={tc}
+                cantidadHorarios={conteoPorTipo[tc.id] ?? 0}
+                esAdmin={esAdmin}
+                isPending={isPending}
+                onEditar={abrirDrawerTipo}
+                onConfirmarBaja={handleConfirmarBajaTipoClase}
+              />
             ))
           )}
         </div>
-      </div>
+      </section>
+
+      <DrawerTipoClase
+        open={drawerModo === "tipo"}
+        editando={Boolean(tipoEditando)}
+        isPending={isPending}
+        borrador={borradorTipo}
+        errores={erroresTipo}
+        onClose={cerrarDrawer}
+        onChange={setBorradorTipo}
+        onSubmit={handleGuardarTipoClase}
+      />
+
+      <DrawerHorario
+        open={drawerModo === "horario"}
+        editando={Boolean(horarioEditando)}
+        isPending={isPending}
+        borrador={borradorHorario}
+        errores={erroresHorario}
+        tiposActivos={tiposActivos}
+        coaches={coaches}
+        onClose={cerrarDrawer}
+        onChange={setBorradorHorario}
+        onSubmit={handleGuardarHorario}
+      />
     </div>
   );
 }

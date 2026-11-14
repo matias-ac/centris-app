@@ -1,6 +1,6 @@
 # 10 — Rediseño UX/UI de `/horarios` (Tipos de Clase y Plantilla Semanal)
 
-**Status:** ready-for-agent
+**Status:** done
 **Branch:** `feat/ui-10-horarios`
 **Blocked by:** `01`
 
@@ -29,10 +29,10 @@ Migra `/horarios` a **Dark Bento Cockpit** (`propuesta-horarios.html`) para gest
 
 ## Acceptance Criteria (TDD / BDD)
 
-- [ ] **Red $\rightarrow$ Green en E2E (`InlineConfirm` sin `confirm()`)**: Reemplazar ambos `page.on("dialog", ...)` en `07-tipos-clase-y-horarios-recurrentes-e2e.steps.ts` por clicks en `InlineConfirm`, verificar falla en Red y lograr Green al implementar `InlineConfirm` en `horarios-view.tsx`.
-- [ ] **Bento Grid Semanal y Creación en Drawer/Panel**: Mostrar plantilla semanal agrupada por día de la semana con `tabular-nums` en franjas horarias (`07:00 – 08:00`) y cupos (`20 cupos`), badges semánticos sin colores chillones y panel/drawer limpio para crear o editar `Tipos de Clase` y `Horarios`.
-- [ ] **Anti-Overflow Notebook y Mobile**: Grilla adaptable `minmax(min(100%, 300px), 1fr)` sin botones cortados y controles `min-h-11` con inputs `>= 16px`.
-- [ ] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` (`Vitest` + todas las suites `playwright-bdd`) y `/code-review`.
+- [x] **Red $\rightarrow$ Green en E2E (`InlineConfirm` sin `confirm()`)**: Reemplazar ambos `page.on("dialog", ...)` en `07-tipos-clase-y-horarios-recurrentes-e2e.steps.ts` por clicks en `InlineConfirm`, verificar falla en Red y lograr Green al implementar `InlineConfirm` en `horarios-view.tsx`.
+- [x] **Bento Grid Semanal y Creación en Drawer/Panel**: Mostrar plantilla semanal agrupada por día de la semana con `tabular-nums` en franjas horarias (`07:00 – 08:00`) y cupos (`20 cupos`), badges semánticos sin colores chillones y panel/drawer limpio para crear o editar `Tipos de Clase` y `Horarios`.
+- [x] **Anti-Overflow Notebook y Mobile**: Grilla adaptable `minmax(min(100%, 300px), 1fr)` sin botones cortados y controles `min-h-11` con inputs `>= 16px`.
+- [x] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` (`Vitest` + todas las suites `playwright-bdd`) y `/code-review`.
 
 ## Comments
 
