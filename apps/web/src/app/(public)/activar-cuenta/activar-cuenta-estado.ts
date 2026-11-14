@@ -1,24 +1,26 @@
 import {
   ActivarCuentaSchema,
   ERROR_CODES,
-  type ActivarCuentaInput
+  type ActivarCuentaInput,
+  type ErrorCode
 } from "@centris/shared";
+import {
+  procesarEnvioAuth,
+  traducirErrorAuth,
+  validarCamposAuth,
+  type AccionAuthPublicoFn,
+  type ErroresAuthPublico,
+  type ResultadoEnvioAuth,
+  type ResultadoValidacionAuth
+} from "../auth-publico-estado";
 
 export const LONGITUD_MINIMA_CONTRASENA = 8;
 
-export interface ErroresActivacion {
-  email?: string;
-  password?: string;
-  general?: string;
-}
-
+export type ErroresActivacion = ErroresAuthPublico;
 export type ResultadoValidacionActivacion =
-  | { ok: true; datos: ActivarCuentaInput }
-  | { ok: false; errores: ErroresActivacion };
-
-export type ResultadoEnvioActivacion =
-  | { ok: true; destino: string }
-  | { ok: false; errores: ErroresActivacion };
+  ResultadoValidacionAuth<ActivarCuentaInput>;
+export type ResultadoEnvioActivacion = ResultadoEnvioAuth;
+export type AccionActivarCuentaFn = AccionAuthPublicoFn;
 
 export interface ReglaContrasenaEstado {
   longitud: number;
@@ -27,14 +29,10 @@ export interface ReglaContrasenaEstado {
   contador: string;
 }
 
-export interface AccionActivarCuentaFn {
-  (
-    email: string,
-    password: string
-  ): Promise<{ ok: boolean; errorCode?: string; destino?: string }>;
-}
+const MENSAJE_EMAIL_INVALIDO =
+  "Ingresá el correo electrónico con el que te registraron.";
 
-const MENSAJES_ERROR_ACTIVACION: Record<string, string> = {
+const MENSAJES_ERROR_ACTIVACION: Partial<Record<ErrorCode, string>> = {
   [ERROR_CODES.CUENTA_YA_ACTIVADA]:
     "Esta cuenta ya fue activada previamente. Iniciá sesión con tu correo y contraseña.",
   [ERROR_CODES.CREDENCIALES_INVALIDAS]:
@@ -54,27 +52,12 @@ export function validarActivacionCuenta(
   email: string,
   password: string
 ): ResultadoValidacionActivacion {
-  const validado = ActivarCuentaSchema.safeParse({ email, password });
-  if (validado.success) {
-    return { ok: true, datos: validado.data };
-  }
-
-  const errores: ErroresActivacion = {};
-  for (const issue of validado.error.issues) {
-    const campo = issue.path[0];
-    if (campo === "email" && !errores.email) {
-      errores.email =
-        "Ingresá el correo electrónico con el que te registraron.";
-    } else if (campo === "password" && !errores.password) {
-      errores.password = issue.message;
-    }
-  }
-
-  if (!errores.email && !errores.password) {
-    errores.general = "Revisá los datos ingresados e intentá nuevamente.";
-  }
-
-  return { ok: false, errores };
+  return validarCamposAuth(
+    email,
+    password,
+    ActivarCuentaSchema,
+    MENSAJE_EMAIL_INVALIDO
+  );
 }
 
 /**
@@ -102,10 +85,11 @@ export function evaluarReglaContrasena(
  * sin exponer errorCode ni códigos HTTP en la UI.
  */
 export function traducirErrorActivacion(errorCode?: string): string {
-  if (errorCode && errorCode in MENSAJES_ERROR_ACTIVACION) {
-    return MENSAJES_ERROR_ACTIVACION[errorCode] ?? MENSAJE_ERROR_RESPALDO;
-  }
-  return MENSAJE_ERROR_RESPALDO;
+  return traducirErrorAuth(
+    errorCode,
+    MENSAJES_ERROR_ACTIVACION,
+    MENSAJE_ERROR_RESPALDO
+  );
 }
 
 /**
@@ -122,22 +106,10 @@ export async function procesarEnvioActivacion(
     return { ok: false, errores: validacion.errores };
   }
 
-  try {
-    const res = await accionActivar(
-      validacion.datos.email,
-      validacion.datos.password
-    );
-    if (!res.ok) {
-      return {
-        ok: false,
-        errores: { general: traducirErrorActivacion(res.errorCode) }
-      };
-    }
-    return { ok: true, destino: res.destino ?? "/inicio" };
-  } catch {
-    return {
-      ok: false,
-      errores: { general: traducirErrorActivacion() }
-    };
-  }
+  return procesarEnvioAuth(
+    validacion.datos,
+    accionActivar,
+    MENSAJES_ERROR_ACTIVACION,
+    MENSAJE_ERROR_RESPALDO
+  );
 }

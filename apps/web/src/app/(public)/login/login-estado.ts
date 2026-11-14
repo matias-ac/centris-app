@@ -1,27 +1,25 @@
-import { ERROR_CODES, LoginSchema, type LoginInput } from "@centris/shared";
+import {
+  ERROR_CODES,
+  LoginSchema,
+  type ErrorCode,
+  type LoginInput
+} from "@centris/shared";
+import {
+  procesarEnvioAuth,
+  traducirErrorAuth,
+  validarCamposAuth,
+  type AccionAuthPublicoFn,
+  type ErroresAuthPublico,
+  type ResultadoEnvioAuth,
+  type ResultadoValidacionAuth
+} from "../auth-publico-estado";
 
-export interface ErroresLogin {
-  email?: string;
-  password?: string;
-  general?: string;
-}
+export type ErroresLogin = ErroresAuthPublico;
+export type ResultadoValidacionLogin = ResultadoValidacionAuth<LoginInput>;
+export type ResultadoEnvioLogin = ResultadoEnvioAuth;
+export type AccionLoginFn = AccionAuthPublicoFn;
 
-export type ResultadoValidacionLogin =
-  | { ok: true; datos: LoginInput }
-  | { ok: false; errores: ErroresLogin };
-
-export type ResultadoEnvioLogin =
-  | { ok: true; destino: string }
-  | { ok: false; errores: ErroresLogin };
-
-export interface AccionLoginFn {
-  (
-    email: string,
-    password: string
-  ): Promise<{ ok: boolean; errorCode?: string; destino?: string }>;
-}
-
-const MENSAJES_ERROR_AUTENTICACION: Record<string, string> = {
+const MENSAJES_ERROR_AUTENTICACION: Partial<Record<ErrorCode, string>> = {
   [ERROR_CODES.CREDENCIALES_INVALIDAS]:
     "El correo o la contraseña no coinciden, o tu cuenta todavía no fue activada.",
   [ERROR_CODES.VALIDACION_FALLIDA]:
@@ -41,26 +39,12 @@ export function validarCredencialesLogin(
   email: string,
   password: string
 ): ResultadoValidacionLogin {
-  const validado = LoginSchema.safeParse({ email, password });
-  if (validado.success) {
-    return { ok: true, datos: validado.data };
-  }
-
-  const errores: ErroresLogin = {};
-  for (const issue of validado.error.issues) {
-    const campo = issue.path[0];
-    if (campo === "email" && !errores.email) {
-      errores.email = "Ingresá un correo electrónico válido.";
-    } else if (campo === "password" && !errores.password) {
-      errores.password = issue.message;
-    }
-  }
-
-  if (!errores.email && !errores.password) {
-    errores.general = "Revisá los datos ingresados e intentá nuevamente.";
-  }
-
-  return { ok: false, errores };
+  return validarCamposAuth(
+    email,
+    password,
+    LoginSchema,
+    "Ingresá un correo electrónico válido."
+  );
 }
 
 /**
@@ -68,10 +52,11 @@ export function validarCredencialesLogin(
  * evitando exponer identificadores técnicos o códigos HTTP en la UI.
  */
 export function traducirErrorAutenticacion(errorCode?: string): string {
-  if (errorCode && errorCode in MENSAJES_ERROR_AUTENTICACION) {
-    return MENSAJES_ERROR_AUTENTICACION[errorCode] ?? MENSAJE_ERROR_RESPALDO;
-  }
-  return MENSAJE_ERROR_RESPALDO;
+  return traducirErrorAuth(
+    errorCode,
+    MENSAJES_ERROR_AUTENTICACION,
+    MENSAJE_ERROR_RESPALDO
+  );
 }
 
 /**
@@ -88,22 +73,10 @@ export async function procesarEnvioLogin(
     return { ok: false, errores: validacion.errores };
   }
 
-  try {
-    const res = await accionLogin(
-      validacion.datos.email,
-      validacion.datos.password
-    );
-    if (!res.ok) {
-      return {
-        ok: false,
-        errores: { general: traducirErrorAutenticacion(res.errorCode) }
-      };
-    }
-    return { ok: true, destino: res.destino ?? "/inicio" };
-  } catch {
-    return {
-      ok: false,
-      errores: { general: traducirErrorAutenticacion() }
-    };
-  }
+  return procesarEnvioAuth(
+    validacion.datos,
+    accionLogin,
+    MENSAJES_ERROR_AUTENTICACION,
+    MENSAJE_ERROR_RESPALDO
+  );
 }

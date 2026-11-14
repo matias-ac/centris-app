@@ -1,4 +1,4 @@
-import { expect } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
 import { SEED_BOX_IDS } from "@centris/shared";
 import pg from "pg";
@@ -357,6 +357,38 @@ Then(
   }
 );
 
+async function verificarToggleVisibilidadClave(
+  page: Page,
+  passwordInput: Locator
+): Promise<void> {
+  const toggleBtn = page.getByRole("button", {
+    name: /Mostrar clave/i
+  });
+  const toggleBox = await toggleBtn.boundingBox();
+  expect(toggleBox?.width).toBeGreaterThanOrEqual(44);
+  expect(toggleBox?.height).toBeGreaterThanOrEqual(44);
+  await toggleBtn.click();
+  await expect(passwordInput).toHaveAttribute("type", "text");
+  await expect(
+    page.getByRole("button", { name: /Ocultar clave/i })
+  ).toHaveAttribute("aria-pressed", "true");
+}
+
+async function verificarSinDesbordeResponsive(
+  page: Page,
+  widths: number[] = [375, 1280, 1440]
+): Promise<void> {
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 });
+    const overflow = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth
+    );
+    expect(overflow).toBe(false);
+  }
+}
+
 Given(
   "un Usuario no autenticado en la pantalla de inicio de sesión",
   async ({ page }) => {
@@ -384,17 +416,7 @@ When(
     await expect(passwordInput).not.toHaveAttribute("aria-invalid", "true");
 
     // Toggle de visibilidad de contraseña accesible (>= 44px)
-    const toggleBtn = page.getByRole("button", {
-      name: /Mostrar clave/i
-    });
-    const toggleBox = await toggleBtn.boundingBox();
-    expect(toggleBox?.width).toBeGreaterThanOrEqual(44);
-    expect(toggleBox?.height).toBeGreaterThanOrEqual(44);
-    await toggleBtn.click();
-    await expect(passwordInput).toHaveAttribute("type", "text");
-    await expect(
-      page.getByRole("button", { name: /Ocultar clave/i })
-    ).toHaveAttribute("aria-pressed", "true");
+    await verificarToggleVisibilidadClave(page, passwordInput);
 
     // Credenciales válidas en formato pero incorrectas en servidor
     await emailInput.fill("admin@centris.dev");
@@ -413,13 +435,7 @@ Then(
     expect(textoAlerta).not.toMatch(/CREDENCIALES_INVALIDAS|ERROR:|401|500/);
 
     // Sin desborde horizontal en móvil (375px) ni escritorio (1280px y 1440px)
-    for (const width of [375, 1280, 1440]) {
-      await page.setViewportSize({ width, height: 900 });
-      const overflow = await page.evaluate(
-        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
-      );
-      expect(overflow).toBe(false);
-    }
+    await verificarSinDesbordeResponsive(page);
 
     // Navegación accesible hacia /activar-cuenta
     const activarLink = page.getByRole("link", { name: /Activar mi cuenta/i });
@@ -461,17 +477,7 @@ When(
     await expect(passwordInput).not.toHaveAttribute("aria-invalid", "true");
 
     // Toggle de visibilidad de contraseña accesible (>= 44px)
-    const toggleBtn = page.getByRole("button", {
-      name: /Mostrar clave/i
-    });
-    const toggleBox = await toggleBtn.boundingBox();
-    expect(toggleBox?.width).toBeGreaterThanOrEqual(44);
-    expect(toggleBox?.height).toBeGreaterThanOrEqual(44);
-    await toggleBtn.click();
-    await expect(passwordInput).toHaveAttribute("type", "text");
-    await expect(
-      page.getByRole("button", { name: /Ocultar clave/i })
-    ).toHaveAttribute("aria-pressed", "true");
+    await verificarToggleVisibilidadClave(page, passwordInput);
 
     // Correo válido en formato pero sin cuenta pendiente en servidor
     await emailInput.fill("inexistente.e2e@centris.dev");
@@ -491,15 +497,7 @@ Then(
     );
 
     // Sin desborde horizontal en móvil (375px) ni escritorio (1280px y 1440px)
-    for (const width of [375, 1280, 1440]) {
-      await page.setViewportSize({ width, height: 900 });
-      const overflow = await page.evaluate(
-        () =>
-          document.documentElement.scrollWidth >
-          document.documentElement.clientWidth
-      );
-      expect(overflow).toBe(false);
-    }
+    await verificarSinDesbordeResponsive(page);
 
     // Navegación accesible hacia /login
     const loginLink = page.getByRole("link", {
