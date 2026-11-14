@@ -28,6 +28,17 @@ export interface ButtonProps extends React.ComponentProps<"button"> {
   variant?: ButtonVariant;
 }
 
+export function buttonClassName(
+  variant: ButtonVariant = "primary",
+  className?: string
+): string {
+  return cn(
+    "inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full text-[0.9375rem] font-semibold leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50",
+    VARIANT_CLASSES[variant],
+    className
+  );
+}
+
 /**
  * Botón táctil Dark Bento Cockpit con altura mínima de 44px y forma cápsula.
  */
@@ -42,11 +53,7 @@ export function Button({
     <button
       ref={ref}
       type={type}
-      className={cn(
-        "inline-flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-full text-[0.9375rem] font-semibold leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50",
-        VARIANT_CLASSES[variant],
-        className
-      )}
+      className={buttonClassName(variant, className)}
       {...props}
     />
   );
