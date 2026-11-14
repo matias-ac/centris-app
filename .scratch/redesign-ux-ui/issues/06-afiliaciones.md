@@ -1,6 +1,6 @@
 # 06 — Rediseño UX/UI de `/afiliaciones`
 
-**Status:** in-progress
+**Status:** done
 **Branch:** `feat/ui-06-afiliaciones`
 **Blocked by:** `01`
 
@@ -25,11 +25,12 @@ Migra `/afiliaciones` a **Dark Bento Cockpit** (`propuesta-afiliaciones.html`), 
 
 ## Acceptance Criteria (TDD / BDD)
 
-- [ ] **Tests en Red $\rightarrow$ Green**: Verificar alta/invitación, conmutación de los 4 roles (`Administrador`, `Recepcionista`, `Coach`, `Atleta`), estado `"Sin guardar"` al editar, persistencia al guardar y preservación de selectores usados en `02-auth-selector-box-y-roles-e2e.steps.ts`.
-- [ ] **Estabilidad de Filas (`0` desplazamiento de `Guardar roles`)**: En desktop, usar tracks de grilla fijos con columna dedicada de acciones (`264px`) y franja contextual inferior (`.dirty-strip` con borde superior sutil o espacio fijo reservado) para indicar cambios pendientes sin mover ni comprimir el botón `Guardar roles` ni las columnas vecinas; en mobile, mantener ancho completo consistente y acciones `min-h-11`.
-- [ ] **Bento y Controles Táctiles**: Chips de rol componibles accesibles (`aria-pressed`, `min-h-11`), invitación en panel/card Bento `#111214` sin exposición de errores HTTP crudos.
-- [ ] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` y `/code-review`.
+- [x] **Tests en Red $\rightarrow$ Green**: Verificada la conmutación de los 4 roles (`Administrador`, `Recepcionista`, `Coach`, `Atleta`), estado `"Cambios sin guardar"` y descartar borrador, persistencia al guardar, confirmación inline con `Escape`/cancelar y preservación de selectores en `02-auth-selector-box-y-roles-e2e.steps.ts` *(sin formulario de alta/invitación por alcance actual de backend y mockup; ver Comments)*.
+- [x] **Estabilidad de Filas (`0` desplazamiento de `Guardar roles`)**: En desktop (`>=1200px`), grilla de tracks fijos con columna dedicada de acciones (`264px`) y franja contextual inferior (`.dirty-strip`) + confirmación inline fuera de `.member-main`, verificando `<= 1px` de desplazamiento en `1280px` y `1440px`; en mobile (`375px`), ancho completo consistente y acciones `min-h-11`.
+- [x] **Bento y Controles Táctiles**: Chips de filtro por rol accesibles (`aria-pressed`, `min-h-11`), pills de roles componibles (`role="switch"`, `min-h-11`), confirmación inline reutilizable sin `confirm()` y mensajes de error humanos sin exposición de códigos HTTP crudos ni `403 Forbidden`.
+- [x] **Verificación CI / DoD**: `pnpm lint`, `pnpm typecheck`, `pnpm test` completos y `/code-review` contra `main` aprobados.
 
 ## Comments
 
-- *Sin comentarios aún.*
+- **Alcance de alta/invitación**: La redacción inicial del ticket mencionaba "alta/invitación de miembros del staff", pero `apps/api/src/modules/afiliaciones/afiliaciones.controller.ts` solo expone `GET /afiliaciones/mias`, `GET /afiliaciones`, `PATCH /afiliaciones/:id` y `DELETE /afiliaciones/:id` (la creación de usuarios ocurre en `POST /atletas` y la composición de roles se gestiona en `/afiliaciones`), y `.scratch/propuesta-afiliaciones.html` tampoco contempla un formulario de invitación. En consecuencia, `/afiliaciones` implementa fielmente el mockup aprobado sin inventario de endpoints inexistentes.
+- **Code review aplicado**: Tras `/code-review` contra `main`, se ajustó el breakpoint desktop de fila a `min-[1200px]` para evitar desborde en `1100px–1189px`, se elevaron los borradores por fila a `TablaAfiliacionesBox` para no perder cambios ante filtros o `router.refresh()`, se reemplazó `isPending` compartido por `operacionPendiente` (`"guardar" | "baja" | null`), se alineó la terminología con `GLOSSARY.md` (`Equipo operativo`, `Afiliaciones`), se agregó `<h1>` en vista restringida y se extrajeron `AccesoRestringidoCard` y `useInlineConfirm`/`InlineConfirmPanel` para eliminar duplicación con `/configuracion`.
