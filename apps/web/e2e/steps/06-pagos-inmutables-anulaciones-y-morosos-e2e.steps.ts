@@ -272,6 +272,19 @@ Then(
   }
 );
 
+async function verificarSinDesbordeHorizontal(page: Page) {
+  for (const width of [1280, 1440, 375]) {
+    await page.setViewportSize({ width, height: 850 });
+    const overflow = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth
+    );
+    expect(overflow).toBe(false);
+  }
+  await page.setViewportSize({ width: 1280, height: 850 });
+}
+
 Then(
   "en la Auditoría de Caja el Pago permanece visible con su motivo de anulación y sin desborde horizontal",
   async ({ page }) => {
@@ -286,16 +299,7 @@ Then(
     await expect(filaAuditoria.getByTestId("pago-motivo-anulacion")).toBeVisible();
     await expect(filaAuditoria.getByTestId("pago-motivo-anulacion")).not.toBeEmpty();
 
-    for (const width of [1280, 1440, 375]) {
-      await page.setViewportSize({ width, height: 850 });
-      const overflow = await page.evaluate(
-        () =>
-          document.documentElement.scrollWidth >
-          document.documentElement.clientWidth
-      );
-      expect(overflow).toBe(false);
-    }
-    await page.setViewportSize({ width: 1280, height: 850 });
+    await verificarSinDesbordeHorizontal(page);
   }
 );
 
@@ -341,16 +345,7 @@ Then(
     );
     await expect(page.getByTestId("total-ingresos-validos")).toContainText("$ 0");
 
-    for (const width of [1280, 1440, 375]) {
-      await page.setViewportSize({ width, height: 850 });
-      const overflow = await page.evaluate(
-        () =>
-          document.documentElement.scrollWidth >
-          document.documentElement.clientWidth
-      );
-      expect(overflow).toBe(false);
-    }
-    await page.setViewportSize({ width: 1280, height: 850 });
+    await verificarSinDesbordeHorizontal(page);
   }
 );
 
@@ -379,9 +374,9 @@ Then(
     const card = page.getByTestId("acceso-denegado-rol");
     await expect(card).toBeVisible();
     await expect(
-      page
-        .getByRole("alert")
-        .filter({ hasText: /Acceso restringido a Recepción y Administración/i })
+      card.getByRole("heading", {
+        name: /Acceso restringido a Recepción y Administración/i
+      })
     ).toBeVisible();
     const texto = (await card.textContent()) ?? "";
     expect(texto).not.toMatch(/403|Forbidden/i);

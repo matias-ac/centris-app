@@ -53,12 +53,90 @@ const FORM_ANULACION_ID = "form-anular-pago-caja";
  */
 export function AccesoRestringidoCaja({ nombreBox }: { nombreBox: string }) {
   return (
-    <div role="alert">
-      <AccesoRestringidoCard
-        headingAs="h1"
-        titulo="Acceso restringido a Recepción y Administración"
-        badgeLabel="Permiso requerido"
-        descripcion={`Tu afiliación en ${nombreBox} no posee permisos de Recepción o Administración para consultar o gestionar la Caja y el Reporte de Morosos.`}
+    <AccesoRestringidoCard
+      headingAs="h1"
+      titulo="Acceso restringido a Recepción y Administración"
+      badgeLabel="Permiso requerido"
+      descripcion={`Tu afiliación en ${nombreBox} no posee permisos de Recepción o Administración para consultar o gestionar la Caja y el Reporte de Morosos.`}
+    />
+  );
+}
+
+function BotonTabCaja({
+  id,
+  controlsId,
+  testId,
+  active,
+  label,
+  count,
+  onClick
+}: {
+  id: string;
+  controlsId: string;
+  testId: string;
+  active: boolean;
+  label: string;
+  count: number;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      id={id}
+      type="button"
+      role="tab"
+      aria-selected={active}
+      aria-controls={controlsId}
+      data-testid={testId}
+      onClick={onClick}
+      className={cn(
+        "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        active
+          ? "border-transparent bg-primary font-semibold text-primary-foreground"
+          : "border-border bg-card font-medium text-muted-foreground hover:border-[#3A3C42] hover:text-foreground"
+      )}
+    >
+      <span>{label}</span>
+      <span
+        className={cn(
+          "rounded-full px-2 py-0.5 text-xs tabular-nums",
+          active
+            ? "bg-black/15 text-black"
+            : "bg-secondary text-muted-foreground"
+        )}
+      >
+        {count}
+      </span>
+    </button>
+  );
+}
+
+function BuscadorCaja({
+  ariaLabel,
+  placeholder,
+  value,
+  onChange,
+  testId
+}: {
+  ariaLabel: string;
+  placeholder: string;
+  value: string;
+  onChange: (value: string) => void;
+  testId: string;
+}) {
+  return (
+    <div className="relative w-full sm:max-w-xs">
+      <Search
+        className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
+        aria-hidden="true"
+      />
+      <Input
+        type="search"
+        aria-label={ariaLabel}
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        data-testid={testId}
+        className="rounded-xl pl-10 text-base"
       />
     </div>
   );
@@ -145,7 +223,7 @@ function FilaMorosoCaja({
               key={m.membresiaId}
               className="rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs text-muted-foreground tabular-nums"
             >
-              {m.nombrePlan}: debe{" "}
+              {m.nombrePlan}: saldo{" "}
               <strong className="font-semibold text-[#FF6D6D] tabular-nums">
                 {formatearMoneda(m.saldo, moneda)}
               </strong>{" "}
@@ -157,7 +235,7 @@ function FilaMorosoCaja({
       </div>
 
       <div className="text-left lg:text-right">
-        <span className="block text-xs text-muted-foreground">Deuda total</span>
+        <span className="block text-xs text-muted-foreground">Saldo total</span>
         <strong
           data-testid="moroso-total-deuda"
           className="text-xl font-medium text-[#FF6D6D] tabular-nums"
@@ -172,7 +250,7 @@ function FilaMorosoCaja({
           data-testid="btn-ver-atleta"
           className={buttonClassName("secondary")}
         >
-          <span>Abrir ficha y cobrar</span>
+          <span>Abrir ficha y pagar</span>
           <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
         </Link>
       </div>
@@ -425,11 +503,11 @@ export function PanelCajaMorosos({
       <header className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
         <div className="space-y-1">
           <h1 className="text-[clamp(1.375rem,1.2rem+0.8vw,1.75rem)] font-medium leading-[1.2] tracking-[-0.02em] text-foreground">
-            Caja y seguimiento de deuda
+            Caja y seguimiento de saldos
           </h1>
           <p className="max-w-[65ch] text-sm text-muted-foreground">
             Controlá saldos pendientes de atletas y revisá el historial completo
-            de cobros del Box.
+            de pagos del Box.
           </p>
         </div>
 
@@ -438,58 +516,26 @@ export function PanelCajaMorosos({
           aria-label="Vistas de caja"
           className="flex flex-wrap gap-2 lg:shrink-0 lg:flex-nowrap"
         >
-          <button
-            type="button"
-            role="tab"
-            aria-selected={tabActiva === "morosos"}
-            data-testid="tab-morosos"
+          <BotonTabCaja
+            id="tab-caja-morosos"
+            controlsId="panel-caja-morosos"
+            testId="tab-morosos"
+            active={tabActiva === "morosos"}
+            label="Atletas morosos"
+            count={kpis.cantidadMorosos}
             onClick={() => setTabActiva("morosos")}
-            className={cn(
-              "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-              tabActiva === "morosos"
-                ? "border-transparent bg-primary text-primary-foreground font-semibold"
-                : "border-border bg-card text-muted-foreground font-medium hover:border-[#3A3C42] hover:text-foreground"
-            )}
-          >
-            <span>Atletas con deuda</span>
-            <span
-              className={cn(
-                "rounded-full px-2 py-0.5 text-xs tabular-nums",
-                tabActiva === "morosos"
-                  ? "bg-black/15 text-black"
-                  : "bg-secondary text-muted-foreground"
-              )}
-            >
-              {kpis.cantidadMorosos}
-            </span>
-          </button>
+          />
 
           {esAdministrador ? (
-            <button
-              type="button"
-              role="tab"
-              aria-selected={tabActiva === "auditoria"}
-              data-testid="tab-auditoria"
+            <BotonTabCaja
+              id="tab-caja-auditoria"
+              controlsId="panel-caja-auditoria"
+              testId="tab-auditoria"
+              active={tabActiva === "auditoria"}
+              label="Auditoría de caja"
+              count={kpis.totalPagos}
               onClick={() => setTabActiva("auditoria")}
-              className={cn(
-                "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm leading-none transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                tabActiva === "auditoria"
-                  ? "border-transparent bg-primary text-primary-foreground font-semibold"
-                  : "border-border bg-card text-muted-foreground font-medium hover:border-[#3A3C42] hover:text-foreground"
-              )}
-            >
-              <span>Auditoría de caja</span>
-              <span
-                className={cn(
-                  "rounded-full px-2 py-0.5 text-xs tabular-nums",
-                  tabActiva === "auditoria"
-                    ? "bg-black/15 text-black"
-                    : "bg-secondary text-muted-foreground"
-                )}
-              >
-                {kpis.totalPagos}
-              </span>
-            </button>
+            />
           ) : null}
         </div>
       </header>
@@ -498,7 +544,7 @@ export function PanelCajaMorosos({
         <div
           data-testid="banner-alcance-recepcion"
           role="status"
-          className="flex items-start gap-3 rounded-2xl border border-[#FBBF24]/28 bg-[#FBBF24]/14 px-4 py-3 text-sm text-[#FDE68A]"
+          className="flex items-start gap-3 rounded-2xl border border-[#FBBF24]/28 bg-[#FBBF24]/14 px-4 py-3 text-sm text-[#FBBF24]"
         >
           <Info
             className="mt-0.5 h-4 w-4 shrink-0 text-[#FBBF24]"
@@ -506,7 +552,7 @@ export function PanelCajaMorosos({
           />
           <span>
             <strong>Vista de Recepción:</strong> podés consultar atletas con
-            saldo pendiente y abrir su ficha para registrar cobros. La auditoría
+            saldo pendiente y abrir su ficha para registrar pagos. La auditoría
             de movimientos y anulación de pagos es exclusiva de Administración.
           </span>
         </div>
@@ -522,10 +568,10 @@ export function PanelCajaMorosos({
       >
         <TarjetaKpiCaja
           etiqueta="Saldo total pendiente"
-          valor={formatearMoneda(kpis.deudaTotalPendiente, moneda)}
+          valor={formatearMoneda(kpis.saldoTotalPendiente, moneda)}
           valorTestId="total-deuda-acumulada"
           valorClassName="text-[#FF6D6D]"
-          badgeLabel="Por cobrar"
+          badgeLabel="Saldo pendiente"
           badgeVariant="coral"
           pie="Membresías vigentes y vencidas con saldo mayor a cero"
         />
@@ -566,7 +612,12 @@ export function PanelCajaMorosos({
 
       {/* Vista Morosos / Auditoría */}
       {tabActiva === "morosos" ? (
-        <Card className="space-y-5 p-6">
+        <Card
+          id="panel-caja-morosos"
+          role="tabpanel"
+          aria-labelledby="tab-caja-morosos"
+          className="space-y-5 p-6"
+        >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <h2 className="text-[1.0625rem] font-medium leading-[1.3] tracking-[-0.01em] text-foreground">
@@ -578,21 +629,13 @@ export function PanelCajaMorosos({
               </p>
             </div>
 
-            <div className="relative w-full sm:max-w-xs">
-              <Search
-                className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <Input
-                type="search"
-                aria-label="Buscar atleta con deuda"
-                placeholder="Buscar por nombre o email..."
-                value={busquedaMorosos}
-                onChange={(e) => setBusquedaMorosos(e.target.value)}
-                data-testid="input-buscar-moroso"
-                className="rounded-full pl-10 text-base"
-              />
-            </div>
+            <BuscadorCaja
+              ariaLabel="Buscar atleta moroso"
+              placeholder="Buscar por nombre o email..."
+              value={busquedaMorosos}
+              onChange={setBusquedaMorosos}
+              testId="input-buscar-moroso"
+            />
           </div>
 
           {morososFiltrados.length === 0 ? (
@@ -602,7 +645,7 @@ export function PanelCajaMorosos({
             >
               {morososIniciales.length === 0
                 ? "No hay atletas morosos en este momento."
-                : "No hay atletas con deuda que coincidan con la búsqueda."}
+                : "No hay atletas morosos que coincidan con la búsqueda."}
             </div>
           ) : (
             <div className="space-y-3" data-testid="listado-morosos">
@@ -617,11 +660,17 @@ export function PanelCajaMorosos({
           )}
         </Card>
       ) : (
-        <Card className="space-y-5 p-6" data-testid="seccion-auditoria-caja">
+        <Card
+          id="panel-caja-auditoria"
+          role="tabpanel"
+          aria-labelledby="tab-caja-auditoria"
+          className="space-y-5 p-6"
+          data-testid="seccion-auditoria-caja"
+        >
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <h2 className="text-[1.0625rem] font-medium leading-[1.3] tracking-[-0.01em] text-foreground">
-                Auditoría de cobros y anulaciones
+                Auditoría de pagos y anulaciones
               </h2>
               <p className="text-sm text-muted-foreground">
                 Registro histórico inmutable de pagos ingresados en el Box.
@@ -629,21 +678,13 @@ export function PanelCajaMorosos({
               </p>
             </div>
 
-            <div className="relative w-full sm:max-w-xs">
-              <Search
-                className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-                aria-hidden="true"
-              />
-              <Input
-                type="search"
-                aria-label="Buscar en auditoría"
-                placeholder="Buscar por registrador o motivo..."
-                value={busquedaAuditoria}
-                onChange={(e) => setBusquedaAuditoria(e.target.value)}
-                data-testid="input-buscar-auditoria"
-                className="rounded-full pl-10 text-base"
-              />
-            </div>
+            <BuscadorCaja
+              ariaLabel="Buscar en auditoría"
+              placeholder="Buscar por registrador o motivo..."
+              value={busquedaAuditoria}
+              onChange={setBusquedaAuditoria}
+              testId="input-buscar-auditoria"
+            />
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -700,7 +741,7 @@ export function PanelCajaMorosos({
         open={Boolean(pagoParaAnular)}
         onClose={cerrarDrawerAnulacion}
         title="Anular pago registrado"
-        description="El comprobante queda marcado como anulado en auditoría y el importe vuelve al saldo pendiente."
+        description="El comprobante queda marcado como anulado en auditoría y el monto vuelve al saldo pendiente."
         testId="modal-anular-pago"
         closeTestId="btn-cerrar-anular-pago"
         footer={
@@ -718,7 +759,7 @@ export function PanelCajaMorosos({
               form={FORM_ANULACION_ID}
               variant="destructive"
               data-testid="btn-confirmar-anulacion"
-              disabled={isPending || motivoAnulacion.trim().length < 3}
+              disabled={isPending}
             >
               {isPending ? "Anulando..." : "Confirmar anulación"}
             </Button>
@@ -781,7 +822,12 @@ export function PanelCajaMorosos({
                   id="motivo-anulacion"
                   data-testid="input-motivo-anulacion"
                   value={motivoAnulacion}
-                  onChange={(e) => setMotivoAnulacion(e.target.value)}
+                  onChange={(e) => {
+                    setMotivoAnulacion(e.target.value);
+                    if (errorAnulacion) {
+                      setErrorAnulacion(null);
+                    }
+                  }}
                   placeholder="Ej. Transferencia duplicada por error de carga"
                   required
                   disabled={isPending}

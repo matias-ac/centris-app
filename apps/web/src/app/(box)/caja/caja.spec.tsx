@@ -118,11 +118,11 @@ const PAGOS_BASE: PagoConRegistrador[] = [
 
 describe("Rediseño Dark Bento Cockpit de /caja", () => {
   describe("Módulo caja-estado (KPIs, filtros, deep-link, errores y anulación)", () => {
-    it("calcula KPIs de deuda pendiente, morosos e ingresos válidos excluyendo anulados", () => {
+    it("calcula KPIs de saldo pendiente, morosos e ingresos válidos excluyendo anulados", () => {
       const kpis = calcularKpisCaja(MOROSOS_BASE, PAGOS_BASE);
 
       expect(kpis).toEqual({
-        deudaTotalPendiente: 54000,
+        saldoTotalPendiente: 54000,
         cantidadMorosos: 2,
         ingresosValidos: 39000,
         cantidadPagosValidos: 2,
@@ -229,16 +229,16 @@ describe("Rediseño Dark Bento Cockpit de /caja", () => {
   });
 
   describe("Renderizado Dark Bento Cockpit, Deep-Link, Roles y Estabilidad Mobile", () => {
-    it("renderiza AccesoRestringidoCaja con role='alert' y sin código 403 Forbidden", () => {
+    it("renderiza AccesoRestringidoCaja accesible y sin código 403 Forbidden", () => {
       const html = renderToStaticMarkup(
         createElement(AccesoRestringidoCaja, {
           nombreBox: "Box Centris Norte"
         })
       );
 
-      expect(html).toContain('role="alert"');
       expect(html).toContain('data-testid="acceso-denegado-rol"');
       expect(html).toContain("<h1");
+      expect(html).toContain("Acceso restringido a Recepción y Administración");
       expect(html).toContain("Volver al panel");
       expect(html).not.toMatch(/403|Forbidden/i);
     });
@@ -254,7 +254,8 @@ describe("Rediseño Dark Bento Cockpit de /caja", () => {
         })
       );
 
-      expect(html).toContain("Caja y seguimiento de deuda");
+      expect(html).toContain("Caja y seguimiento de saldos");
+      expect(html).toContain('role="tabpanel"');
       expect(html).toContain('data-testid="total-deuda-acumulada"');
       expect(html).toContain('data-testid="cantidad-atletas-morosos"');
       expect(html).toContain('data-testid="total-ingresos-validos"');
@@ -263,7 +264,7 @@ describe("Rediseño Dark Bento Cockpit de /caja", () => {
       expect(html).toContain(
         '/atletas?afiliacionId=a1000000-0000-4000-8000-000000000001'
       );
-      expect(html).toContain("Abrir ficha y cobrar");
+      expect(html).toContain("Abrir ficha y pagar");
       expect(html).toContain("tabular-nums");
       expect(html).not.toContain("font-mono");
     });

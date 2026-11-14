@@ -19,7 +19,7 @@ export interface FiltrosAuditoriaCaja {
 }
 
 export interface KpisCaja {
-  deudaTotalPendiente: number;
+  saldoTotalPendiente: number;
   cantidadMorosos: number;
   ingresosValidos: number;
   cantidadPagosValidos: number;
@@ -33,6 +33,9 @@ const ETIQUETAS_MEDIO_PAGO: Record<MedioPago, string> = {
   OTRO: "Otro"
 };
 
+const MENSAJE_MOTIVO_ANULACION_INVALIDO =
+  "Ingresá un motivo claro de al menos 3 caracteres para registrar la anulación.";
+
 const MENSAJES_ERROR_CAJA: Partial<Record<ErrorCode, string>> = {
   [ERROR_CODES.PAGO_YA_ANULADO]:
     "Este pago ya fue anulado previamente y no admite otra anulación.",
@@ -42,8 +45,7 @@ const MENSAJES_ERROR_CAJA: Partial<Record<ErrorCode, string>> = {
     "Seleccioná un Box activo antes de continuar.",
   [ERROR_CODES.NO_AUTENTICADO]:
     "Tu sesión venció. Volvé a iniciar sesión para continuar.",
-  [ERROR_CODES.VALIDACION_FALLIDA]:
-    "Ingresá un motivo claro de al menos 3 caracteres para registrar la anulación."
+  [ERROR_CODES.VALIDACION_FALLIDA]: MENSAJE_MOTIVO_ANULACION_INVALIDO
 };
 
 const MENSAJE_ERROR_RESPALDO =
@@ -56,7 +58,7 @@ export function calcularKpisCaja(
   morosos: readonly Moroso[],
   pagos: readonly PagoConRegistrador[]
 ): KpisCaja {
-  const deudaTotalPendiente = morosos.reduce(
+  const saldoTotalPendiente = morosos.reduce(
     (acc, moroso) => acc + moroso.totalDeuda,
     0
   );
@@ -75,7 +77,7 @@ export function calcularKpisCaja(
   }
 
   return {
-    deudaTotalPendiente,
+    saldoTotalPendiente,
     cantidadMorosos: morosos.length,
     ingresosValidos,
     cantidadPagosValidos,
@@ -192,8 +194,7 @@ export async function procesarAnulacionPago(
     return {
       ok: false,
       error:
-        validacion.error.issues[0]?.message ??
-        "Ingresá un motivo claro de al menos 3 caracteres para la auditoría."
+        validacion.error.issues[0]?.message ?? MENSAJE_MOTIVO_ANULACION_INVALIDO
     };
   }
 
