@@ -26,6 +26,11 @@ vi.mock("@/lib/actions", () => ({
 }));
 
 import {
+  actualizarAtletaAction,
+  crearAtletaAction,
+  eliminarAtletaAction
+} from "@/lib/actions";
+import {
   AccesoRestringidoAtletas,
   DirectorioAtletasBox
 } from "./directorio-atletas-box";
@@ -225,7 +230,7 @@ describe("Rediseño Dark Bento Cockpit de /atletas", () => {
       expect(kpis).toEqual({
         activos: 3,
         conPlanVigente: 2,
-        alDia: 2,
+        alDia: 1,
         morosos: 1,
         sinMembresia: 1,
         todos: 4
@@ -251,7 +256,7 @@ describe("Rediseño Dark Bento Cockpit de /atletas", () => {
         filtrarAtletasDirectorio(resumenes, { busqueda: "", filtro: "AL_DIA" }).map(
           (r) => r.atleta.nombre
         )
-      ).toEqual(["Sofía Castro", "Camila Díaz"]);
+      ).toEqual(["Sofía Castro"]);
 
       expect(
         filtrarAtletasDirectorio(resumenes, { busqueda: "", filtro: "MOROSOS" }).map(
@@ -329,46 +334,47 @@ describe("Rediseño Dark Bento Cockpit de /atletas", () => {
     });
 
     it("valida localmente el alta, edición y baja de atleta y delega a las actions", async () => {
-      const crearMock = vi.fn().mockResolvedValue({ ok: true });
-      const editarMock = vi.fn().mockResolvedValue({ ok: true });
-      const eliminarMock = vi.fn().mockResolvedValue({ ok: true });
+      const crearMock = vi
+        .mocked(crearAtletaAction)
+        .mockReset()
+        .mockResolvedValue({ ok: true });
+      const editarMock = vi
+        .mocked(actualizarAtletaAction)
+        .mockReset()
+        .mockResolvedValue({ ok: true });
+      const eliminarMock = vi
+        .mocked(eliminarAtletaAction)
+        .mockReset()
+        .mockResolvedValue({ ok: true });
 
-      const invalido = await procesarAltaAtleta(
-        BOX_ID,
-        { nombre: "", email: "mal" },
-        crearMock
-      );
+      const invalido = await procesarAltaAtleta(BOX_ID, {
+        nombre: "",
+        email: "mal"
+      });
       expect(invalido.ok).toBe(false);
       expect(crearMock).not.toHaveBeenCalled();
 
-      const altaOk = await procesarAltaAtleta(
-        BOX_ID,
-        { nombre: "Luciana Vega", email: "LUCIANA@CENTRIS.DEV" },
-        crearMock
-      );
+      const altaOk = await procesarAltaAtleta(BOX_ID, {
+        nombre: "Luciana Vega",
+        email: "LUCIANA@CENTRIS.DEV"
+      });
       expect(altaOk.ok).toBe(true);
       expect(crearMock).toHaveBeenCalledWith(BOX_ID, {
         nombre: "Luciana Vega",
         email: "luciana@centris.dev"
       });
 
-      const edicionOk = await procesarEdicionAtleta(
-        BOX_ID,
-        ATLETAS_BASE[0]!.id,
-        { nombre: "Sofía Castro Nuevo", activo: true },
-        editarMock
-      );
+      const edicionOk = await procesarEdicionAtleta(BOX_ID, ATLETAS_BASE[0]!.id, {
+        nombre: "Sofía Castro Nuevo",
+        activo: true
+      });
       expect(edicionOk.ok).toBe(true);
       expect(editarMock).toHaveBeenCalledWith(BOX_ID, ATLETAS_BASE[0]!.id, {
         nombre: "Sofía Castro Nuevo",
         activo: true
       });
 
-      const bajaOk = await procesarBajaAtleta(
-        BOX_ID,
-        ATLETAS_BASE[0]!,
-        eliminarMock
-      );
+      const bajaOk = await procesarBajaAtleta(BOX_ID, ATLETAS_BASE[0]!);
       expect(bajaOk.ok).toBe(true);
       expect(eliminarMock).toHaveBeenCalledWith(BOX_ID, ATLETAS_BASE[0]!.id);
     });

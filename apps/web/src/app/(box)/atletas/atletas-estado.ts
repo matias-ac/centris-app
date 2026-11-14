@@ -3,9 +3,7 @@ import {
   CrearAtletaSchema,
   ERROR_CODES,
   calcularSaldoMembresia,
-  type ActualizarAtleta,
   type Atleta,
-  type CrearAtleta,
   type ErrorCode,
   type MedioPago,
   type Membresia,
@@ -13,6 +11,12 @@ import {
   type PagoConRegistrador,
   type Plan
 } from "@centris/shared";
+import {
+  actualizarAtletaAction,
+  crearAtletaAction,
+  eliminarAtletaAction,
+  type ResultadoAccion
+} from "@/lib/actions";
 import { obtenerInicialesUsuario } from "@/lib/identidad-ui";
 
 export type FiltroDirectorioAtletas =
@@ -53,26 +57,6 @@ export interface FiltrosDirectorioAtletas {
   busqueda: string;
   filtro: FiltroDirectorioAtletas;
 }
-
-export type ResultadoAccionAtleta =
-  | { ok: true }
-  | { ok: false; errorCode?: string; message?: string };
-
-export type AccionCrearAtletaFn = (
-  boxId: string,
-  input: CrearAtleta
-) => Promise<ResultadoAccionAtleta>;
-
-export type AccionActualizarAtletaFn = (
-  boxId: string,
-  atletaId: string,
-  input: ActualizarAtleta
-) => Promise<ResultadoAccionAtleta>;
-
-export type AccionEliminarAtletaFn = (
-  boxId: string,
-  atletaId: string
-) => Promise<ResultadoAccionAtleta>;
 
 const ETIQUETAS_MEDIO_PAGO: Record<MedioPago, string> = {
   EFECTIVO: "Efectivo",
@@ -215,6 +199,14 @@ export function construirResumenesAtletas(params: {
   });
 }
 
+function esResumenAlDia(resumen: ResumenAtletaDirectorio): boolean {
+  return (
+    resumen.atleta.activo &&
+    !resumen.esMoroso &&
+    resumen.tienePlanVigenteOFuturo
+  );
+}
+
 /**
  * Calcula los KPIs y contadores de filtros del directorio de atletas.
  */
@@ -224,7 +216,7 @@ export function calcularKpisAtletas(
   const activos = resumenes.filter((r) => r.atleta.activo);
   const conPlanVigente = activos.filter((r) => r.tienePlanVigenteOFuturo);
   const morosos = activos.filter((r) => r.esMoroso);
-  const alDia = activos.filter((r) => !r.esMoroso);
+  const alDia = activos.filter(esResumenAlDia);
   const sinMembresia = activos.filter((r) => !r.tienePlanVigenteOFuturo);
 
   return {
@@ -252,7 +244,7 @@ export function filtrarAtletasDirectorio(
     if (filtros.filtro === "ACTIVOS" && !atleta.activo) {
       return false;
     }
-    if (filtros.filtro === "AL_DIA" && (!atleta.activo || esMoroso)) {
+    if (filtros.filtro === "AL_DIA" && !esResumenAlDia(resumen)) {
       return false;
     }
     if (filtros.filtro === "MOROSOS" && (!atleta.activo || !esMoroso)) {
@@ -337,35 +329,53 @@ export function traducirErrorAtleta(
   return contieneJergaTecnica ? MENSAJE_ERROR_RESPALDO : mensajeLimpio;
 }
 
+interface EsquemaParseable<T> {
+  safeParse(input: unknown):
+    | { success: true; data: T }
+    | { success: false; error: { issues: Array<{ message?: string }> } };
+}
+
+type RespuestaMutacionAtleta =
+  | { ok: true; mensajeExito: string }
+  | { ok: false; error: string };
+
+async function ejecutarMutacionValidada<T>(
+  esquema: EsquemaParseable<T>,
+  input: unknown,
+  mensajeValidacionDefecto: string,
+  invocar: (datos: T) => Promise<ResultadoAccion>,
+  construirExito: (datos: T) => string
+): Promise<RespuestaMutacionAtleta> {
+  const validacion = esquema.safeParse(input);
+  if (!validacion.success) {
+    return {
+      ok: false,
+      error: validacion.error.issues[0]?.message ?? mensajeValidacionDefecto
+    };
+  }
+
+  const res = await invocar(validacion.data);
+  if (!res.ok) {
+    return { ok: false, error: traducirErrorAtleta(res.errorCode, res.message) };
+  }
+
+  return { ok: true, mensajeExito: construirExito(validacion.data) };
+}
+
 /**
  * Valida y ejecuta el alta de un Atleta en mostrador.
  */
 export async function procesarAltaAtleta(
   boxId: string,
-  input: { nombre: string; email: string },
-  crearAtletaFn: AccionCrearAtletaFn
-): Promise<
-  { ok: true; mensajeExito: string } | { ok: false; error: string }
-> {
-  const validacion = CrearAtletaSchema.safeParse(input);
-  if (!validacion.success) {
-    return {
-      ok: false,
-      error:
-        validacion.error.issues[0]?.message ??
-        "Revisá el nombre y correo electrónico del atleta."
-    };
-  }
-
-  const res = await crearAtletaFn(boxId, validacion.data);
-  if (!res.ok) {
-    return { ok: false, error: traducirErrorAtleta(res.errorCode, res.message) };
-  }
-
-  return {
-    ok: true,
-    mensajeExito: `${validacion.data.nombre} quedó registrado como atleta del Box.`
-  };
+  input: { nombre: string; email: string }
+): Promise<RespuestaMutacionAtleta> {
+  return ejecutarMutacionValidada(
+    CrearAtletaSchema,
+    input,
+    "Revisá el nombre y correo electrónico del atleta.",
+    (datos) => crearAtletaAction(boxId, datos),
+    (datos) => `${datos.nombre} quedó registrado como atleta del Box.`
+  );
 }
 
 /**
@@ -374,30 +384,15 @@ export async function procesarAltaAtleta(
 export async function procesarEdicionAtleta(
   boxId: string,
   atletaId: string,
-  input: { nombre: string; activo: boolean },
-  actualizarAtletaFn: AccionActualizarAtletaFn
-): Promise<
-  { ok: true; mensajeExito: string } | { ok: false; error: string }
-> {
-  const validacion = ActualizarAtletaSchema.safeParse(input);
-  if (!validacion.success) {
-    return {
-      ok: false,
-      error:
-        validacion.error.issues[0]?.message ??
-        "Revisá los datos de edición del atleta."
-    };
-  }
-
-  const res = await actualizarAtletaFn(boxId, atletaId, validacion.data);
-  if (!res.ok) {
-    return { ok: false, error: traducirErrorAtleta(res.errorCode, res.message) };
-  }
-
-  return {
-    ok: true,
-    mensajeExito: `Los datos de ${validacion.data.nombre ?? "atleta"} fueron actualizados.`
-  };
+  input: { nombre: string; activo: boolean }
+): Promise<RespuestaMutacionAtleta> {
+  return ejecutarMutacionValidada(
+    ActualizarAtletaSchema,
+    input,
+    "Revisá los datos de edición del atleta.",
+    (datos) => actualizarAtletaAction(boxId, atletaId, datos),
+    (datos) => `Los datos de ${datos.nombre ?? "atleta"} fueron actualizados.`
+  );
 }
 
 /**
@@ -405,12 +400,9 @@ export async function procesarEdicionAtleta(
  */
 export async function procesarBajaAtleta(
   boxId: string,
-  atleta: Pick<Atleta, "id" | "nombre">,
-  eliminarAtletaFn: AccionEliminarAtletaFn
-): Promise<
-  { ok: true; mensajeExito: string } | { ok: false; error: string }
-> {
-  const res = await eliminarAtletaFn(boxId, atleta.id);
+  atleta: Pick<Atleta, "id" | "nombre">
+): Promise<RespuestaMutacionAtleta> {
+  const res = await eliminarAtletaAction(boxId, atleta.id);
   if (!res.ok) {
     return { ok: false, error: traducirErrorAtleta(res.errorCode, res.message) };
   }

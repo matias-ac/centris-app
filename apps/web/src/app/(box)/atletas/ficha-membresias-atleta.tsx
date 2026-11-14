@@ -1,11 +1,19 @@
 "use client";
 
-import { AlertCircle, CheckCircle2, CreditCard, Plus, X } from "lucide-react";
+import {
+  AlertCircle,
+  CheckCircle2,
+  ChevronDown,
+  CreditCard,
+  Plus,
+  X
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import {
   MEDIOS_PAGO,
   calcularSaldoMembresia,
+  obtenerFechaLocal,
   type MedioPago,
   type Membresia,
   type PagoConRegistrador,
@@ -45,13 +53,43 @@ interface FichaMembresiasAtletaProps {
   fechaHoyBox?: string;
 }
 
+export function AlertaOperacionAtletas({
+  tipo,
+  mensaje,
+  testId
+}: {
+  tipo: "error" | "exito";
+  mensaje: string;
+  testId?: string;
+}) {
+  const esError = tipo === "error";
+  return (
+    <div
+      data-testid={testId}
+      role={esError ? "alert" : "status"}
+      className={
+        esError
+          ? "flex items-start gap-2.5 rounded-2xl border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-4 py-3 text-sm text-[#FF6D6D]"
+          : "flex items-center gap-2.5 rounded-2xl border border-[#18FFC8]/28 bg-[#18FFC8]/14 px-4 py-3 text-sm text-[#18FFC8]"
+      }
+    >
+      {esError ? (
+        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+      ) : (
+        <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+      )}
+      <span>{mensaje}</span>
+    </div>
+  );
+}
+
 const BADGE_ESTADO_MEMBRESIA: Record<
   Exclude<EstadoMembresiaPrincipal, "SIN_MEMBRESIA">,
   { label: string; variant: "mint" | "amber" | "coral" | "zinc" }
 > = {
   VIGENTE: { label: "Vigente", variant: "mint" },
   FUTURA: { label: "Futura", variant: "amber" },
-  BAJA_ANTICIPADA: { label: "Baja anticipada", variant: "coral" },
+  BAJA_ANTICIPADA: { label: "Baja anticipada", variant: "zinc" },
   VENCIDA: { label: "Vencida", variant: "zinc" }
 };
 
@@ -63,7 +101,7 @@ export function FichaMembresiasAtleta({
   membresias,
   pagosPorMembresia = {},
   esAdministrador,
-  fechaHoyBox = new Date().toISOString().slice(0, 10)
+  fechaHoyBox = obtenerFechaLocal(new Date(), "America/Argentina/Buenos_Aires")
 }: FichaMembresiasAtletaProps) {
   const router = useRouter();
   const planesActivos = planes.filter((plan) => plan.activo);
@@ -136,24 +174,15 @@ export function FichaMembresiasAtleta({
       </div>
 
       {errorMsg ? (
-        <div
-          data-testid="alerta-error-membresias"
-          role="alert"
-          className="flex items-start gap-2.5 rounded-2xl border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-4 py-3 text-sm text-[#FF6D6D]"
-        >
-          <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>{errorMsg}</span>
-        </div>
+        <AlertaOperacionAtletas
+          tipo="error"
+          mensaje={errorMsg}
+          testId="alerta-error-membresias"
+        />
       ) : null}
 
       {exitoMsg ? (
-        <div
-          role="status"
-          className="flex items-center gap-2.5 rounded-2xl border border-[#18FFC8]/28 bg-[#18FFC8]/14 px-4 py-3 text-sm text-[#18FFC8]"
-        >
-          <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>{exitoMsg}</span>
-        </div>
+        <AlertaOperacionAtletas tipo="exito" mensaje={exitoMsg} />
       ) : null}
 
       <form
@@ -577,10 +606,18 @@ function FilaMembresia({
       </div>
 
       {/* Ajustes operativos y administrativos */}
-      <div className="space-y-3 rounded-2xl border border-border bg-card p-3.5">
-        <div className="text-xs font-medium text-muted-foreground">
-          Ajustes de membresía
-        </div>
+      <details
+        open
+        className="group rounded-2xl border border-border bg-card"
+      >
+        <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between px-3.5 py-2.5 text-xs font-medium text-muted-foreground select-none hover:text-foreground">
+          <span>Ajustes de créditos, precio y baja anticipada</span>
+          <ChevronDown
+            className="h-4 w-4 shrink-0 transition-transform group-open:rotate-180"
+            aria-hidden="true"
+          />
+        </summary>
+        <div className="space-y-3 border-t border-border p-3.5">
 
         <div className="flex flex-wrap items-end gap-2.5">
           <div className="min-w-[120px] flex-1 space-y-1.5">
@@ -692,7 +729,8 @@ function FilaMembresia({
             Ajustar precios, anular pagos o ejecutar bajas anticipadas está reservado a Administración.
           </p>
         )}
-      </div>
+        </div>
+      </details>
     </li>
   );
 }

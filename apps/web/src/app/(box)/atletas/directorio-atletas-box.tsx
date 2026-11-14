@@ -1,8 +1,6 @@
 "use client";
 
 import {
-  AlertCircle,
-  CheckCircle2,
   Edit3,
   Eye,
   Search,
@@ -12,12 +10,13 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import type {
-  Atleta,
-  Membresia,
-  Moroso,
-  PagoConRegistrador,
-  Plan
+import {
+  obtenerFechaLocal,
+  type Atleta,
+  type Membresia,
+  type Moroso,
+  type PagoConRegistrador,
+  type Plan
 } from "@centris/shared";
 import { AccesoRestringidoCard } from "@/components/ui/acceso-restringido-card";
 import { Badge } from "@/components/ui/badge";
@@ -34,11 +33,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SideDrawer } from "@/components/ui/side-drawer";
-import {
-  actualizarAtletaAction,
-  crearAtletaAction,
-  eliminarAtletaAction
-} from "@/lib/actions";
 import { obtenerEtiquetaRol } from "@/lib/identidad-ui";
 import { cn, formatearMoneda } from "@/lib/utils";
 import {
@@ -52,7 +46,10 @@ import {
   type FiltroDirectorioAtletas,
   type ResumenAtletaDirectorio
 } from "./atletas-estado";
-import { FichaMembresiasAtleta } from "./ficha-membresias-atleta";
+import {
+  AlertaOperacionAtletas,
+  FichaMembresiasAtleta
+} from "./ficha-membresias-atleta";
 
 export interface DirectorioAtletasBoxProps {
   boxId: string;
@@ -113,7 +110,7 @@ function TarjetaKpiAtletas({
       <div className="flex flex-col gap-2">
         <span className="text-sm text-muted-foreground">{etiqueta}</span>
         <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
-          <strong className="text-[clamp(1.375rem,1.2rem+0.8vw,1.75rem)] font-medium leading-[1.2] tracking-[-0.02em] text-foreground tabular-nums">
+          <strong className="text-[clamp(1.75rem,1.45rem+1.4vw,2.375rem)] font-bold leading-[1.1] tracking-[-0.025em] text-foreground tabular-nums">
             {valor}
           </strong>
           <Badge variant={badgeVariant}>{badgeLabel}</Badge>
@@ -121,6 +118,42 @@ function TarjetaKpiAtletas({
         <span className="text-xs text-muted-foreground">{pie}</span>
       </div>
     </Card>
+  );
+}
+
+function InsigniasAfiliacion({
+  atleta,
+  conTestIds = false
+}: {
+  atleta: Pick<Atleta, "id" | "activo" | "roles">;
+  conTestIds?: boolean;
+}) {
+  return (
+    <>
+      {atleta.activo ? (
+        <Badge
+          variant="mint"
+          data-testid={conTestIds ? `badge-estado-activo-${atleta.id}` : undefined}
+        >
+          Activo
+        </Badge>
+      ) : (
+        <Badge
+          variant="zinc"
+          data-testid={conTestIds ? `badge-estado-inactivo-${atleta.id}` : undefined}
+        >
+          Inactivo
+        </Badge>
+      )}
+      {atleta.roles.map((rol) => {
+        const meta = obtenerEtiquetaRol(rol);
+        return (
+          <Badge key={rol} variant={meta.variant}>
+            {meta.label}
+          </Badge>
+        );
+      })}
+    </>
   );
 }
 
@@ -183,29 +216,7 @@ function FilaAtleta({
             >
               {atleta.nombre}
             </span>
-            {atleta.activo ? (
-              <Badge
-                variant="mint"
-                data-testid={`badge-estado-activo-${atleta.id}`}
-              >
-                Activo
-              </Badge>
-            ) : (
-              <Badge
-                variant="zinc"
-                data-testid={`badge-estado-inactivo-${atleta.id}`}
-              >
-                Inactivo
-              </Badge>
-            )}
-            {atleta.roles.map((rol) => {
-              const meta = obtenerEtiquetaRol(rol);
-              return (
-                <Badge key={rol} variant={meta.variant}>
-                  {meta.label}
-                </Badge>
-              );
-            })}
+            <InsigniasAfiliacion atleta={atleta} conTestIds />
           </div>
           <p
             data-testid={`atleta-email-${atleta.id}`}
@@ -252,6 +263,10 @@ function FilaAtleta({
         ) : estadoMembresiaPrincipal === "VIGENTE" ||
           estadoMembresiaPrincipal === "FUTURA" ? (
           <Badge variant="mint">Al día</Badge>
+        ) : estadoMembresiaPrincipal === "VENCIDA" ? (
+          <Badge variant="zinc">Vencida</Badge>
+        ) : estadoMembresiaPrincipal === "BAJA_ANTICIPADA" ? (
+          <Badge variant="zinc">Baja anticipada</Badge>
         ) : (
           <Badge variant="amber">Pendiente de alta</Badge>
         )}
@@ -317,7 +332,7 @@ function FilaAtleta({
           onCancel={confirmBaja.cancelar}
           testIdPrefix={`baja-atleta-${atleta.id}`}
           className="col-span-full border-[#FF6D6D]/28 bg-[#FF6D6D]/14"
-          messageClassName="text-[#FECACA]"
+          messageClassName="text-foreground"
         />
       ) : null}
     </article>
@@ -331,7 +346,7 @@ export function DirectorioAtletasBox({
   boxId,
   moneda,
   esAdministrador,
-  fechaHoyBox = new Date().toISOString().slice(0, 10),
+  fechaHoyBox = obtenerFechaLocal(new Date(), "America/Argentina/Buenos_Aires"),
   afiliacionIdInicial = null,
   atletasIniciales,
   planes,
@@ -483,11 +498,10 @@ export function DirectorioAtletasBox({
     setExitoMsg(null);
 
     startTransition(async () => {
-      const resultado = await procesarAltaAtleta(
-        boxId,
-        { nombre: nombreAlta, email: emailAlta },
-        crearAtletaAction
-      );
+      const resultado = await procesarAltaAtleta(boxId, {
+        nombre: nombreAlta,
+        email: emailAlta
+      });
       if (!resultado.ok) {
         setErrorMsg(resultado.error);
         return;
@@ -508,12 +522,10 @@ export function DirectorioAtletasBox({
     setExitoMsg(null);
 
     startTransition(async () => {
-      const resultado = await procesarEdicionAtleta(
-        boxId,
-        atletaEnEdicion.id,
-        { nombre: editNombre, activo: editActivo },
-        actualizarAtletaAction
-      );
+      const resultado = await procesarEdicionAtleta(boxId, atletaEnEdicion.id, {
+        nombre: editNombre,
+        activo: editActivo
+      });
       if (!resultado.ok) {
         setErrorMsg(resultado.error);
         return;
@@ -529,11 +541,7 @@ export function DirectorioAtletasBox({
     setErrorMsg(null);
     setExitoMsg(null);
 
-    const resultado = await procesarBajaAtleta(
-      boxId,
-      atleta,
-      eliminarAtletaAction
-    );
+    const resultado = await procesarBajaAtleta(boxId, atleta);
     if (!resultado.ok) {
       setErrorMsg(resultado.error);
       return;
@@ -553,7 +561,7 @@ export function DirectorioAtletasBox({
             Directorio de atletas
           </h1>
           <p className="max-w-[65ch] text-sm text-muted-foreground">
-            Buscá socios del Box, consultá su membresía vigente o abrí su ficha para cobrar y asignar planes.
+            Buscá atletas del Box, consultá su membresía vigente o abrí su ficha para cobrar y asignar planes.
           </p>
         </div>
 
@@ -569,25 +577,19 @@ export function DirectorioAtletasBox({
       </header>
 
       {errorMsg && drawer?.tipo !== "alta" && drawer?.tipo !== "editar" ? (
-        <div
-          data-testid="alerta-error"
-          role="alert"
-          className="flex items-center gap-2.5 rounded-2xl border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-4 py-3 text-sm text-[#FF6D6D]"
-        >
-          <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>{errorMsg}</span>
-        </div>
+        <AlertaOperacionAtletas
+          tipo="error"
+          mensaje={errorMsg}
+          testId="alerta-error"
+        />
       ) : null}
 
       {exitoMsg ? (
-        <div
-          data-testid="alerta-exito"
-          role="status"
-          className="flex items-center gap-2.5 rounded-2xl border border-[#18FFC8]/28 bg-[#18FFC8]/14 px-4 py-3 text-sm text-[#18FFC8]"
-        >
-          <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>{exitoMsg}</span>
-        </div>
+        <AlertaOperacionAtletas
+          tipo="exito"
+          mensaje={exitoMsg}
+          testId="alerta-exito"
+        />
       ) : null}
 
       {/* KPIs Resumen */}
@@ -729,14 +731,11 @@ export function DirectorioAtletasBox({
           className="space-y-4"
         >
           {errorMsg ? (
-            <div
-              data-testid="alerta-error"
-              role="alert"
-              className="flex items-center gap-2.5 rounded-2xl border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-4 py-3 text-sm text-[#FF6D6D]"
-            >
-              <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-              <span>{errorMsg}</span>
-            </div>
+            <AlertaOperacionAtletas
+              tipo="error"
+              mensaje={errorMsg}
+              testId="alerta-error"
+            />
           ) : null}
 
           <div className="space-y-1.5">
@@ -809,14 +808,11 @@ export function DirectorioAtletasBox({
             className="space-y-4"
           >
             {errorMsg ? (
-              <div
-                data-testid="alerta-error"
-                role="alert"
-                className="flex items-center gap-2.5 rounded-2xl border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-4 py-3 text-sm text-[#FF6D6D]"
-              >
-                <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>{errorMsg}</span>
-              </div>
+              <AlertaOperacionAtletas
+                tipo="error"
+                mensaje={errorMsg}
+                testId="alerta-error"
+              />
             ) : null}
 
             <div className="space-y-1.5">
@@ -901,19 +897,7 @@ export function DirectorioAtletasBox({
                   Roles y estado en el Box
                 </span>
                 <div className="mt-1 flex flex-wrap gap-1.5">
-                  {atletaEnFicha.activo ? (
-                    <Badge variant="mint">Activo</Badge>
-                  ) : (
-                    <Badge variant="zinc">Inactivo</Badge>
-                  )}
-                  {atletaEnFicha.roles.map((rol) => {
-                    const meta = obtenerEtiquetaRol(rol);
-                    return (
-                      <Badge key={rol} variant={meta.variant}>
-                        {meta.label}
-                      </Badge>
-                    );
-                  })}
+                  <InsigniasAfiliacion atleta={atletaEnFicha} />
                 </div>
               </div>
               <div>
