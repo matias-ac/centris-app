@@ -29,7 +29,13 @@ Característica: Directorio y Alta de Atletas por Recepción y Administración E
     Cuando desactiva la afiliación del Atleta
     Entonces el Atleta figura como inactivo con fecha de baja lógica
 
+  Escenario: Apertura directa de ficha de Atleta mediante parámetro en URL y verificación responsive
+    Dado un Administrador autenticado operando en "Box Centris Norte" en el Directorio de Atletas
+    Cuando navega directamente a la ficha de "atleta.moroso@centris.dev" mediante parámetro afiliacionId
+    Entonces el panel lateral de la ficha se abre automáticamente mostrando sus datos y saldo pendiente
+    Y la pantalla de Atletas no presenta desborde horizontal en desktop ni móvil
+
   Escenario: Restricción de acceso a Directorio para Coach y Atleta
     Dado un Atleta autenticado operando en "Box Centris Norte"
     Cuando intenta acceder a la ruta "/atletas"
-    Entonces visualiza el mensaje de 403 Forbidden y acceso restringido
+    Entonces visualiza la restricción de acceso sin código 403 Forbidden y puede volver al panel

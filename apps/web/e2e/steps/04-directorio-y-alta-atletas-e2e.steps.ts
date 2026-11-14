@@ -42,6 +42,15 @@ async function ejecutarSqlOwner(
   }
 }
 
+function filaAtletaEnDirectorio(
+  page: import("@playwright/test").Page,
+  texto: string
+) {
+  return page
+    .getByTestId("tabla-atletas")
+    .locator('[data-testid^="fila-atleta-"]', { hasText: texto });
+}
+
 After(async () => {
   // Limpiar usuarios y afiliaciones creados en tests E2E
   await ejecutarSqlOwner(
@@ -94,11 +103,9 @@ Then(
   'el Atleta figura en el directorio con rol {string} y estado activo',
   async ({ page }, rol: string) => {
     await expect(page.getByTestId("alerta-exito")).toBeVisible();
-    const fila = page
-      .getByTestId("tabla-atletas")
-      .locator("tr", { hasText: E2E_ATLETA_BDD.email });
+    const fila = filaAtletaEnDirectorio(page, E2E_ATLETA_BDD.email);
     await expect(fila).toBeVisible();
-    await expect(fila).toContainText(rol);
+    await expect(fila).toContainText(new RegExp(rol, "i"));
     await expect(fila).toContainText("Activo");
   }
 );
@@ -158,11 +165,9 @@ Then(
   'el Atleta figura en {string} con rol {string} y estado activo',
   async ({ page }, _nombreBox: string, rol: string) => {
     await expect(page.getByTestId("alerta-exito")).toBeVisible();
-    const fila = page
-      .getByTestId("tabla-atletas")
-      .locator("tr", { hasText: E2E_ATLETA_SUR.email });
+    const fila = filaAtletaEnDirectorio(page, E2E_ATLETA_SUR.email);
     await expect(fila).toBeVisible();
-    await expect(fila).toContainText(rol);
+    await expect(fila).toContainText(new RegExp(rol, "i"));
     await expect(fila).toContainText("Activo");
   }
 );
@@ -200,12 +205,10 @@ Then(
   'la afiliación combina los roles coach y atleta sin duplicar el registro',
   async ({ page }) => {
     await expect(page.getByTestId("alerta-exito")).toBeVisible();
-    const fila = page
-      .getByTestId("tabla-atletas")
-      .locator("tr", { hasText: "coach@centris.dev" });
+    const fila = filaAtletaEnDirectorio(page, "coach@centris.dev");
     await expect(fila).toBeVisible();
-    await expect(fila).toContainText("coach");
-    await expect(fila).toContainText("atleta");
+    await expect(fila).toContainText(/Coach/i);
+    await expect(fila).toContainText(/Atleta/i);
 
     const res = await ejecutarSqlOwner(
       `SELECT count(*) as total, roles FROM afiliaciones
@@ -235,10 +238,7 @@ Given(
     await expect(page).toHaveURL(/\/atletas/);
 
     // Si no está creado todavía, darlo de alta
-    const existe = await page
-      .getByTestId("tabla-atletas")
-      .locator("tr", { hasText: E2E_ATLETA_BDD.email })
-      .count();
+    const existe = await filaAtletaEnDirectorio(page, E2E_ATLETA_BDD.email).count();
     if (existe === 0) {
       await page.getByTestId("btn-nuevo-atleta").click();
       await page.getByTestId("input-atleta-nombre").fill(E2E_ATLETA_BDD.nombre);
@@ -256,22 +256,16 @@ When('busca atletas por término {string}', async ({ page }, termino: string) =>
 Then(
   'el listado muestra exclusivamente los atletas que coinciden con la búsqueda',
   async ({ page }) => {
-    const fila = page
-      .getByTestId("tabla-atletas")
-      .locator("tr", { hasText: E2E_ATLETA_BDD.email });
+    const fila = filaAtletaEnDirectorio(page, E2E_ATLETA_BDD.email);
     await expect(fila).toBeVisible();
 
-    const otraFila = page
-      .getByTestId("tabla-atletas")
-      .locator("tr", { hasText: "atleta.aldia@centris.dev" });
+    const otraFila = filaAtletaEnDirectorio(page, "atleta.aldia@centris.dev");
     await expect(otraFila).not.toBeVisible();
   }
 );
 
 When('consulta la ficha individual del Atleta', async ({ page }) => {
-  const fila = page
-    .getByTestId("tabla-atletas")
-    .locator("tr", { hasText: E2E_ATLETA_BDD.email });
+  const fila = filaAtletaEnDirectorio(page, E2E_ATLETA_BDD.email);
   await fila.getByRole("button", { name: /Ficha/i }).click();
 });
 
@@ -291,9 +285,7 @@ Then('visualiza los datos completos de su afiliación', async ({ page }) => {
 When(
   'edita el nombre del Atleta a {string}',
   async ({ page }, nuevoNombre: string) => {
-    const fila = page
-      .getByTestId("tabla-atletas")
-      .locator("tr", { hasText: E2E_ATLETA_BDD.email });
+    const fila = filaAtletaEnDirectorio(page, E2E_ATLETA_BDD.email);
     await fila.getByRole("button", { name: /Editar/i }).click();
 
     await expect(page.getByTestId("form-editar-atleta")).toBeVisible();
@@ -304,35 +296,31 @@ When(
 
 Then('el cambio se refleja en el directorio', async ({ page }) => {
   await expect(page.getByTestId("alerta-exito")).toBeVisible();
-  const fila = page
-    .getByTestId("tabla-atletas")
-    .locator("tr", { hasText: E2E_ATLETA_BDD.nombreModificado });
+  const fila = filaAtletaEnDirectorio(page, E2E_ATLETA_BDD.nombreModificado);
   await expect(fila).toBeVisible();
 });
 
 When('desactiva la afiliación del Atleta', async ({ page }) => {
-  page.on("dialog", (dialog) => dialog.accept());
-  const fila = page
-    .getByTestId("tabla-atletas")
-    .locator("tr", { hasText: E2E_ATLETA_BDD.email });
+  const fila = filaAtletaEnDirectorio(page, E2E_ATLETA_BDD.email);
   await fila.getByRole("button", { name: /Desactivar/i }).click();
+  const panelConfirmacion = fila.locator('[data-testid^="baja-atleta-"][data-testid$="-panel"]');
+  await expect(panelConfirmacion).toBeVisible();
+  await panelConfirmacion
+    .locator('[data-testid^="baja-atleta-"][data-testid$="-confirm"]')
+    .click();
 });
 
 Then(
   'el Atleta figura como inactivo con fecha de baja lógica',
   async ({ page }) => {
     await expect(page.getByTestId("alerta-exito")).toBeVisible();
-    // Por defecto el filtro soloActivos oculta inactivos
-    const filaOculta = page
-      .getByTestId("tabla-atletas")
-      .locator("tr", { hasText: E2E_ATLETA_BDD.email });
+    // Por defecto el filtro Activos oculta inactivos
+    const filaOculta = filaAtletaEnDirectorio(page, E2E_ATLETA_BDD.email);
     await expect(filaOculta).not.toBeVisible();
 
-    // Desmarcar "Solo activos" para ver inactivos
-    await page.getByTestId("checkbox-solo-activos").click();
-    const filaVisible = page
-      .getByTestId("tabla-atletas")
-      .locator("tr", { hasText: E2E_ATLETA_BDD.email });
+    // Seleccionar filtro "Todos" para ver inactivos
+    await page.getByTestId("filtro-atletas-todos").click();
+    const filaVisible = filaAtletaEnDirectorio(page, E2E_ATLETA_BDD.email);
     await expect(filaVisible).toBeVisible();
     await expect(filaVisible).toContainText("Inactivo");
 
@@ -343,6 +331,51 @@ Then(
     );
     expect(res.rows[0]!.activo).toBe(false);
     expect(res.rows[0]!.deleted_at).not.toBeNull();
+  }
+);
+
+When(
+  'navega directamente a la ficha de {string} mediante parámetro afiliacionId',
+  async ({ page }, emailAtleta: string) => {
+    const res = await ejecutarSqlOwner(
+      `SELECT a.id FROM afiliaciones a
+       INNER JOIN usuarios u ON u.id = a.usuario_id
+       WHERE a.box_id = $1 AND u.email = $2`,
+      [SEED_BOX_IDS.boxCentrisNorte, emailAtleta]
+    );
+    expect(res.rows.length).toBe(1);
+    const afiliacionId = String(res.rows[0]!.id);
+    await page.goto(`/atletas?afiliacionId=${afiliacionId}`);
+  }
+);
+
+Then(
+  'el panel lateral de la ficha se abre automáticamente mostrando sus datos y saldo pendiente',
+  async ({ page }) => {
+    const modalFicha = page.getByTestId("modal-ficha-atleta");
+    await expect(modalFicha).toBeVisible();
+    await expect(modalFicha.getByTestId("ficha-atleta-email")).toContainText(
+      "atleta.moroso@centris.dev"
+    );
+    await expect(modalFicha.getByTestId("badge-moroso")).toBeVisible();
+    await page.getByTestId("btn-cerrar-ficha-atleta").click();
+    await expect(modalFicha).not.toBeVisible();
+  }
+);
+
+Then(
+  'la pantalla de Atletas no presenta desborde horizontal en desktop ni móvil',
+  async ({ page }) => {
+    for (const width of [1280, 375]) {
+      await page.setViewportSize({ width, height: 800 });
+      const overflow = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth
+      );
+      expect(overflow).toBe(false);
+    }
+    await page.setViewportSize({ width: 1280, height: 800 });
   }
 );
 
@@ -365,11 +398,14 @@ When('intenta acceder a la ruta {string}', async ({ page }, ruta: string) => {
 });
 
 Then(
-  'visualiza el mensaje de 403 Forbidden y acceso restringido',
+  'visualiza la restricción de acceso sin código 403 Forbidden y puede volver al panel',
   async ({ page }) => {
     const bannerDenegado = page.getByTestId("acceso-denegado-rol");
     await expect(bannerDenegado).toBeVisible();
-    await expect(bannerDenegado).toContainText("403 Forbidden");
+    const texto = (await bannerDenegado.textContent()) ?? "";
+    expect(texto).not.toMatch(/403|Forbidden/i);
     await expect(page.getByTestId("nav-link-atletas")).not.toBeVisible();
+    await bannerDenegado.getByRole("link", { name: /Volver al panel/i }).click();
+    await expect(page).toHaveURL(/\/inicio/);
   }
 );
