@@ -123,14 +123,11 @@ const COACHES_BASE: AfiliacionConUsuario[] = [
     usuarioId: "d1000000-0000-4000-8000-000000000001",
     roles: ["coach"],
     activo: true,
-    createdAt: "2026-11-01T12:00:00.000Z",
-    updatedAt: "2026-11-01T12:00:00.000Z",
-    deletedAt: null,
     usuario: {
       id: "d1000000-0000-4000-8000-000000000001",
       email: "coach@centris.dev",
       nombre: "Valentina Ruiz",
-      activo: true
+      passwordActivada: true
     }
   }
 ];
