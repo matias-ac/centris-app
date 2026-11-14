@@ -1,6 +1,6 @@
 # 06 — Rediseño UX/UI de `/afiliaciones`
 
-**Status:** ready-for-agent
+**Status:** in-progress
 **Branch:** `feat/ui-06-afiliaciones`
 **Blocked by:** `01`
 
