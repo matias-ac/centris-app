@@ -436,7 +436,7 @@ export function PanelCajaMorosos({
         <div
           role="tablist"
           aria-label="Vistas de caja"
-          className="flex flex-wrap gap-2"
+          className="flex flex-wrap gap-2 lg:shrink-0 lg:flex-nowrap"
         >
           <button
             type="button"
