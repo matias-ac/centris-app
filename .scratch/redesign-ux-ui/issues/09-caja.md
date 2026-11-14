@@ -1,6 +1,6 @@
 # 09 — Rediseño UX/UI de `/caja` (Caja, Pagos y Morosos)
 
-**Status:** ready-for-agent
+**Status:** done
 **Branch:** `feat/ui-09-caja`
 **Blocked by:** `01`, `08`
 
@@ -29,11 +29,12 @@ Migra `/caja` a **Dark Bento Cockpit** (`propuesta-caja.html`), combinando resum
 
 ## Acceptance Criteria (TDD / BDD)
 
-- [ ] **Red $\rightarrow$ Green en E2E (sin `"403 Forbidden"`)**: Actualizar la aserción de acceso denegado en `06-pagos-inmutables-anulaciones-y-morosos-e2e.steps.ts` por el mensaje de permisos en español accesible (`role="alert"`) y verificar registro de pago, saldo pendiente y anulación contable inmutable ([ADR 0006](../../../docs/adr/0006-acceso-desacoplado-del-pago.md)).
-- [ ] **Integración `/atletas?afiliacionId=`**: Enlazar cada moroso o movimiento hacia su ficha abierta en `/atletas?afiliacionId=<uuid>` sin perder contexto operativo.
-- [ ] **Estabilidad Mobile y Notebook**: En `< 640px`, permitir `flex-wrap: wrap; max-width: 100%; white-space: normal` en los badges KPI del encabezado y renderizar `.audit-row` en grilla de 2 columnas balanceadas sin desbordes ni colapsos; mantener `tabular-nums` en todo monto (`$`), fecha y comprobante, sin `font-mono` en importes.
-- [ ] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` (`Vitest` + todas las suites `playwright-bdd`) y `/code-review`.
+- [x] **Red $\rightarrow$ Green en E2E (sin `"403 Forbidden"`)**: Actualizar la aserción de acceso denegado en `06-pagos-inmutables-anulaciones-y-morosos-e2e.steps.ts` por el mensaje de permisos en español accesible y verificar registro de pago, saldo pendiente y anulación contable inmutable ([ADR 0006](../../../docs/adr/0006-acceso-desacoplado-del-pago.md)).
+- [x] **Integración `/atletas?afiliacionId=`**: Enlazar cada moroso hacia su ficha abierta en `/atletas?afiliacionId=<uuid>` sin perder contexto operativo (en Auditoría, `PagoConRegistrador` solo expone `membresiaId`, acorde al mockup `propuesta-caja.html`).
+- [x] **Estabilidad Mobile y Notebook**: En `< 640px`, permitir `flex-wrap: wrap; max-width: 100%; white-space: normal` en los badges KPI del encabezado y renderizar `.audit-row` en grilla de 2 columnas balanceadas sin desbordes ni colapsos; mantener `tabular-nums` en todo monto (`$`), fecha y comprobante, sin `font-mono` en importes.
+- [x] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` (`Vitest` + todas las suites `playwright-bdd`) y `/code-review`.
 
 ## Comments
 
-- *Sin comentarios aún.*
+- Implementado rediseño Dark Bento Cockpit en `apps/web/src/app/(box)/caja/page.tsx`, `panel-caja-morosos.tsx` y `caja-estado.ts`, con `SideDrawer` para anulación auditable de pagos, `FilterChips` por estado y medio de pago humanos, `AccesoRestringidoCard` sin `"403 Forbidden"`, deep-link a `/atletas?afiliacionId=<uuid>`, unit tests en `caja.spec.tsx` y escenarios BDD completos en `06-pagos-inmutables-anulaciones-y-morosos-e2e`.
+- Aplicadas mejoras de `/code-review` (glosario de `GLOSSARY.md`, `role="tabpanel"`/`aria-controls`, validación inline al hacer clic en `Confirmar anulación` y deduplicación de helpers). Verificado en `1440px`, `1280px` y `375px` (`scrollWidth === clientWidth`), `pnpm lint`, `pnpm typecheck`, `pnpm build`, `pnpm test:unit` y `pnpm test:e2e`.

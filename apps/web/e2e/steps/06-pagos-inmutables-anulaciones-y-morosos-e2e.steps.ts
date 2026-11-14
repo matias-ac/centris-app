@@ -181,7 +181,7 @@ Then(
 );
 
 Then(
-  "en el reporte de Morosos el Atleta figura con una deuda de {int}",
+  "en el reporte de Morosos el Atleta figura con una deuda de {int} y puede abrir su ficha desde Caja",
   async ({ page }, _deuda: number) => {
     await page.goto("/caja");
     await expect(page).toHaveURL(/\/caja/);
@@ -191,11 +191,11 @@ Then(
     await expect(filaMoroso).toBeVisible();
     await expect(filaMoroso.getByTestId("moroso-total-deuda")).toContainText("5.000");
 
-    // Regresar a la ficha del Atleta
-    await page.goto("/atletas");
-    await page
-      .getByTestId(`btn-ficha-atleta-${E2E_PAGOS.afiliacionId}`)
-      .click();
+    // Deep-link desde /caja hacia /atletas?afiliacionId=<uuid>
+    await filaMoroso.getByTestId("btn-ver-atleta").click();
+    await expect(page).toHaveURL(
+      new RegExp(`/atletas\\?afiliacionId=${E2E_PAGOS.afiliacionId}`)
+    );
     await expect(page.getByTestId("modal-ficha-atleta")).toBeVisible();
   }
 );
@@ -272,17 +272,80 @@ Then(
   }
 );
 
+async function verificarSinDesbordeHorizontal(page: Page) {
+  for (const width of [1280, 1440, 375]) {
+    await page.setViewportSize({ width, height: 850 });
+    const overflow = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth
+    );
+    expect(overflow).toBe(false);
+  }
+  await page.setViewportSize({ width: 1280, height: 850 });
+}
+
 Then(
-  "en la Auditoría de Caja el Pago permanece visible con su motivo de anulación",
+  "en la Auditoría de Caja el Pago permanece visible con su motivo de anulación y sin desborde horizontal",
   async ({ page }) => {
     await page.goto("/caja");
     await expect(page).toHaveURL(/\/caja/);
     await page.getByTestId("tab-auditoria").click();
     await expect(page.getByTestId("tabla-auditoria-caja")).toBeVisible();
+
+    await page.getByTestId("filtro-auditoria-estado-anulados").click();
     const filaAuditoria = page.getByTestId("fila-auditoria-pago").first();
     await expect(filaAuditoria.getByTestId("badge-pago-anulado")).toBeVisible();
     await expect(filaAuditoria.getByTestId("pago-motivo-anulacion")).toBeVisible();
     await expect(filaAuditoria.getByTestId("pago-motivo-anulacion")).not.toBeEmpty();
+
+    await verificarSinDesbordeHorizontal(page);
+  }
+);
+
+Given(
+  "un Administrador autenticado en la Auditoría de Caja con un Pago de {int} en {string} sobre una Membresía de {int}",
+  async ({ page }, pagoInicial: number, _medio: string, precio: number) => {
+    await prepararAtletaConMembresia(precio, "2026-11-01", pagoInicial);
+    await page.context().clearCookies();
+    await page.goto("/login");
+    await page.getByLabel(/Correo electrónico/i).fill("admin@centris.dev");
+    await page.getByLabel(/Contraseña/i).fill("Centris123!");
+    await page.getByRole("button", { name: /Iniciar sesión/i }).click();
+    await page.waitForURL(/\/(inicio|atletas|caja|seleccionar-box)/);
+    await page.goto("/caja");
+    await expect(page).toHaveURL(/\/caja/);
+    await page.getByTestId("tab-auditoria").click();
+    await expect(page.getByTestId("tabla-auditoria-caja")).toBeVisible();
+  }
+);
+
+When(
+  "abre el panel de anulación en Caja e ingresa el motivo {string}",
+  async ({ page }, motivo: string) => {
+    await page.getByTestId("filtro-auditoria-estado-validos").click();
+    await page.getByTestId(`btn-anular-pago-${E2E_PAGOS.pagoId}`).click();
+    const drawer = page.getByTestId("modal-anular-pago");
+    await expect(drawer).toBeVisible();
+    await drawer.getByTestId("input-motivo-anulacion").fill(motivo);
+    await drawer.getByTestId("btn-confirmar-anulacion").click();
+    await expect(drawer).not.toBeVisible();
+  }
+);
+
+Then(
+  "la Auditoría de Caja actualiza los ingresos válidos y muestra el Pago Anulado con su motivo sin desborde horizontal",
+  async ({ page }) => {
+    await expect(page.getByTestId("alerta-exito-caja")).toBeVisible();
+    await page.getByTestId("filtro-auditoria-estado-anulados").click();
+    const filaAuditoria = page.getByTestId("fila-auditoria-pago").first();
+    await expect(filaAuditoria.getByTestId("badge-pago-anulado")).toBeVisible();
+    await expect(filaAuditoria.getByTestId("pago-motivo-anulacion")).toContainText(
+      "Comprobante repetido en mostrador"
+    );
+    await expect(page.getByTestId("total-ingresos-validos")).toContainText("$ 0");
+
+    await verificarSinDesbordeHorizontal(page);
   }
 );
 
@@ -306,9 +369,18 @@ When(
 );
 
 Then(
-  "el sistema le deniega el acceso con 403 Forbidden",
+  "el sistema le deniega el acceso sin código 403 Forbidden y puede volver al panel",
   async ({ page }) => {
-    await expect(page.getByTestId("acceso-denegado-rol")).toBeVisible();
-    await expect(page.getByText("403 Forbidden")).toBeVisible();
+    const card = page.getByTestId("acceso-denegado-rol");
+    await expect(card).toBeVisible();
+    await expect(
+      card.getByRole("heading", {
+        name: /Acceso restringido a Recepción y Administración/i
+      })
+    ).toBeVisible();
+    const texto = (await card.textContent()) ?? "";
+    expect(texto).not.toMatch(/403|Forbidden/i);
+    await card.getByRole("link", { name: /Volver al panel/i }).click();
+    await expect(page).toHaveURL(/\/inicio/);
   }
 );
