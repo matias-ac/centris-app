@@ -4,11 +4,10 @@ import { AlertCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import type { AfiliacionConBox } from "@centris/shared";
-import { obtenerEtiquetaRol } from "@/app/(box)/navegacion-box";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
-import { seleccionarBoxAction } from "@/lib/actions";
+import { obtenerEtiquetaRol } from "@/lib/identidad-ui";
 import { cn } from "@/lib/utils";
 import {
   ejecutarSeleccionBox,
@@ -17,9 +16,33 @@ import {
 
 export interface SelectorBoxCardProps {
   afiliacion: AfiliacionConBox;
-  esActivo?: boolean;
-  errorInicial?: string;
-  onSeleccionarBox?: (boxId: string) => Promise<void>;
+  esActivo: boolean;
+  onSeleccionarBox: (boxId: string) => Promise<void>;
+}
+
+/**
+ * Alerta accesible dentro de la tarjeta de Box cuando falla el cambio de sede.
+ */
+export function AlertaErrorSeleccionBox({
+  boxId,
+  mensaje
+}: {
+  boxId: string;
+  mensaje: string;
+}) {
+  return (
+    <div
+      role="alert"
+      data-testid={`error-box-${boxId}`}
+      className="flex items-start gap-2 rounded-2xl border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-3.5 py-2.5 text-xs text-[#FF6D6D]"
+    >
+      <AlertCircle
+        className="mt-0.5 h-4 w-4 shrink-0 text-[#FF6D6D]"
+        aria-hidden={true}
+      />
+      <span>{mensaje}</span>
+    </div>
+  );
 }
 
 /**
@@ -28,23 +51,21 @@ export interface SelectorBoxCardProps {
  */
 export function SelectorBoxCard({
   afiliacion,
-  esActivo = false,
-  errorInicial,
+  esActivo,
   onSeleccionarBox
 }: SelectorBoxCardProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<string | undefined>(errorInicial);
+  const [error, setError] = useState<string | undefined>();
 
   const ubicacion = formatearUbicacionTimezone(afiliacion.box.timezone);
-  const accionSeleccion = onSeleccionarBox ?? seleccionarBoxAction;
 
   function handleElegirBox() {
     setError(undefined);
     startTransition(async () => {
       const resultado = await ejecutarSeleccionBox(
         afiliacion.boxId,
-        accionSeleccion
+        onSeleccionarBox
       );
       if (!resultado.ok) {
         setError(resultado.mensaje);
@@ -104,17 +125,7 @@ export function SelectorBoxCard({
 
       <div className="flex flex-col gap-3">
         {error ? (
-          <div
-            role="alert"
-            data-testid={`error-box-${afiliacion.boxId}`}
-            className="flex items-start gap-2 rounded-2xl border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-3.5 py-2.5 text-xs text-[#FF6D6D]"
-          >
-            <AlertCircle
-              className="mt-0.5 h-4 w-4 shrink-0 text-[#FF6D6D]"
-              aria-hidden={true}
-            />
-            <span>{error}</span>
-          </div>
+          <AlertaErrorSeleccionBox boxId={afiliacion.boxId} mensaje={error} />
         ) : null}
 
         <Button

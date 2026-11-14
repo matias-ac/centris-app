@@ -68,6 +68,10 @@ After(async () => {
     `UPDATE boxes SET nombre = 'Box Centris Norte', timezone = 'America/Argentina/Buenos_Aires', moneda = 'ARS', anticipacion_reserva_dias = 7, ventana_cancelacion_minutos = 120 WHERE id = $1`,
     [SEED_BOX_IDS.boxCentrisNorte]
   );
+  await ejecutarSqlOwner(
+    `UPDATE boxes SET nombre = 'Box Centris Sur' WHERE id = $1`,
+    [SEED_BOX_IDS.boxCentrisSur]
+  );
 });
 
 Given(
@@ -520,6 +524,10 @@ Then(
 Given(
   "un Usuario con Afiliaciones activas y un Box ya activo en su sesión",
   async ({ page }) => {
+    await ejecutarSqlOwner(
+      `UPDATE boxes SET nombre = 'Box Centris Sur Entrenamiento Funcional y Fuerza' WHERE id = $1`,
+      [SEED_BOX_IDS.boxCentrisSur]
+    );
     await page.context().clearCookies();
     await page.goto("/login");
     await page

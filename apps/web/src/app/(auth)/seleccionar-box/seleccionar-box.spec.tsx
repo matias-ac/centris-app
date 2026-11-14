@@ -17,7 +17,7 @@ import {
   formatearUbicacionTimezone
 } from "./seleccionar-box-estado";
 import { SeleccionarBoxView } from "./seleccionar-box-view";
-import { SelectorBoxCard } from "./selector-box-card";
+import { AlertaErrorSeleccionBox } from "./selector-box-card";
 
 const BOX_NORTE: AfiliacionConBox["box"] = {
   id: "a0000000-0000-4000-8000-000000000001",
@@ -146,20 +146,19 @@ describe("Rediseño Dark Bento Cockpit de /seleccionar-box", () => {
       expect(html).toContain("bg-primary");
       expect(html).toContain("text-primary-foreground");
 
-      // Reglas de copy y tipografía v2
+      // Reglas de copy, lenguaje ubicuo y tipografía v2
       expect(html).not.toContain("font-display");
       expect(html).not.toContain("uppercase");
       expect(html).not.toContain("gimnasio");
+      expect(html).not.toContain("cuenta");
     });
 
-    it("muestra alerta accesible sin jerga técnica cuando falla la selección de un Box en SelectorBoxCard", () => {
+    it("muestra alerta accesible sin jerga técnica cuando falla la selección de un Box", () => {
       const html = renderToStaticMarkup(
-        createElement(SelectorBoxCard, {
-          afiliacion: AFILIACION_NORTE,
-          esActivo: false,
-          errorInicial:
-            "No pudimos abrir este Box en este momento. Intentá nuevamente.",
-          onSeleccionarBox: vi.fn()
+        createElement(AlertaErrorSeleccionBox, {
+          boxId: BOX_NORTE.id,
+          mensaje:
+            "No pudimos abrir este Box en este momento. Intentá nuevamente."
         })
       );
 
@@ -186,6 +185,8 @@ describe("Rediseño Dark Bento Cockpit de /seleccionar-box", () => {
       expect(html).toContain("No tenés afiliaciones activas");
       expect(html).toContain("Cerrar sesión");
       expect(html).toContain("Actualizar listado");
+      expect(html).not.toContain("cuenta");
+      expect(html).not.toContain("gimnasio");
     });
 
     it("renderiza estado de error de carga accesible sin códigos HTTP ni errorCode técnicos", () => {
