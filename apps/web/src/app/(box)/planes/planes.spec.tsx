@@ -16,10 +16,12 @@ vi.mock("@/lib/actions", () => ({
 import { CatalogoPlanesBox } from "./catalogo-planes-box";
 import {
   calcularKpisPlanes,
+  construirVistaPreviaPlan,
   crearBorradorPlan,
   explicarReglaPlan,
   filtrarPlanes,
   formatearPrecioPlan,
+  formatearRangoPreciosActivos,
   obtenerMetaModalidadPlan,
   procesarAlternarActivoPlan,
   procesarBajaPlan,
@@ -61,7 +63,7 @@ const PLANES_BASE: Plan[] = [
   {
     id: "f1000000-0000-4000-8000-000000000003",
     boxId: BOX_ID,
-    nombre: "Pack 12 Clases Flexible",
+    nombre: "Bolsa 12 Clases Flexible",
     precioBase: 41500,
     duracionDias: 45,
     modalidadCreditos: "VIGENCIA_TOTAL",
@@ -154,12 +156,46 @@ describe("Rediseño Dark Bento Cockpit de /planes", () => {
         precioMaxActivo: null,
         modalidadesActivas: 0
       });
+
+      expect(formatearRangoPreciosActivos(kpis, "ARS")).toMatch(/38\.000.*54\.000/);
+      expect(
+        formatearRangoPreciosActivos(
+          { precioMinActivo: 42000, precioMaxActivo: 42000 },
+          "ARS"
+        )
+      ).toContain("42.000");
+      expect(formatearRangoPreciosActivos(sinActivos, "ARS")).toBe(
+        "Sin planes activos"
+      );
+
+      expect(
+        construirVistaPreviaPlan(
+          {
+            precioBase: "45000",
+            duracionDias: "30",
+            modalidadCreditos: "SEMANAL",
+            creditosPorPeriodo: "3"
+          },
+          "ARS"
+        )
+      ).toContain("Precio de lista:");
+      expect(
+        construirVistaPreviaPlan(
+          {
+            precioBase: "",
+            duracionDias: "30",
+            modalidadCreditos: "ILIMITADO",
+            creditosPorPeriodo: ""
+          },
+          "ARS"
+        )
+      ).not.toContain("Precio de lista:");
     });
 
     it("filtra planes por búsqueda de nombre, estado activo/inactivo y modalidad", () => {
       expect(
         filtrarPlanes(PLANES_BASE, {
-          busqueda: "pack",
+          busqueda: "bolsa",
           estado: "TODOS",
           modalidad: "TODAS"
         }).map((p) => p.id)
@@ -215,6 +251,15 @@ describe("Rediseño Dark Bento Cockpit de /planes", () => {
       expect(traducirErrorPlan("ERROR_DESCONOCIDO")).not.toMatch(
         /ERROR_DESCONOCIDO|500/
       );
+      expect(
+        traducirErrorPlan(
+          "REGLA_NEGOCIO",
+          "El plan tiene membresías activas asociadas."
+        )
+      ).toBe("El plan tiene membresías activas asociadas.");
+      expect(
+        traducirErrorPlan("ERROR_SERVIDOR", "SQLSTATE 23505 duplicate key")
+      ).not.toMatch(/SQLSTATE|23505/);
 
       const crearMock = vi.fn().mockResolvedValueOnce({
         ok: false,
@@ -275,7 +320,7 @@ describe("Rediseño Dark Bento Cockpit de /planes", () => {
 
       // KPIs y filtros con tabular-nums
       expect(html).toContain("Planes activos");
-      expect(html).toContain("Rango de cuota");
+      expect(html).toContain("Rango de precios");
       expect(html).toContain("Modalidades en oferta");
       expect(html).toContain("tabular-nums");
       expect(html).toContain('aria-label="Filtrar por estado"');
@@ -361,6 +406,7 @@ describe("Rediseño Dark Bento Cockpit de /planes", () => {
       );
 
       expect(html).toContain('data-testid="banner-solo-lectura"');
+      expect(html).not.toContain('aria-label="Filtrar por estado"');
       expect(html).not.toContain('data-testid="btn-nuevo-plan"');
       expect(html).not.toContain("Desactivar");
       expect(html).not.toContain("Dar de baja");

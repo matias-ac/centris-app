@@ -39,15 +39,17 @@ import {
 import { cn } from "@/lib/utils";
 import {
   calcularKpisPlanes,
+  construirVistaPreviaPlan,
   crearBorradorPlan,
-  explicarReglaPlan,
   filtrarPlanes,
   formatearPrecioPlan,
+  formatearRangoPreciosActivos,
   obtenerMetaModalidadPlan,
   procesarAlternarActivoPlan,
   procesarBajaPlan,
   procesarGuardadoPlan,
   resumirCreditosPlan,
+  explicarReglaPlan,
   type BorradorPlan,
   type ErroresPlanFormulario,
   type FiltroEstadoPlan,
@@ -60,11 +62,29 @@ export interface CatalogoPlanesBoxProps {
   planesIniciales: Plan[];
   esAdmin: boolean;
   drawerAbiertoInicial?: boolean;
-  planEditandoInicial?: Plan | null;
   confirmandoBajaInicialId?: string | null;
 }
 
 const FORM_PLAN_ID = "formulario-plan-catalogo";
+
+const TESTID_MODALIDAD: Record<ModalidadCreditos, string> = {
+  SEMANAL: "filtro-modalidad-semanal",
+  VIGENCIA_TOTAL: "filtro-modalidad-vigencia",
+  ILIMITADO: "filtro-modalidad-ilimitado"
+};
+
+function AlertaErrorPlan({ mensaje }: { mensaje: string }) {
+  return (
+    <div
+      data-testid="plan-mensaje-error"
+      role="alert"
+      className="flex items-center gap-2.5 rounded-2xl border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-4 py-3 text-sm text-[#FF6D6D]"
+    >
+      <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
+      <span>{mensaje}</span>
+    </div>
+  );
+}
 
 function TarjetaKpiPlan({
   etiqueta,
@@ -177,7 +197,7 @@ function TarjetaPlanCatalogo({
               {plan.duracionDias} {plan.duracionDias === 1 ? "día" : "días"}
             </span>
           </div>
-          <p className="border-t border-border pt-2.5 text-xs leading-relaxed text-muted-foreground">
+          <p className="border-t border-border pt-2.5 text-xs leading-relaxed text-muted-foreground tabular-nums">
             {explicarReglaPlan(plan)}
           </p>
         </div>
@@ -257,7 +277,6 @@ export function CatalogoPlanesBox({
   planesIniciales,
   esAdmin,
   drawerAbiertoInicial = false,
-  planEditandoInicial = null,
   confirmandoBajaInicialId = null
 }: CatalogoPlanesBoxProps) {
   const router = useRouter();
@@ -265,13 +284,12 @@ export function CatalogoPlanesBox({
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstadoPlan>("TODOS");
   const [filtroModalidad, setFiltroModalidad] =
     useState<FiltroModalidadPlan>("TODAS");
+  const [eliminadosIds, setEliminadosIds] = useState<string[]>([]);
 
   const [drawerAbierto, setDrawerAbierto] = useState(drawerAbiertoInicial);
-  const [planEditando, setPlanEditando] = useState<Plan | null>(
-    planEditandoInicial
-  );
+  const [planEditando, setPlanEditando] = useState<Plan | null>(null);
   const [borrador, setBorrador] = useState<BorradorPlan>(() =>
-    crearBorradorPlan(planEditandoInicial)
+    crearBorradorPlan(null)
   );
   const [erroresForm, setErroresForm] = useState<ErroresPlanFormulario>({});
 
@@ -279,19 +297,21 @@ export function CatalogoPlanesBox({
   const [exitoMsg, setExitoMsg] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const kpis = useMemo(
-    () => calcularKpisPlanes(planesIniciales),
-    [planesIniciales]
+  const planesVisibles = useMemo(
+    () => planesIniciales.filter((plan) => !eliminadosIds.includes(plan.id)),
+    [planesIniciales, eliminadosIds]
   );
+
+  const kpis = useMemo(() => calcularKpisPlanes(planesVisibles), [planesVisibles]);
 
   const planesFiltrados = useMemo(
     () =>
-      filtrarPlanes(planesIniciales, {
+      filtrarPlanes(planesVisibles, {
         busqueda,
-        estado: filtroEstado,
+        estado: esAdmin ? filtroEstado : "TODOS",
         modalidad: filtroModalidad
       }),
-    [planesIniciales, busqueda, filtroEstado, filtroModalidad]
+    [planesVisibles, busqueda, esAdmin, filtroEstado, filtroModalidad]
   );
 
   const opcionesEstado: readonly FilterChipOption<FiltroEstadoPlan>[] = [
@@ -321,49 +341,18 @@ export function CatalogoPlanesBox({
       label: "Todas las modalidades",
       testId: "filtro-modalidad-todas"
     },
-    {
-      value: "SEMANAL",
-      label: "Créditos semanales",
-      testId: "filtro-modalidad-semanal"
-    },
-    {
-      value: "VIGENCIA_TOTAL",
-      label: "Bolsa por vigencia",
-      testId: "filtro-modalidad-vigencia"
-    },
-    {
-      value: "ILIMITADO",
-      label: "Ilimitado",
-      testId: "filtro-modalidad-ilimitado"
-    }
+    ...MODALIDADES_CREDITOS.map((mod) => ({
+      value: mod,
+      label: obtenerMetaModalidadPlan(mod).label,
+      testId: TESTID_MODALIDAD[mod]
+    }))
   ];
 
-  const rangoCuota =
-    kpis.precioMinActivo === null || kpis.precioMaxActivo === null
-      ? "Sin planes activos"
-      : kpis.precioMinActivo === kpis.precioMaxActivo
-        ? formatearPrecioPlan(kpis.precioMinActivo, moneda)
-        : `${formatearPrecioPlan(kpis.precioMinActivo, moneda)} a ${formatearPrecioPlan(kpis.precioMaxActivo, moneda)}`;
-
+  const rangoPrecios = formatearRangoPreciosActivos(kpis, moneda);
   const metaModalidadFormulario = obtenerMetaModalidadPlan(
     borrador.modalidadCreditos
   );
-
-  const precioPreview = Number(borrador.precioBase);
-  const diasPreview = Number(borrador.duracionDias) || 30;
-  const creditosPreview =
-    Number(borrador.creditosPorPeriodo) ||
-    (borrador.modalidadCreditos === "SEMANAL" ? 3 : 12);
-  const textoPreview = explicarReglaPlan({
-    duracionDias: diasPreview,
-    modalidadCreditos: borrador.modalidadCreditos,
-    creditosPorPeriodo:
-      borrador.modalidadCreditos === "ILIMITADO" ? null : creditosPreview
-  });
-  const notaPrecioPreview =
-    Number.isFinite(precioPreview) && precioPreview > 0
-      ? `Precio de lista: ${formatearPrecioPlan(precioPreview, moneda)}. `
-      : "";
+  const textoVistaPrevia = construirVistaPreviaPlan(borrador, moneda);
 
   function abrirDrawerNuevo() {
     setPlanEditando(null);
@@ -394,7 +383,11 @@ export function CatalogoPlanesBox({
     valor: BorradorPlan[K]
   ) {
     setBorrador((prev) => ({ ...prev, [campo]: valor }));
-    setErroresForm((prev) => ({ ...prev, [campo]: undefined, general: undefined }));
+    setErroresForm((prev) => ({
+      ...prev,
+      [campo]: undefined,
+      general: undefined
+    }));
   }
 
   function handleSubmitPlan(event: React.FormEvent) {
@@ -456,8 +449,13 @@ export function CatalogoPlanesBox({
       return;
     }
 
+    setEliminadosIds((prev) =>
+      prev.includes(plan.id) ? prev : [...prev, plan.id]
+    );
     setExitoMsg(resultado.mensajeExito);
-    router.refresh();
+    startTransition(() => {
+      router.refresh();
+    });
   }
 
   function limpiarFiltros() {
@@ -468,7 +466,7 @@ export function CatalogoPlanesBox({
 
   const hayFiltrosActivos =
     busqueda.trim().length > 0 ||
-    filtroEstado !== "TODOS" ||
+    (esAdmin && filtroEstado !== "TODOS") ||
     filtroModalidad !== "TODAS";
 
   return (
@@ -529,16 +527,7 @@ export function CatalogoPlanesBox({
         </div>
       ) : null}
 
-      {errorMsg && !drawerAbierto ? (
-        <div
-          data-testid="plan-mensaje-error"
-          role="alert"
-          className="flex items-center gap-2.5 rounded-2xl border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-4 py-3 text-sm text-[#FF6D6D]"
-        >
-          <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-          <span>{errorMsg}</span>
-        </div>
-      ) : null}
+      {errorMsg && !drawerAbierto ? <AlertaErrorPlan mensaje={errorMsg} /> : null}
 
       <section
         aria-label="Resumen del catálogo"
@@ -552,8 +541,8 @@ export function CatalogoPlanesBox({
           pie="Visibles al asignar nuevas membresías"
         />
         <TarjetaKpiPlan
-          etiqueta="Rango de cuota"
-          valor={rangoCuota}
+          etiqueta="Rango de precios"
+          valor={rangoPrecios}
           pie={`Moneda local del Box (${moneda})`}
         />
         <TarjetaKpiPlan
@@ -583,12 +572,14 @@ export function CatalogoPlanesBox({
             />
           </div>
 
-          <FilterChips
-            ariaLabel="Filtrar por estado"
-            value={filtroEstado}
-            onChange={setFiltroEstado}
-            options={opcionesEstado}
-          />
+          {esAdmin ? (
+            <FilterChips
+              ariaLabel="Filtrar por estado"
+              value={filtroEstado}
+              onChange={setFiltroEstado}
+              options={opcionesEstado}
+            />
+          ) : null}
         </div>
 
         <FilterChips
@@ -605,16 +596,12 @@ export function CatalogoPlanesBox({
           className="flex flex-col items-center justify-center gap-3 rounded-3xl border border-dashed border-border bg-card px-6 py-10 text-center"
         >
           <p className="text-sm text-muted-foreground">
-            {planesIniciales.length === 0
+            {planesVisibles.length === 0
               ? "Todavía no hay planes configurados en este Box."
               : "No hay planes que coincidan con los filtros seleccionados."}
           </p>
           {hayFiltrosActivos ? (
-            <Button
-              type="button"
-              variant="secondary"
-              onClick={limpiarFiltros}
-            >
+            <Button type="button" variant="secondary" onClick={limpiarFiltros}>
               Limpiar filtros
             </Button>
           ) : esAdmin ? (
@@ -694,14 +681,7 @@ export function CatalogoPlanesBox({
             noValidate
           >
             {erroresForm.general ? (
-              <div
-                data-testid="plan-mensaje-error"
-                role="alert"
-                className="flex items-center gap-2.5 rounded-2xl border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-4 py-3 text-sm text-[#FF6D6D]"
-              >
-                <AlertCircle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                <span>{erroresForm.general}</span>
-              </div>
+              <AlertaErrorPlan mensaje={erroresForm.general} />
             ) : null}
 
             <div className="space-y-1.5">
@@ -827,9 +807,8 @@ export function CatalogoPlanesBox({
               <span className="text-xs font-medium text-[#18FFC8]">
                 Así lo entenderá recepción y el atleta
               </span>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                {notaPrecioPreview}
-                {textoPreview}
+              <p className="text-xs leading-relaxed text-muted-foreground tabular-nums">
+                {textoVistaPrevia}
               </p>
             </div>
           </form>

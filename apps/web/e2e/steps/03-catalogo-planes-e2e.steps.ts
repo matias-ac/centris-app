@@ -1,4 +1,4 @@
-import { expect } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
 import { SEED_BOX_IDS } from "@centris/shared";
 import pg from "pg";
@@ -93,6 +93,26 @@ const ETIQUETA_MODALIDAD_HUMANA: Record<string, string> = {
   ILIMITADO: "Ilimitado"
 };
 
+async function verificarTarjetaPlan(
+  page: Page,
+  nombrePlan: string,
+  modalidad: string,
+  textosEsperados: string[]
+) {
+  await expect(page.getByTestId("plan-mensaje-exito")).toBeVisible();
+  const card = page
+    .getByTestId("grilla-planes")
+    .locator("article", { hasText: nombrePlan });
+  await expect(card).toBeVisible();
+  await expect(card).toContainText(
+    ETIQUETA_MODALIDAD_HUMANA[modalidad] ?? modalidad
+  );
+  await expect(card).not.toContainText(/\b(SEMANAL|VIGENCIA_TOTAL|ILIMITADO)\b/);
+  for (const texto of textosEsperados) {
+    await expect(card).toContainText(texto);
+  }
+}
+
 Then(
   'el Plan figura en el catálogo con modalidad {string}, {int} créditos y precio formateado en {string}',
   async (
@@ -101,17 +121,10 @@ Then(
     creditos: number,
     _moneda: string
   ) => {
-    await expect(page.getByTestId("plan-mensaje-exito")).toBeVisible();
-    const card = page
-      .getByTestId("grilla-planes")
-      .locator("article", { hasText: "Pase 3x Semanal E2E" });
-    await expect(card).toBeVisible();
-    await expect(card).toContainText(
-      ETIQUETA_MODALIDAD_HUMANA[modalidad] ?? modalidad
-    );
-    await expect(card).not.toContainText(/\b(SEMANAL|VIGENCIA_TOTAL|ILIMITADO)\b/);
-    await expect(card).toContainText(`${creditos} clases`);
-    await expect(card).toContainText("$ 35.000");
+    await verificarTarjetaPlan(page, "Pase 3x Semanal E2E", modalidad, [
+      `${creditos} clases`,
+      "$ 35.000"
+    ]);
   }
 );
 
@@ -136,16 +149,9 @@ When(
 Then(
   'el Plan figura en el catálogo con modalidad {string} y créditos guardados como nulos',
   async ({ page }, modalidad: string) => {
-    await expect(page.getByTestId("plan-mensaje-exito")).toBeVisible();
-    const card = page
-      .getByTestId("grilla-planes")
-      .locator("article", { hasText: "Pase Libre Mensual E2E" });
-    await expect(card).toBeVisible();
-    await expect(card).toContainText(
-      ETIQUETA_MODALIDAD_HUMANA[modalidad] ?? modalidad
-    );
-    await expect(card).not.toContainText(/\b(SEMANAL|VIGENCIA_TOTAL|ILIMITADO)\b/);
-    await expect(card).toContainText("Ilimitado");
+    await verificarTarjetaPlan(page, "Pase Libre Mensual E2E", modalidad, [
+      "Ilimitado"
+    ]);
   }
 );
 

@@ -19,6 +19,8 @@ export interface MetaModalidadPlan {
   optionLabel: string;
   labelCreditos: string;
   hint: string;
+  resumir: (creditos: number | null) => string;
+  explicar: (dias: number, creditos: number | null) => string;
 }
 
 export interface KpisPlanes {
@@ -72,27 +74,42 @@ export type AccionEliminarPlanFn = (
   planId: string
 ) => Promise<ResultadoAccionPlan>;
 
+function pluralizar(cantidad: number, singular: string, plural: string): string {
+  return `${cantidad} ${cantidad === 1 ? singular : plural}`;
+}
+
 const METADATA_MODALIDADES: Record<ModalidadCreditos, MetaModalidadPlan> = {
   SEMANAL: {
     label: "Créditos semanales",
     badgeVariant: "zinc",
     optionLabel: "Créditos semanales (se renuevan los lunes)",
     labelCreditos: "Créditos por semana",
-    hint: "Cantidad máxima de reservas por semana calendario (lunes a domingo)."
+    hint: "Cantidad máxima de reservas por semana calendario (lunes a domingo).",
+    resumir: (creditos) =>
+      `${pluralizar(creditos ?? 0, "clase", "clases")} por semana`,
+    explicar: (dias, creditos) =>
+      `${pluralizar(Math.max(1, creditos ?? 1), "clase", "clases")} por semana durante ${pluralizar(Math.max(1, dias), "día", "días")}. Se renuevan cada lunes.`
   },
   VIGENCIA_TOTAL: {
     label: "Bolsa por vigencia",
     badgeVariant: "amber",
     optionLabel: "Bolsa total para toda la vigencia",
     labelCreditos: "Créditos totales del período",
-    hint: "Total de clases disponibles para consumir durante toda la vigencia."
+    hint: "Total de clases disponibles para consumir durante toda la vigencia.",
+    resumir: (creditos) =>
+      `${pluralizar(creditos ?? 0, "clase", "clases")} ${creditos === 1 ? "total" : "totales"}`,
+    explicar: (dias, creditos) =>
+      `${pluralizar(Math.max(1, creditos ?? 1), "clase", "clases")} en total para repartir libremente en ${pluralizar(Math.max(1, dias), "día", "días")}.`
   },
   ILIMITADO: {
     label: "Ilimitado",
     badgeVariant: "mint",
     optionLabel: "Ilimitado (sin límite de clases)",
     labelCreditos: "",
-    hint: "Sin límite de clases durante toda la vigencia del plan."
+    hint: "Sin límite de clases durante toda la vigencia del plan.",
+    resumir: () => "Sin tope de clases",
+    explicar: (dias) =>
+      `Clases ilimitadas durante ${pluralizar(Math.max(1, dias), "día", "días")} desde la activación.`
   }
 };
 
@@ -140,15 +157,9 @@ export function formatearPrecioPlan(monto: number, moneda: string): string {
 export function resumirCreditosPlan(
   plan: Pick<Plan, "modalidadCreditos" | "creditosPorPeriodo">
 ): string {
-  if (plan.modalidadCreditos === "ILIMITADO") {
-    return "Sin tope de clases";
-  }
-  const cantidad = plan.creditosPorPeriodo ?? 0;
-  const unidad = cantidad === 1 ? "clase" : "clases";
-  if (plan.modalidadCreditos === "SEMANAL") {
-    return `${cantidad} ${unidad} por semana`;
-  }
-  return `${cantidad} ${unidad} totales`;
+  return METADATA_MODALIDADES[plan.modalidadCreditos].resumir(
+    plan.creditosPorPeriodo
+  );
 }
 
 /**
@@ -157,21 +168,10 @@ export function resumirCreditosPlan(
 export function explicarReglaPlan(
   plan: Pick<Plan, "duracionDias" | "modalidadCreditos" | "creditosPorPeriodo">
 ): string {
-  const dias = Math.max(1, plan.duracionDias);
-  const etiquetaDias = dias === 1 ? "1 día" : `${dias} días`;
-
-  if (plan.modalidadCreditos === "ILIMITADO") {
-    return `Clases ilimitadas durante ${etiquetaDias} desde la activación.`;
-  }
-
-  const cantidad = Math.max(1, plan.creditosPorPeriodo ?? 1);
-  const etiquetaClases = cantidad === 1 ? "1 clase" : `${cantidad} clases`;
-
-  if (plan.modalidadCreditos === "SEMANAL") {
-    return `${etiquetaClases} por semana durante ${etiquetaDias}. Se renuevan cada lunes.`;
-  }
-
-  return `${etiquetaClases} en total para repartir libremente en ${etiquetaDias}.`;
+  return METADATA_MODALIDADES[plan.modalidadCreditos].explicar(
+    plan.duracionDias,
+    plan.creditosPorPeriodo
+  );
 }
 
 /**
@@ -190,6 +190,51 @@ export function calcularKpisPlanes(planes: readonly Plan[]): KpisPlanes {
     modalidadesActivas: new Set(activos.map((plan) => plan.modalidadCreditos))
       .size
   };
+}
+
+/**
+ * Formatea el rango de precios de los planes activos del catálogo.
+ */
+export function formatearRangoPreciosActivos(
+  kpis: Pick<KpisPlanes, "precioMinActivo" | "precioMaxActivo">,
+  moneda: string
+): string {
+  if (kpis.precioMinActivo === null || kpis.precioMaxActivo === null) {
+    return "Sin planes activos";
+  }
+  if (kpis.precioMinActivo === kpis.precioMaxActivo) {
+    return formatearPrecioPlan(kpis.precioMinActivo, moneda);
+  }
+  return `${formatearPrecioPlan(kpis.precioMinActivo, moneda)} a ${formatearPrecioPlan(kpis.precioMaxActivo, moneda)}`;
+}
+
+/**
+ * Construye el texto de vista previa en vivo para el drawer de alta/edición de Plan.
+ */
+export function construirVistaPreviaPlan(
+  borrador: Pick<
+    BorradorPlan,
+    "precioBase" | "duracionDias" | "modalidadCreditos" | "creditosPorPeriodo"
+  >,
+  moneda: string
+): string {
+  const precio = Number(borrador.precioBase);
+  const dias = Number(borrador.duracionDias) || 30;
+  const creditos =
+    Number(borrador.creditosPorPeriodo) ||
+    (borrador.modalidadCreditos === "SEMANAL" ? 3 : 12);
+
+  const regla = explicarReglaPlan({
+    duracionDias: dias,
+    modalidadCreditos: borrador.modalidadCreditos,
+    creditosPorPeriodo:
+      borrador.modalidadCreditos === "ILIMITADO" ? null : creditos
+  });
+
+  if (Number.isFinite(precio) && precio > 0) {
+    return `Precio de lista: ${formatearPrecioPlan(precio, moneda)}. ${regla}`;
+  }
+  return regla;
 }
 
 /**
@@ -316,13 +361,24 @@ export function validarBorradorPlanLocal(
 }
 
 /**
- * Traduce códigos de error de la API a mensajes claros sin exponer detalles técnicos.
+ * Traduce códigos de error de la API a mensajes claros sin exponer jerga técnica.
  */
-export function traducirErrorPlan(errorCode?: string): string {
+export function traducirErrorPlan(
+  errorCode?: string,
+  message?: string
+): string {
   if (errorCode && errorCode in MENSAJES_ERROR_PLAN) {
     return MENSAJES_ERROR_PLAN[errorCode as ErrorCode] ?? MENSAJE_ERROR_RESPALDO;
   }
-  return MENSAJE_ERROR_RESPALDO;
+
+  const mensajeLimpio = message?.trim();
+  const contieneJergaTecnica =
+    !mensajeLimpio ||
+    /\b(401|403|404|409|422|500|Forbidden|Unauthorized|SQLSTATE|ERROR_[A-Z_]+|[A-Z]{2,}_[A-Z_]+)\b/.test(
+      mensajeLimpio
+    );
+
+  return contieneJergaTecnica ? MENSAJE_ERROR_RESPALDO : mensajeLimpio;
 }
 
 /**
@@ -363,7 +419,7 @@ export async function procesarGuardadoPlan(
       validadoEdicion.data
     );
     if (!res.ok) {
-      const mensaje = traducirErrorPlan(res.errorCode);
+      const mensaje = traducirErrorPlan(res.errorCode, res.message);
       return { ok: false, errores: { general: mensaje }, general: mensaje };
     }
 
@@ -375,7 +431,7 @@ export async function procesarGuardadoPlan(
 
   const res = await crearPlanFn(boxId, local.data);
   if (!res.ok) {
-    const mensaje = traducirErrorPlan(res.errorCode);
+    const mensaje = traducirErrorPlan(res.errorCode, res.message);
     return { ok: false, errores: { general: mensaje }, general: mensaje };
   }
 
@@ -398,7 +454,7 @@ export async function procesarAlternarActivoPlan(
   const nuevoEstado = !plan.activo;
   const res = await actualizarPlanFn(boxId, plan.id, { activo: nuevoEstado });
   if (!res.ok) {
-    return { ok: false, error: traducirErrorPlan(res.errorCode) };
+    return { ok: false, error: traducirErrorPlan(res.errorCode, res.message) };
   }
 
   return {
@@ -421,7 +477,7 @@ export async function procesarBajaPlan(
 > {
   const res = await eliminarPlanFn(boxId, plan.id);
   if (!res.ok) {
-    return { ok: false, error: traducirErrorPlan(res.errorCode) };
+    return { ok: false, error: traducirErrorPlan(res.errorCode, res.message) };
   }
 
   return {
