@@ -1,6 +1,6 @@
 # 04 — Rediseño UX/UI de `/seleccionar-box`
 
-**Status:** ready-for-agent
+**Status:** in-progress
 **Branch:** `feat/ui-04-seleccionar-box`
 **Blocked by:** `01`
 
