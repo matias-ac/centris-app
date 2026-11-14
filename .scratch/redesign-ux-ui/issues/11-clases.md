@@ -1,6 +1,6 @@
 # 11 — Rediseño UX/UI de `/clases` (Calendario, Materialización y Asistencia)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 **Branch:** `feat/ui-11-clases`
 **Blocked by:** `01`
 
