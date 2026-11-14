@@ -1,4 +1,4 @@
-import { expect } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
 import pg from "pg";
 
@@ -98,6 +98,44 @@ Then(
   }
 );
 
+async function programarHorarioDesdeDrawer(
+  page: Page,
+  params: {
+    tipoLabel?: string;
+    dia: number;
+    hora: string;
+    duracion: number;
+    cupos: number;
+  }
+): Promise<void> {
+  await page.getByTestId("btn-nuevo-horario").click();
+  const selectTipo = page.getByTestId("select-horario-tipo-clase");
+  if (params.tipoLabel) {
+    await selectTipo.selectOption({ label: params.tipoLabel });
+  } else {
+    const opcionesTipo = await selectTipo.locator("option").all();
+    if (opcionesTipo.length > 1) {
+      await selectTipo.selectOption({ index: 1 });
+    }
+  }
+
+  const selectCoach = page.getByTestId("select-horario-coach");
+  const opcionesCoach = await selectCoach.locator("option").all();
+  if (opcionesCoach.length > 1) {
+    await selectCoach.selectOption({ index: 1 });
+  }
+
+  await page
+    .getByTestId("select-horario-dia")
+    .selectOption(params.dia.toString());
+  await page.getByTestId("input-horario-hora").fill(params.hora);
+  await page
+    .getByTestId("input-horario-duracion")
+    .fill(params.duracion.toString());
+  await page.getByTestId("input-horario-cupos").fill(params.cupos.toString());
+  await page.getByTestId("btn-guardar-horario").click();
+}
+
 When(
   'programa un Horario recurrente con tipo {string}, día {int} a las {string} con duración de {int} minutos y {int} cupos',
   async (
@@ -108,29 +146,7 @@ When(
     duracion: number,
     cupos: number
   ) => {
-    await page.getByTestId("btn-nuevo-horario").click();
-    // Seleccionar primer tipo de clase disponible si no hay seleccionado
-    const selectTipo = page.getByTestId("select-horario-tipo-clase");
-    const opcionesTipo = await selectTipo.locator("option").all();
-    if (opcionesTipo.length > 1) {
-      await selectTipo.selectOption({ index: 1 });
-    }
-    // Seleccionar primer coach disponible
-    const selectCoach = page.getByTestId("select-horario-coach");
-    const opcionesCoach = await selectCoach.locator("option").all();
-    if (opcionesCoach.length > 1) {
-      await selectCoach.selectOption({ index: 1 });
-    }
-
-    await page
-      .getByTestId("select-horario-dia")
-      .selectOption(dia.toString());
-    await page.getByTestId("input-horario-hora").fill(hora);
-    await page
-      .getByTestId("input-horario-duracion")
-      .fill(duracion.toString());
-    await page.getByTestId("input-horario-cupos").fill(cupos.toString());
-    await page.getByTestId("btn-guardar-horario").click();
+    await programarHorarioDesdeDrawer(page, { dia, hora, duracion, cupos });
   }
 );
 
@@ -161,6 +177,28 @@ Then(
 );
 
 When(
+  'edita el Tipo de Clase {string} a nombre {string} y descripción {string}',
+  async (
+    { page },
+    nombreActual: string,
+    nuevoNombre: string,
+    nuevaDescripcion: string
+  ) => {
+    await page.getByTestId(`btn-editar-tipo-clase-${nombreActual}`).click();
+    await expect(page.getByTestId("drawer-tipo-clase")).toBeVisible();
+    await page.getByTestId("input-tipo-clase-nombre").fill(nuevoNombre);
+    await page
+      .getByTestId("input-tipo-clase-descripcion")
+      .fill(nuevaDescripcion);
+    await page.getByTestId("btn-guardar-tipo-clase").click();
+    await expect(page.getByTestId("drawer-tipo-clase")).not.toBeVisible();
+    await expect(
+      page.getByTestId(`item-tipo-clase-${nuevoNombre}`)
+    ).toBeVisible();
+  }
+);
+
+When(
   'programa un Horario para el Tipo de Clase {string} el día {int} a las {string} con {int} minutos y {int} cupos',
   async (
     { page },
@@ -170,23 +208,13 @@ When(
     duracion: number,
     cupos: number
   ) => {
-    await page.getByTestId("btn-nuevo-horario").click();
-    const selectTipo = page.getByTestId("select-horario-tipo-clase");
-    await selectTipo.selectOption({ label: tipoNombre });
-
-    const selectCoach = page.getByTestId("select-horario-coach");
-    const opcionesCoach = await selectCoach.locator("option").all();
-    if (opcionesCoach.length > 1) {
-      await selectCoach.selectOption({ index: 1 });
-    }
-
-    await page.getByTestId("select-horario-dia").selectOption(dia.toString());
-    await page.getByTestId("input-horario-hora").fill(hora);
-    await page
-      .getByTestId("input-horario-duracion")
-      .fill(duracion.toString());
-    await page.getByTestId("input-horario-cupos").fill(cupos.toString());
-    await page.getByTestId("btn-guardar-horario").click();
+    await programarHorarioDesdeDrawer(page, {
+      tipoLabel: tipoNombre,
+      dia,
+      hora,
+      duracion,
+      cupos
+    });
     await expect(
       page.getByTestId(`bloque-horario-dia-${dia}-${hora}`)
     ).toBeVisible();
@@ -215,12 +243,14 @@ When(
 );
 
 Then(
-  'visualiza la franja {string} con {string} en desktop y mobile sin desborde horizontal',
-  async ({ page }, franja: string, cuposTexto: string) => {
+  'visualiza el Tipo de Clase {string} y la franja {string} con {string} en desktop y mobile sin desborde horizontal',
+  async ({ page }, tipoNombre: string, franja: string, cuposTexto: string) => {
     const bloque = page.getByTestId("bloque-horario-dia-2-08:00");
     await expect(bloque).toBeVisible();
+    await expect(bloque).toContainText(tipoNombre);
     await expect(bloque).toContainText(franja);
     await expect(bloque).toContainText(cuposTexto);
+    await expect(page.getByTestId(`item-tipo-clase-${tipoNombre}`)).toBeVisible();
 
     for (const width of [1280, 1440, 375]) {
       await page.setViewportSize({ width, height: 850 });

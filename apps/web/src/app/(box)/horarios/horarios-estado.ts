@@ -381,24 +381,6 @@ export function validarBorradorHorarioLocal(
 }
 
 /**
- * Construye una síntesis en vivo de cómo se verá el Horario en la plantilla semanal.
- */
-export function construirVistaPreviaHorario(
-  borrador: Pick<
-    BorradorHorario,
-    "diaSemana" | "horaInicio" | "duracionMinutos" | "cuposDefault"
-  >
-): string {
-  const dia = Number(borrador.diaSemana) as DiaSemana;
-  const nombreDia = NOMBRES_DIAS_SEMANA[dia] ?? "Día semanal";
-  const duracion = Number(borrador.duracionMinutos) || 60;
-  const cupos = Number(borrador.cuposDefault) || 16;
-  const franja = formatearFranjaHoraria(borrador.horaInicio || "07:00", duracion);
-
-  return `${nombreDia} · ${franja} · ${formatearCuposHorario(cupos)}`;
-}
-
-/**
  * Traduce códigos de error del servidor a mensajes claros sin jerga técnica ni HTTP.
  */
 export function traducirErrorHorarios(
@@ -421,6 +403,25 @@ export function traducirErrorHorarios(
   return contieneJergaTecnica ? MENSAJE_ERROR_RESPALDO : mensajeLimpio;
 }
 
+async function ejecutarAccionFormulario<
+  TErrores extends { general?: string }
+>(
+  ejecutarFn: () => Promise<ResultadoAccionHorarios>,
+  mensajeExito: string
+): Promise<{ ok: true; mensajeExito: string } | { ok: false; errores: TErrores }> {
+  const res = await ejecutarFn();
+  if (!res.ok) {
+    return {
+      ok: false,
+      errores: {
+        general: traducirErrorHorarios(res.errorCode, res.message)
+      } as TErrores
+    };
+  }
+
+  return { ok: true, mensajeExito };
+}
+
 /**
  * Valida y persiste la creación o edición de un Tipo de Clase.
  */
@@ -432,15 +433,11 @@ export async function procesarGuardadoTipoClase(
   actualizarFn: AccionActualizarTipoClaseFn
 ): Promise<
   | { ok: true; mensajeExito: string }
-  | { ok: false; errores: ErroresTipoClaseFormulario; general?: string }
+  | { ok: false; errores: ErroresTipoClaseFormulario }
 > {
   const local = validarBorradorTipoClaseLocal(borrador);
   if (!local.ok) {
-    return {
-      ok: false,
-      errores: local.errores,
-      general: local.errores.general
-    };
+    return { ok: false, errores: local.errores };
   }
 
   if (tipoEditandoId) {
@@ -451,37 +448,20 @@ export async function procesarGuardadoTipoClase(
     if (!validadoEdicion.success) {
       return {
         ok: false,
-        errores: { general: "Revisá los datos del Tipo de Clase." },
-        general: "Revisá los datos del Tipo de Clase."
+        errores: { general: "Revisá los datos del Tipo de Clase." }
       };
     }
 
-    const res = await actualizarFn(
-      boxId,
-      tipoEditandoId,
-      validadoEdicion.data
+    return ejecutarAccionFormulario(
+      () => actualizarFn(boxId, tipoEditandoId, validadoEdicion.data),
+      `El Tipo de Clase "${local.data.nombre}" fue actualizado.`
     );
-    if (!res.ok) {
-      const mensaje = traducirErrorHorarios(res.errorCode, res.message);
-      return { ok: false, errores: { general: mensaje }, general: mensaje };
-    }
-
-    return {
-      ok: true,
-      mensajeExito: `El Tipo de Clase "${local.data.nombre}" fue actualizado.`
-    };
   }
 
-  const res = await crearFn(boxId, local.data);
-  if (!res.ok) {
-    const mensaje = traducirErrorHorarios(res.errorCode, res.message);
-    return { ok: false, errores: { general: mensaje }, general: mensaje };
-  }
-
-  return {
-    ok: true,
-    mensajeExito: `El Tipo de Clase "${local.data.nombre}" se agregó al catálogo.`
-  };
+  return ejecutarAccionFormulario(
+    () => crearFn(boxId, local.data),
+    `El Tipo de Clase "${local.data.nombre}" se agregó al catálogo.`
+  );
 }
 
 /**
@@ -519,15 +499,11 @@ export async function procesarGuardadoHorario(
   actualizarFn: AccionActualizarHorarioFn
 ): Promise<
   | { ok: true; mensajeExito: string }
-  | { ok: false; errores: ErroresHorarioFormulario; general?: string }
+  | { ok: false; errores: ErroresHorarioFormulario }
 > {
   const local = validarBorradorHorarioLocal(borrador);
   if (!local.ok) {
-    return {
-      ok: false,
-      errores: local.errores,
-      general: local.errores.general
-    };
+    return { ok: false, errores: local.errores };
   }
 
   const diaNombre =
@@ -538,37 +514,20 @@ export async function procesarGuardadoHorario(
     if (!validadoEdicion.success) {
       return {
         ok: false,
-        errores: { general: "Revisá los datos del Horario antes de guardar." },
-        general: "Revisá los datos del Horario antes de guardar."
+        errores: { general: "Revisá los datos del Horario antes de guardar." }
       };
     }
 
-    const res = await actualizarFn(
-      boxId,
-      horarioEditandoId,
-      validadoEdicion.data
+    return ejecutarAccionFormulario(
+      () => actualizarFn(boxId, horarioEditandoId, validadoEdicion.data),
+      `Horario de ${diaNombre} a las ${local.data.horaInicio} actualizado.`
     );
-    if (!res.ok) {
-      const mensaje = traducirErrorHorarios(res.errorCode, res.message);
-      return { ok: false, errores: { general: mensaje }, general: mensaje };
-    }
-
-    return {
-      ok: true,
-      mensajeExito: `Horario de ${diaNombre} a las ${local.data.horaInicio} actualizado.`
-    };
   }
 
-  const res = await crearFn(boxId, local.data);
-  if (!res.ok) {
-    const mensaje = traducirErrorHorarios(res.errorCode, res.message);
-    return { ok: false, errores: { general: mensaje }, general: mensaje };
-  }
-
-  return {
-    ok: true,
-    mensajeExito: `Horario de ${diaNombre} a las ${local.data.horaInicio} guardado. Ya podés generar las próximas clases.`
-  };
+  return ejecutarAccionFormulario(
+    () => crearFn(boxId, local.data),
+    `Horario de ${diaNombre} a las ${local.data.horaInicio} guardado. Ya podés generar las próximas clases.`
+  );
 }
 
 /**

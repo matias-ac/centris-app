@@ -17,7 +17,13 @@ vi.mock("@/lib/actions", () => ({
   materializarClasesAction: vi.fn()
 }));
 
-import { HorariosView } from "./horarios-view";
+import {
+  BloqueHorarioCard,
+  DrawerHorario,
+  DrawerTipoClase,
+  HorariosView,
+  TipoClaseCard
+} from "./horarios-view";
 import {
   agruparHorariosPorDia,
   calcularResumenHorarios,
@@ -287,9 +293,12 @@ describe("Rediseño Dark Bento Cockpit de /horarios", () => {
       expect(html).toContain('data-testid="btn-nuevo-horario"');
       expect(html).toContain('data-testid="btn-generar-clases"');
 
-      // Grilla anti-overflow y franjas tabular-nums
-      expect(html).toContain('data-testid="grilla-horarios-semana"');
-      expect(html).toContain('data-testid="grilla-tipos-clase"');
+      // Plantilla anti-overflow y franjas tabular-nums
+      expect(html).toContain('data-testid="plantilla-horarios-semana"');
+      expect(html).toContain('data-testid="catalogo-tipos-clase"');
+      expect(html).toContain("3 horarios activos");
+      expect(html).toContain("48 cupos semanales");
+      expect(html).toContain("2 tipos activos");
       expect(html).toContain("minmax(min(100%,300px),1fr)");
       expect(html).toContain("07:00 – 08:00");
       expect(html).toContain("16 cupos");
@@ -312,13 +321,14 @@ describe("Rediseño Dark Bento Cockpit de /horarios", () => {
 
     it("renderiza InlineConfirm para baja de Tipo de Clase y de Horario sin window.confirm()", () => {
       const htmlTipo = renderToStaticMarkup(
-        createElement(HorariosView, {
-          boxId: BOX_ID,
+        createElement(TipoClaseCard, {
+          tipoClase: TIPOS_BASE[0]!,
+          cantidadHorarios: 2,
           esAdmin: true,
-          tiposClaseIniciales: TIPOS_BASE,
-          horariosIniciales: HORARIOS_BASE,
-          coaches: COACHES_BASE,
-          confirmandoTipoInicialId: TIPO_WOD_ID
+          isPending: false,
+          confirmandoInicial: true,
+          onEditar: vi.fn(),
+          onConfirmarBaja: vi.fn()
         })
       );
 
@@ -327,13 +337,13 @@ describe("Rediseño Dark Bento Cockpit de /horarios", () => {
       expect(htmlTipo).toContain('data-testid="baja-tipo-clase-WOD-cancel"');
 
       const htmlHorario = renderToStaticMarkup(
-        createElement(HorariosView, {
-          boxId: BOX_ID,
+        createElement(BloqueHorarioCard, {
+          horario: HORARIOS_BASE[1]!,
           esAdmin: true,
-          tiposClaseIniciales: TIPOS_BASE,
-          horariosIniciales: HORARIOS_BASE,
-          coaches: COACHES_BASE,
-          confirmandoHorarioInicialId: HORARIOS_BASE[1]!.id
+          isPending: false,
+          confirmandoInicial: true,
+          onEditar: vi.fn(),
+          onConfirmarBaja: vi.fn()
         })
       );
 
@@ -344,13 +354,15 @@ describe("Rediseño Dark Bento Cockpit de /horarios", () => {
 
     it("renderiza SideDrawer accesible para Tipo de Clase y para Horario", () => {
       const htmlDrawerTipo = renderToStaticMarkup(
-        createElement(HorariosView, {
-          boxId: BOX_ID,
-          esAdmin: true,
-          tiposClaseIniciales: TIPOS_BASE,
-          horariosIniciales: HORARIOS_BASE,
-          coaches: COACHES_BASE,
-          drawerInicial: "tipo"
+        createElement(DrawerTipoClase, {
+          open: true,
+          editando: false,
+          isPending: false,
+          borrador: crearBorradorTipoClase(null),
+          errores: {},
+          onClose: vi.fn(),
+          onChange: vi.fn(),
+          onSubmit: vi.fn()
         })
       );
       expect(htmlDrawerTipo).toContain('role="dialog"');
@@ -358,13 +370,20 @@ describe("Rediseño Dark Bento Cockpit de /horarios", () => {
       expect(htmlDrawerTipo).toContain('data-testid="btn-guardar-tipo-clase"');
 
       const htmlDrawerHorario = renderToStaticMarkup(
-        createElement(HorariosView, {
-          boxId: BOX_ID,
-          esAdmin: true,
-          tiposClaseIniciales: TIPOS_BASE,
-          horariosIniciales: HORARIOS_BASE,
+        createElement(DrawerHorario, {
+          open: true,
+          editando: false,
+          isPending: false,
+          borrador: crearBorradorHorario(null, {
+            tipoClaseId: TIPO_WOD_ID,
+            coachAfiliacionId: COACH_AFIL_ID
+          }),
+          errores: {},
+          tiposActivos: TIPOS_BASE,
           coaches: COACHES_BASE,
-          drawerInicial: "horario"
+          onClose: vi.fn(),
+          onChange: vi.fn(),
+          onSubmit: vi.fn()
         })
       );
       expect(htmlDrawerHorario).toContain('role="dialog"');
