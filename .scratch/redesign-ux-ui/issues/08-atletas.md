@@ -1,6 +1,6 @@
 # 08 — Rediseño UX/UI de `/atletas` y Ficha de Membresías
 
-**Status:** ready-for-agent
+**Status:** in-progress
 **Branch:** `feat/ui-08-atletas`
 **Blocked by:** `01`
 
