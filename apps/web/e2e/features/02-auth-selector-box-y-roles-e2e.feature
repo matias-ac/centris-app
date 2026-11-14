@@ -31,3 +31,8 @@ Característica: Identidad Global, Autenticación, Selector de Box y Guard de 4 
     Dado un Usuario no autenticado en la pantalla de inicio de sesión
     Cuando valida campos inválidos individualmente, alterna la visibilidad de contraseña y envía credenciales incorrectas
     Entonces visualiza errores accesibles sin códigos técnicos, sin desborde horizontal en móvil ni escritorio y puede navegar a activar su cuenta
+
+  Escenario: Validación accesible, indicador mínimo de clave, estabilidad responsive y regreso al login en /activar-cuenta
+    Dado un Usuario no autenticado en la pantalla de activación de cuenta
+    Cuando valida campos inválidos individualmente, evalúa el mínimo de contraseña, alterna su visibilidad y envía un correo no elegible
+    Entonces visualiza errores accesibles de activación sin códigos técnicos, sin desborde horizontal en móvil ni escritorio y puede volver a iniciar sesión

@@ -1,6 +1,6 @@
 # 03 — Rediseño UX/UI de `/activar-cuenta`
 
-**Status:** ready-for-agent
+**Status:** done
 **Branch:** `feat/ui-03-activar-cuenta`
 **Blocked by:** `01`
 
@@ -24,10 +24,10 @@ Migra `/activar-cuenta` al lenguaje visual **Dark Bento Cockpit** siguiendo `pro
 
 ## Acceptance Criteria (TDD / BDD)
 
-- [ ] **Tests en Red $\rightarrow$ Green**: Validar flujo de activación exitosa, token faltante/inválido con feedback claro (`role="alert"`) y preservación de selectores E2E existentes.
-- [ ] **Estética Dark Bento Cockpit**: Card `#111214` (`rounded-3xl`, borde `#232428`), título `Inter` en *Sentence case*, campo token/contraseña en `#09090B` (`rounded-xl`, `>= 16px`, `min-h-11`), CTA `#C1F429` (`#000000` texto) y enlace de regreso a `/login`.
-- [ ] **Estabilidad Responsive**: Verificar en `375px` y `1280px` / `1440px` sin desbordamientos.
-- [ ] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` y `/code-review`.
+- [x] **Tests en Red $\rightarrow$ Green**: Validar flujo de activación exitosa, token faltante/inválido con feedback claro (`role="alert"`) y preservación de selectores E2E existentes.
+- [x] **Estética Dark Bento Cockpit**: Card `#111214` (`rounded-3xl`, borde `#232428`), título `Inter` en *Sentence case*, campo token/contraseña en `#09090B` (`rounded-xl`, `>= 16px`, `min-h-11`), CTA `#C1F429` (`#000000` texto) y enlace de regreso a `/login`.
+- [x] **Estabilidad Responsive**: Verificar en `375px` y `1280px` / `1440px` sin desbordamientos.
+- [x] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` y `/code-review`.
 
 ## Comments
 

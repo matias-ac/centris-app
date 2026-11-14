@@ -1,4 +1,4 @@
-import { expect } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { createBdd } from "playwright-bdd";
 import { SEED_BOX_IDS } from "@centris/shared";
 import pg from "pg";
@@ -122,9 +122,10 @@ When(
 Then(
   "visualiza el rechazo indicando que la cuenta ya fue activada previamente",
   async ({ page }) => {
-    await expect(page.getByTestId("alerta-error-auth")).toContainText(
-      /CUENTA_YA_ACTIVADA|ya posee una contraseña|ya fue activada/i
-    );
+    const alerta = page.getByTestId("alerta-error-auth");
+    await expect(alerta).toBeVisible();
+    await expect(alerta).toContainText(/ya posee una contraseña|ya fue activada/i);
+    await expect(alerta).not.toContainText("CUENTA_YA_ACTIVADA");
   }
 );
 
@@ -356,6 +357,38 @@ Then(
   }
 );
 
+async function verificarToggleVisibilidadClave(
+  page: Page,
+  passwordInput: Locator
+): Promise<void> {
+  const toggleBtn = page.getByRole("button", {
+    name: /Mostrar clave/i
+  });
+  const toggleBox = await toggleBtn.boundingBox();
+  expect(toggleBox?.width).toBeGreaterThanOrEqual(44);
+  expect(toggleBox?.height).toBeGreaterThanOrEqual(44);
+  await toggleBtn.click();
+  await expect(passwordInput).toHaveAttribute("type", "text");
+  await expect(
+    page.getByRole("button", { name: /Ocultar clave/i })
+  ).toHaveAttribute("aria-pressed", "true");
+}
+
+async function verificarSinDesbordeResponsive(
+  page: Page,
+  widths: number[] = [375, 1280, 1440]
+): Promise<void> {
+  for (const width of widths) {
+    await page.setViewportSize({ width, height: 900 });
+    const overflow = await page.evaluate(
+      () =>
+        document.documentElement.scrollWidth >
+        document.documentElement.clientWidth
+    );
+    expect(overflow).toBe(false);
+  }
+}
+
 Given(
   "un Usuario no autenticado en la pantalla de inicio de sesión",
   async ({ page }) => {
@@ -383,17 +416,7 @@ When(
     await expect(passwordInput).not.toHaveAttribute("aria-invalid", "true");
 
     // Toggle de visibilidad de contraseña accesible (>= 44px)
-    const toggleBtn = page.getByRole("button", {
-      name: /Mostrar clave/i
-    });
-    const toggleBox = await toggleBtn.boundingBox();
-    expect(toggleBox?.width).toBeGreaterThanOrEqual(44);
-    expect(toggleBox?.height).toBeGreaterThanOrEqual(44);
-    await toggleBtn.click();
-    await expect(passwordInput).toHaveAttribute("type", "text");
-    await expect(
-      page.getByRole("button", { name: /Ocultar clave/i })
-    ).toHaveAttribute("aria-pressed", "true");
+    await verificarToggleVisibilidadClave(page, passwordInput);
 
     // Credenciales válidas en formato pero incorrectas en servidor
     await emailInput.fill("admin@centris.dev");
@@ -412,13 +435,7 @@ Then(
     expect(textoAlerta).not.toMatch(/CREDENCIALES_INVALIDAS|ERROR:|401|500/);
 
     // Sin desborde horizontal en móvil (375px) ni escritorio (1280px y 1440px)
-    for (const width of [375, 1280, 1440]) {
-      await page.setViewportSize({ width, height: 900 });
-      const overflow = await page.evaluate(
-        () => document.documentElement.scrollWidth > document.documentElement.clientWidth
-      );
-      expect(overflow).toBe(false);
-    }
+    await verificarSinDesbordeResponsive(page);
 
     // Navegación accesible hacia /activar-cuenta
     const activarLink = page.getByRole("link", { name: /Activar mi cuenta/i });
@@ -426,5 +443,69 @@ Then(
     expect(linkBox?.height).toBeGreaterThanOrEqual(44);
     await activarLink.click();
     await expect(page).toHaveURL(/\/activar-cuenta/);
+  }
+);
+
+Given(
+  "un Usuario no autenticado en la pantalla de activación de cuenta",
+  async ({ page }) => {
+    await page.context().clearCookies();
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("/activar-cuenta");
+    await expect(
+      page.getByRole("heading", { name: /Activá tu cuenta/i })
+    ).toBeVisible();
+  }
+);
+
+When(
+  "valida campos inválidos individualmente, evalúa el mínimo de contraseña, alterna su visibilidad y envía un correo no elegible",
+  async ({ page }) => {
+    const emailInput = page.getByLabel(/Correo electrónico/i);
+    const passwordInput = page.getByLabel("Nueva contraseña", { exact: true });
+    const submitBtn = page.getByRole("button", { name: /Activar mi cuenta/i });
+    const badgeMinimo = page.getByTestId("badge-minimo-contrasena");
+
+    await expect(badgeMinimo).toContainText("Mínimo 8 caracteres");
+
+    // Validación individual: solo email inválido
+    await emailInput.fill("correo-invalido");
+    await passwordInput.fill("ActivaCentris123!");
+    await expect(badgeMinimo).toContainText("Cumple mínimo de 8 caracteres");
+    await submitBtn.click();
+    await expect(emailInput).toHaveAttribute("aria-invalid", "true");
+    await expect(passwordInput).not.toHaveAttribute("aria-invalid", "true");
+
+    // Toggle de visibilidad de contraseña accesible (>= 44px)
+    await verificarToggleVisibilidadClave(page, passwordInput);
+
+    // Correo válido en formato pero sin cuenta pendiente en servidor
+    await emailInput.fill("inexistente.e2e@centris.dev");
+    await submitBtn.click();
+  }
+);
+
+Then(
+  "visualiza errores accesibles de activación sin códigos técnicos, sin desborde horizontal en móvil ni escritorio y puede volver a iniciar sesión",
+  async ({ page }) => {
+    const alerta = page.getByTestId("alerta-error-auth");
+    await expect(alerta).toBeVisible();
+    await expect(alerta).toHaveAttribute("role", "alert");
+    const textoAlerta = (await alerta.textContent()) ?? "";
+    expect(textoAlerta).not.toMatch(
+      /CREDENCIALES_INVALIDAS|CUENTA_YA_ACTIVADA|ERROR:|401|409|500/
+    );
+
+    // Sin desborde horizontal en móvil (375px) ni escritorio (1280px y 1440px)
+    await verificarSinDesbordeResponsive(page);
+
+    // Navegación accesible hacia /login
+    const loginLink = page.getByRole("link", {
+      name: /Volver a iniciar sesión/i
+    });
+    const linkBox = await loginLink.boundingBox();
+    expect(linkBox?.height).toBeGreaterThanOrEqual(44);
+    await loginLink.click();
+    await expect(page).toHaveURL(/\/login/);
   }
 );
