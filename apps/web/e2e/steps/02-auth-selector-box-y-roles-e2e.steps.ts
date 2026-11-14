@@ -325,6 +325,7 @@ When(
     await filaIntegrante
       .getByTestId(`checkbox-rol-recepcionista-${E2E_EQUIPO.afiliacionNorteId}`)
       .check();
+    await expect(filaIntegrante).toContainText(/Cambios sin guardar/i);
     await filaIntegrante
       .getByRole("button", { name: /Guardar roles/i })
       .click();
@@ -335,6 +336,12 @@ When(
 
     await filaIntegrante
       .getByRole("button", { name: /Dar de baja/i })
+      .click();
+    await expect(
+      filaIntegrante.getByText(/No afectará sus Afiliaciones en otros Boxes/i)
+    ).toBeVisible();
+    await filaIntegrante
+      .getByRole("button", { name: /Confirmar baja/i })
       .click();
   }
 );
@@ -758,5 +765,112 @@ Then(
     await expect(
       page.getByRole("button", { name: /Guardar configuración/i })
     ).toBeDisabled();
+  }
+);
+
+When("intenta abrir la gestión de afiliaciones del Box", async ({ page }) => {
+  await page.goto("/afiliaciones");
+});
+
+When(
+  "gestiona filtros, edición de roles con cambios sin guardar y confirmación inline en \\/afiliaciones",
+  async ({ page }) => {
+    await page.getByTestId("nav-link-afiliaciones").click();
+    await expect(page).toHaveURL(/\/afiliaciones/);
+
+    // Filtro por rol Coach y buscador
+    const grupoFiltros = page.getByRole("group", { name: /Filtrar por rol/i });
+    await grupoFiltros.getByRole("button", { name: "Coach" }).click();
+    await expect(
+      grupoFiltros.getByRole("button", { name: "Coach" })
+    ).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByText("Diego Sosa")).toBeVisible();
+    await expect(page.getByText("Sofía Castro")).toHaveCount(0);
+
+    await grupoFiltros.getByRole("button", { name: "Todos" }).click();
+    const buscador = page.getByLabel(/Buscar integrante/i);
+    await buscador.fill("coach@centris.dev");
+    await expect(page.getByText("Valentina Ruiz")).toBeVisible();
+    await buscador.fill("");
+
+    const filaValentina = page
+      .locator('[data-testid^="fila-afiliacion-"]')
+      .filter({ hasText: "Valentina Ruiz" });
+    await expect(filaValentina).toBeVisible();
+
+    // Estabilidad 0 desplazamiento de Guardar roles al activar "Cambios sin guardar" en desktop
+    for (const width of [1280, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      await filaValentina.scrollIntoViewIfNeeded();
+      const btnGuardar = filaValentina.getByRole("button", {
+        name: /Guardar roles/i
+      });
+      const obtenerPosicionDocumento = async () => {
+        const box = await btnGuardar.boundingBox();
+        const scroll = await page.evaluate(() => ({
+          x: window.scrollX,
+          y: window.scrollY
+        }));
+        if (!box) return null;
+        return {
+          x: box.x + scroll.x,
+          y: box.y + scroll.y,
+          width: box.width,
+          height: box.height
+        };
+      };
+
+      const antes = await obtenerPosicionDocumento();
+      expect(antes).not.toBeNull();
+
+      const pillAtleta = filaValentina.locator('[data-testid^="checkbox-rol-atleta-"]');
+      await pillAtleta.check();
+      await expect(filaValentina).toContainText(/Cambios sin guardar/i);
+
+      const despues = await obtenerPosicionDocumento();
+      expect(despues).not.toBeNull();
+      if (antes && despues) {
+        expect(Math.abs(antes.x - despues.x)).toBeLessThanOrEqual(1);
+        expect(Math.abs(antes.y - despues.y)).toBeLessThanOrEqual(1);
+        expect(Math.abs(antes.width - despues.width)).toBeLessThanOrEqual(1);
+        expect(Math.abs(antes.height - despues.height)).toBeLessThanOrEqual(1);
+      }
+
+      await filaValentina.getByRole("button", { name: /Descartar/i }).click();
+      await expect(filaValentina).not.toContainText(/Cambios sin guardar/i);
+    }
+
+    // Validación accesible sin códigos técnicos al intentar guardar con 0 roles
+    const pillCoach = filaValentina.locator('[data-testid^="checkbox-rol-coach-"]');
+    await pillCoach.uncheck();
+    await filaValentina.getByRole("button", { name: /Guardar roles/i }).click();
+    const alerta = filaValentina.getByRole("alert");
+    await expect(alerta).toBeVisible();
+    const textoAlerta = (await alerta.textContent()) ?? "";
+    expect(textoAlerta).not.toMatch(/VALIDACION_FALLIDA|ERROR:|400|422/);
+    await filaValentina.getByRole("button", { name: /Descartar/i }).click();
+
+    // Confirmación inline de baja con Escape y cancelar + retorno de foco
+    const btnBaja = filaValentina.getByRole("button", { name: /Dar de baja/i });
+    await btnBaja.click();
+    await expect(
+      filaValentina.getByText(/No afectará sus Afiliaciones en otros Boxes/i)
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(
+      filaValentina.getByText(/No afectará sus Afiliaciones en otros Boxes/i)
+    ).toHaveCount(0);
+    await expect(btnBaja).toBeFocused();
+
+    await btnBaja.click();
+    await filaValentina.getByRole("button", { name: /Cancelar/i }).click();
+    await expect(filaValentina).toBeVisible();
+  }
+);
+
+Then(
+  "el botón Guardar roles no se desplaza ni deforma en escritorio, valida al menos un rol y mantiene el diseño sin desborde en móvil y escritorio",
+  async ({ page }) => {
+    await verificarSinDesbordeResponsive(page, [375, 1280, 1440]);
   }
 );

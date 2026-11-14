@@ -54,3 +54,11 @@ Característica: Identidad Global, Autenticación, Selector de Box y Guard de 4 
     Dado un Administrador autenticado operando en "Box Centris Norte"
     Cuando verifica la alineación responsive de /configuracion, prueba validación individual y usa atajos de cancelación
     Entonces las columnas se apilan en móvil y alinean sus inputs en escritorio, sin desborde horizontal ni códigos técnicos y con opción de restablecer
+
+  Escenario: Diseño Bento, estabilidad de Guardar roles, filtros y confirmación inline en /afiliaciones
+    Dado un Usuario sin rol de Administrador en "Box Centris Norte"
+    Cuando intenta abrir la gestión de afiliaciones del Box
+    Entonces visualiza la restricción de acceso sin código 403 Forbidden y puede volver al panel
+    Dado un Administrador autenticado operando en "Box Centris Norte"
+    Cuando gestiona filtros, edición de roles con cambios sin guardar y confirmación inline en /afiliaciones
+    Entonces el botón Guardar roles no se desplaza ni deforma en escritorio, valida al menos un rol y mantiene el diseño sin desborde en móvil y escritorio

@@ -1,12 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { AlertCircle, CheckCircle2, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import type { Box } from "@centris/shared";
+import { AccesoRestringidoCard } from "@/components/ui/acceso-restringido-card";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonClassName } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -50,28 +50,9 @@ export function AccesoRestringidoConfiguracion({
   nombreBox: string;
 }) {
   return (
-    <Card
-      data-testid="acceso-denegado-rol"
-      className="max-w-2xl border-[#FF6D6D]/28"
-    >
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
-        <CardTitle className="text-xl">
-          Acceso exclusivo de Administración
-        </CardTitle>
-        <Badge variant="coral">Permiso requerido</Badge>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Tu afiliación actual en {nombreBox} no posee el rol de Administrador
-          para modificar la zona horaria, moneda o reglas operativas del Box.
-        </p>
-        <div>
-          <Link href="/inicio" className={buttonClassName("secondary")}>
-            Volver al panel
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
+    <AccesoRestringidoCard
+      descripcion={`Tu afiliación actual en ${nombreBox} no posee el rol de Administrador para modificar la zona horaria, moneda o reglas operativas del Box.`}
+    />
   );
 }
 
