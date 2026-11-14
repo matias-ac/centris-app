@@ -300,6 +300,61 @@ Then(
 );
 
 Given(
+  "un Administrador autenticado en la Auditoría de Caja con un Pago de {int} en {string} sobre una Membresía de {int}",
+  async ({ page }, pagoInicial: number, _medio: string, precio: number) => {
+    await prepararAtletaConMembresia(precio, "2026-11-01", pagoInicial);
+    await page.context().clearCookies();
+    await page.goto("/login");
+    await page.getByLabel(/Correo electrónico/i).fill("admin@centris.dev");
+    await page.getByLabel(/Contraseña/i).fill("Centris123!");
+    await page.getByRole("button", { name: /Iniciar sesión/i }).click();
+    await page.waitForURL(/\/(inicio|atletas|caja|seleccionar-box)/);
+    await page.goto("/caja");
+    await expect(page).toHaveURL(/\/caja/);
+    await page.getByTestId("tab-auditoria").click();
+    await expect(page.getByTestId("tabla-auditoria-caja")).toBeVisible();
+  }
+);
+
+When(
+  "abre el panel de anulación en Caja e ingresa el motivo {string}",
+  async ({ page }, motivo: string) => {
+    await page.getByTestId("filtro-auditoria-estado-validos").click();
+    await page.getByTestId(`btn-anular-pago-${E2E_PAGOS.pagoId}`).click();
+    const drawer = page.getByTestId("modal-anular-pago");
+    await expect(drawer).toBeVisible();
+    await drawer.getByTestId("input-motivo-anulacion").fill(motivo);
+    await drawer.getByTestId("btn-confirmar-anulacion").click();
+    await expect(drawer).not.toBeVisible();
+  }
+);
+
+Then(
+  "la Auditoría de Caja actualiza los ingresos válidos y muestra el Pago Anulado con su motivo sin desborde horizontal",
+  async ({ page }) => {
+    await expect(page.getByTestId("alerta-exito-caja")).toBeVisible();
+    await page.getByTestId("filtro-auditoria-estado-anulados").click();
+    const filaAuditoria = page.getByTestId("fila-auditoria-pago").first();
+    await expect(filaAuditoria.getByTestId("badge-pago-anulado")).toBeVisible();
+    await expect(filaAuditoria.getByTestId("pago-motivo-anulacion")).toContainText(
+      "Comprobante repetido en mostrador"
+    );
+    await expect(page.getByTestId("total-ingresos-validos")).toContainText("$ 0");
+
+    for (const width of [1280, 1440, 375]) {
+      await page.setViewportSize({ width, height: 850 });
+      const overflow = await page.evaluate(
+        () =>
+          document.documentElement.scrollWidth >
+          document.documentElement.clientWidth
+      );
+      expect(overflow).toBe(false);
+    }
+    await page.setViewportSize({ width: 1280, height: 850 });
+  }
+);
+
+Given(
   "un Coach autenticado en el sistema",
   async ({ page }) => {
     await page.context().clearCookies();
@@ -323,7 +378,11 @@ Then(
   async ({ page }) => {
     const card = page.getByTestId("acceso-denegado-rol");
     await expect(card).toBeVisible();
-    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(
+      page
+        .getByRole("alert")
+        .filter({ hasText: /Acceso restringido a Recepción y Administración/i })
+    ).toBeVisible();
     const texto = (await card.textContent()) ?? "";
     expect(texto).not.toMatch(/403|Forbidden/i);
     await card.getByRole("link", { name: /Volver al panel/i }).click();

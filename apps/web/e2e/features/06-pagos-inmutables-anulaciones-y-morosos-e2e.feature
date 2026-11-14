@@ -21,6 +21,11 @@ Característica: Caja Contable de Pagos Inmutables, Anulaciones Auditables y Rep
     Y el Saldo de la Membresía se recalcula automáticamente a 30000
     Y en la Auditoría de Caja el Pago permanece visible con su motivo de anulación y sin desborde horizontal
 
+  Escenario: Administrador anula un pago directamente desde el panel lateral de Auditoría de Caja
+    Dado un Administrador autenticado en la Auditoría de Caja con un Pago de 15000 en "EFECTIVO" sobre una Membresía de 30000
+    Cuando abre el panel de anulación en Caja e ingresa el motivo "Comprobante repetido en mostrador"
+    Entonces la Auditoría de Caja actualiza los ingresos válidos y muestra el Pago Anulado con su motivo sin desborde horizontal
+
   Escenario: Coach no tiene acceso a las pantallas financieras ni reporte de Morosos
     Dado un Coach autenticado en el sistema
     Cuando intenta navegar a la pantalla de Caja y Morosos
