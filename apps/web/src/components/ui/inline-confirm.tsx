@@ -98,6 +98,8 @@ export interface InlineConfirmPanelProps {
   onConfirm: () => void;
   onCancel: () => void;
   testIdPrefix?: string;
+  confirmTestId?: string;
+  cancelTestId?: string;
   className?: string;
   messageClassName?: string;
 }
@@ -116,6 +118,8 @@ export function InlineConfirmPanel({
   onConfirm,
   onCancel,
   testIdPrefix,
+  confirmTestId,
+  cancelTestId,
   className,
   messageClassName
 }: InlineConfirmPanelProps) {
@@ -138,7 +142,7 @@ export function InlineConfirmPanel({
           type="button"
           variant={confirmVariant}
           disabled={bloqueado}
-          data-testid={testIdPrefix ? `${testIdPrefix}-confirm` : undefined}
+          data-testid={confirmTestId ?? (testIdPrefix ? `${testIdPrefix}-confirm` : undefined)}
           onClick={onConfirm}
         >
           {bloqueado ? "Procesando..." : confirmLabel}
@@ -148,7 +152,7 @@ export function InlineConfirmPanel({
           type="button"
           variant="secondary"
           disabled={bloqueado}
-          data-testid={testIdPrefix ? `${testIdPrefix}-cancel` : undefined}
+          data-testid={cancelTestId ?? (testIdPrefix ? `${testIdPrefix}-cancel` : undefined)}
           onClick={onCancel}
         >
           {cancelLabel}
