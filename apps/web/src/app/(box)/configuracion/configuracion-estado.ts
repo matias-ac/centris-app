@@ -54,8 +54,8 @@ export interface VistaPreviaOperativaBox {
   relojLocal: string;
   zonaElegidaLabel: string;
   ejemploMoneda: string;
-  horizonteTitulo: string;
-  horizonteDetalle: string;
+  anticipacionTitulo: string;
+  anticipacionDetalle: string;
   cancelacionTitulo: string;
   cancelacionDetalle: string;
   equivalenciaVentana: string;
@@ -128,7 +128,7 @@ const MENSAJES_ERROR_SERVIDOR: Partial<Record<ErrorCode, string>> = {
 const MENSAJE_ERROR_RESPALDO =
   "No pudimos guardar la configuración en este momento. Intentá nuevamente en unos segundos.";
 
-function parsearEnteroEstricto(valor: string): number {
+export function parsearEnteroEstricto(valor: string): number {
   const limpio = valor.trim();
   if (!/^-?\d+$/.test(limpio)) {
     return Number.NaN;
@@ -269,22 +269,15 @@ export function validarConfiguracionBox(
   });
 
   if (!validado.success) {
-    const campo = validado.error.issues[0]?.path[0];
-    const mensaje =
-      validado.error.issues[0]?.message ??
-      "Revisá los valores ingresados en el formulario.";
-    if (campo === "timezone") {
-      errores.timezone = mensaje;
-    } else if (campo === "moneda") {
-      errores.moneda = mensaje;
-    } else if (campo === "anticipacionReservaDias") {
-      errores.anticipacionReservaDias =
-        "Indicá un número entero entre 1 y 90 días.";
-    } else if (campo === "ventanaCancelacionMinutos") {
-      errores.ventanaCancelacionMinutos =
-        "Indicá un número entero entre 0 y 10080 minutos.";
-    } else {
-      errores.general = mensaje;
+    for (const issue of validado.error.issues) {
+      const campo = issue.path[0];
+      if (campo === "timezone" && !errores.timezone) {
+        errores.timezone = issue.message;
+      } else if (campo === "moneda" && !errores.moneda) {
+        errores.moneda = issue.message;
+      } else if (!errores.general) {
+        errores.general = issue.message;
+      }
     }
     return { ok: false, errores };
   }
@@ -329,8 +322,8 @@ export function calcularVistaPreviaOperativa(
   }
 
   const dias = parsearEnteroEstricto(borrador.anticipacionReservaDias);
-  let horizonteTitulo = "Revisá los días";
-  let horizonteDetalle = "Debe estar entre 1 y 90 días.";
+  let anticipacionTitulo = "Revisá los días";
+  let anticipacionDetalle = "Debe estar entre 1 y 90 días.";
   if (Number.isInteger(dias) && dias >= 1 && dias <= 90) {
     const fechaLimite = new Date(ahora.getTime() + dias * 86_400_000);
     let fechaStr = `dentro de ${dias} días`;
@@ -344,8 +337,8 @@ export function calcularVistaPreviaOperativa(
     } catch {
       fechaStr = `dentro de ${dias} días`;
     }
-    horizonteTitulo = `Hasta ${dias} día${dias === 1 ? "" : "s"}`;
-    horizonteDetalle = `Hoy un atleta puede reservar clases hasta el ${fechaStr}.`;
+    anticipacionTitulo = `Hasta ${dias} día${dias === 1 ? "" : "s"}`;
+    anticipacionDetalle = `Hoy un atleta puede reservar clases hasta el ${fechaStr}.`;
   }
 
   const minutos = parsearEnteroEstricto(borrador.ventanaCancelacionMinutos);
@@ -373,8 +366,8 @@ export function calcularVistaPreviaOperativa(
     relojLocal,
     zonaElegidaLabel,
     ejemploMoneda,
-    horizonteTitulo,
-    horizonteDetalle,
+    anticipacionTitulo,
+    anticipacionDetalle,
     cancelacionTitulo,
     cancelacionDetalle,
     equivalenciaVentana

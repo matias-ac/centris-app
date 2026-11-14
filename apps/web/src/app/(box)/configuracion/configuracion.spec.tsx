@@ -134,9 +134,9 @@ describe("Rediseño Dark Bento Cockpit de /configuracion", () => {
       expect(vista.zonaElegidaLabel).toContain("Montevideo");
       expect(vista.relojLocal).not.toBe("--:--");
       expect(vista.ejemploMoneda).toMatch(/38\.000|38,000/);
-      expect(vista.horizonteTitulo).toBe("Hasta 10 días");
-      expect(vista.horizonteDetalle).toContain("reservar clases");
-      expect(vista.horizonteDetalle).not.toContain("turnos");
+      expect(vista.anticipacionTitulo).toBe("Hasta 10 días");
+      expect(vista.anticipacionDetalle).toContain("reservar clases");
+      expect(vista.anticipacionDetalle).not.toContain("turnos");
       expect(vista.cancelacionTitulo).toBe("1 h 30 min (90 min) antes");
       expect(vista.cancelacionDetalle).toContain("cancelación tardía");
       expect(vista.equivalenciaVentana).toBe(
@@ -232,7 +232,7 @@ describe("Rediseño Dark Bento Cockpit de /configuracion", () => {
       expect(html).toContain("En vivo");
       expect(html).toContain("Reloj local del Box");
       expect(html).toContain("Ejemplo de precio en pantalla");
-      expect(html).toContain("Horizonte de reservas");
+      expect(html).toContain("Anticipación de reserva");
       expect(html).toContain("Política de cancelación");
 
       // Alineación responsive (.two-cols + .field-label) y reglas tipográficas
@@ -251,7 +251,7 @@ describe("Rediseño Dark Bento Cockpit de /configuracion", () => {
       expect(html).not.toContain("IANA");
       expect(html).not.toContain("ISO 4217");
       expect(html).not.toContain("—");
-      expect(html).not.toMatch(/turnos|cuotas/i);
+      expect(html).not.toMatch(/turnos|cuotas|horizonte/i);
     });
 
     it("aplica aria-invalid únicamente al campo con error y muestra banner accesible al guardar", () => {

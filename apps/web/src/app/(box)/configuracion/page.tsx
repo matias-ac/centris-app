@@ -43,7 +43,11 @@ export default async function ConfiguracionBoxPage() {
         </p>
       </header>
 
-      <FormularioConfiguracionBox key={box.id} box={box} />
+      <FormularioConfiguracionBox
+        key={box.id}
+        box={box}
+        fechaReferenciaIso={new Date().toISOString()}
+      />
     </div>
   );
 }

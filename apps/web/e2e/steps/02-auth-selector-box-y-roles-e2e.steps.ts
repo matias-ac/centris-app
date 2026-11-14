@@ -703,13 +703,7 @@ When(
     const ventanaInput = page.getByLabel(/Ventana de cancelación/i);
 
     // En móvil (375px), los campos .two-cols se apilan en 1 columna sin desborde
-    await page.setViewportSize({ width: 375, height: 812 });
-    const overflowMovil = await page.evaluate(
-      () =>
-        document.documentElement.scrollWidth >
-        document.documentElement.clientWidth
-    );
-    expect(overflowMovil).toBe(false);
+    await verificarSinDesbordeResponsive(page, [375]);
     const rectAntMovil = await anticipacionInput.boundingBox();
     const rectVenMovil = await ventanaInput.boundingBox();
     expect(rectAntMovil).not.toBeNull();
@@ -720,13 +714,7 @@ When(
 
     // En tablet/desktop (768px, 1280px, 1440px), los inputs horizontales arrancan a la misma altura
     for (const width of [768, 1280, 1440]) {
-      await page.setViewportSize({ width, height: 900 });
-      const overflow = await page.evaluate(
-        () =>
-          document.documentElement.scrollWidth >
-          document.documentElement.clientWidth
-      );
-      expect(overflow).toBe(false);
+      await verificarSinDesbordeResponsive(page, [width]);
 
       const rectAnt = await anticipacionInput.boundingBox();
       const rectVen = await ventanaInput.boundingBox();

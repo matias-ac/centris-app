@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { AlertCircle, CheckCircle2, RotateCcw } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import type { Box } from "@centris/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClassName } from "@/components/ui/button";
@@ -24,6 +24,7 @@ import {
   calcularVistaPreviaOperativa,
   crearBorradorDesdeBox,
   hayCambiosPendientesConfiguracion,
+  parsearEnteroEstricto,
   procesarGuardadoConfiguracion,
   resolverOpcionesMoneda,
   resolverOpcionesTimezone,
@@ -31,8 +32,11 @@ import {
   type ErroresConfiguracionBox
 } from "./configuracion-estado";
 
+const FECHA_REFERENCIA_ESTABLE = new Date("2026-11-14T15:00:00.000Z");
+
 export interface FormularioConfiguracionBoxProps {
   box: Box;
+  fechaReferenciaIso?: string;
   erroresIniciales?: ErroresConfiguracionBox;
   guardadoInicialOk?: boolean;
 }
@@ -71,6 +75,49 @@ export function AccesoRestringidoConfiguracion({
   );
 }
 
+function CampoConfiguracion({
+  id,
+  label,
+  hint,
+  hintClassName,
+  error,
+  children
+}: {
+  id: string;
+  label: string;
+  hint: React.ReactNode;
+  hintClassName?: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="min-w-0">
+      <Label
+        htmlFor={id}
+        className="field-label mb-1.5 block md:flex md:min-h-[2.5rem] md:items-end md:leading-[1.3]"
+      >
+        {label}
+      </Label>
+      {children}
+      <p
+        id={`hint-${id}`}
+        className={cn("mt-1.5 text-xs text-muted-foreground", hintClassName)}
+      >
+        {hint}
+      </p>
+      {error ? (
+        <p
+          id={`error-${id}`}
+          role="alert"
+          className="mt-1.5 text-xs text-[#FF6D6D]"
+        >
+          {error}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function PozoVistaPrevia({
   etiqueta,
   valor,
@@ -88,9 +135,7 @@ function PozoVistaPrevia({
       <strong className="text-[1.0625rem] font-medium text-foreground tabular-nums">
         {valor}
       </strong>
-      <p className="text-sm leading-snug text-muted-foreground">
-        {detalle}
-      </p>
+      <p className="text-sm leading-snug text-muted-foreground">{detalle}</p>
     </div>
   );
 }
@@ -100,6 +145,7 @@ function PozoVistaPrevia({
  */
 export function FormularioConfiguracionBox({
   box,
+  fechaReferenciaIso,
   erroresIniciales,
   guardadoInicialOk = false
 }: FormularioConfiguracionBoxProps) {
@@ -113,13 +159,26 @@ export function FormularioConfiguracionBox({
   );
   const [guardadoOk, setGuardadoOk] = useState(guardadoInicialOk);
   const [cambiosDescartados, setCambiosDescartados] = useState(false);
+  const [fechaReferencia, setFechaReferencia] = useState<Date>(() =>
+    fechaReferenciaIso ? new Date(fechaReferenciaIso) : FECHA_REFERENCIA_ESTABLE
+  );
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    setFechaReferencia(new Date());
+    const intervalo = setInterval(() => {
+      setFechaReferencia(new Date());
+    }, 30_000);
+    return () => clearInterval(intervalo);
+  }, []);
 
   const opcionesTimezone = resolverOpcionesTimezone(borrador.timezone);
   const opcionesMoneda = resolverOpcionesMoneda(borrador.moneda);
   const hayCambios = hayCambiosPendientesConfiguracion(boxGuardado, borrador);
-  const vistaPrevia = calcularVistaPreviaOperativa(borrador);
-  const ventanaNumerica = Number(borrador.ventanaCancelacionMinutos.trim());
+  const vistaPrevia = calcularVistaPreviaOperativa(borrador, fechaReferencia);
+  const ventanaNumerica = parsearEnteroEstricto(
+    borrador.ventanaCancelacionMinutos
+  );
 
   function actualizarCampo<K extends keyof BorradorConfiguracionBox>(
     campo: K,
@@ -184,7 +243,7 @@ export function FormularioConfiguracionBox({
   return (
     <form
       onSubmit={handleSubmit}
-      className="grid grid-cols-1 items-start gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(0,0.9fr)]"
+      className="grid grid-cols-1 items-start gap-5 min-[1100px]:grid-cols-[minmax(0,1.35fr)_minmax(0,0.9fr)]"
       noValidate
     >
       <div className="flex min-w-0 flex-col gap-5">
@@ -244,13 +303,12 @@ export function FormularioConfiguracionBox({
             </div>
 
             <div className="two-cols grid grid-cols-1 items-start gap-4 md:grid-cols-2">
-              <div className="min-w-0">
-                <Label
-                  htmlFor="cfg-timezone"
-                  className="field-label mb-1.5 block md:flex md:min-h-[2.5rem] md:items-end md:leading-[1.3]"
-                >
-                  Zona horaria del Box
-                </Label>
+              <CampoConfiguracion
+                id="cfg-timezone"
+                label="Zona horaria del Box"
+                hint="Todas las clases y cancelaciones se calculan con este horario local."
+                error={errores.timezone}
+              >
                 <Select
                   id="cfg-timezone"
                   aria-invalid={errores.timezone ? true : undefined}
@@ -270,31 +328,14 @@ export function FormularioConfiguracionBox({
                     </option>
                   ))}
                 </Select>
-                <p
-                  id="hint-cfg-timezone"
-                  className="mt-1.5 text-xs text-muted-foreground"
-                >
-                  Todas las clases y cancelaciones se calculan con este horario
-                  local.
-                </p>
-                {errores.timezone ? (
-                  <p
-                    id="error-cfg-timezone"
-                    role="alert"
-                    className="mt-1.5 text-xs text-[#FF6D6D]"
-                  >
-                    {errores.timezone}
-                  </p>
-                ) : null}
-              </div>
+              </CampoConfiguracion>
 
-              <div className="min-w-0">
-                <Label
-                  htmlFor="cfg-moneda"
-                  className="field-label mb-1.5 block md:flex md:min-h-[2.5rem] md:items-end md:leading-[1.3]"
-                >
-                  Moneda de cobro
-                </Label>
+              <CampoConfiguracion
+                id="cfg-moneda"
+                label="Moneda de cobro"
+                hint="Se aplica al catálogo de planes, cobranzas y saldos pendientes."
+                error={errores.moneda}
+              >
                 <Select
                   id="cfg-moneda"
                   aria-invalid={errores.moneda ? true : undefined}
@@ -314,23 +355,7 @@ export function FormularioConfiguracionBox({
                     </option>
                   ))}
                 </Select>
-                <p
-                  id="hint-cfg-moneda"
-                  className="mt-1.5 text-xs text-muted-foreground"
-                >
-                  Se aplica al catálogo de planes, cobranzas y saldos
-                  pendientes.
-                </p>
-                {errores.moneda ? (
-                  <p
-                    id="error-cfg-moneda"
-                    role="alert"
-                    className="mt-1.5 text-xs text-[#FF6D6D]"
-                  >
-                    {errores.moneda}
-                  </p>
-                ) : null}
-              </div>
+              </CampoConfiguracion>
             </div>
           </CardContent>
         </Card>
@@ -345,13 +370,17 @@ export function FormularioConfiguracionBox({
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="two-cols grid grid-cols-1 items-start gap-4 md:grid-cols-2">
-              <div className="min-w-0">
-                <Label
-                  htmlFor="cfg-anticipacion"
-                  className="field-label mb-1.5 block md:flex md:min-h-[2.5rem] md:items-end md:leading-[1.3]"
-                >
-                  Anticipación de reserva (días)
-                </Label>
+              <CampoConfiguracion
+                id="cfg-anticipacion"
+                label="Anticipación de reserva (días)"
+                hint={
+                  <>
+                    Entre <span className="tabular-nums">1</span> y{" "}
+                    <span className="tabular-nums">90</span> días hacia adelante.
+                  </>
+                }
+                error={errores.anticipacionReservaDias}
+              >
                 <Input
                   id="cfg-anticipacion"
                   type="number"
@@ -372,31 +401,15 @@ export function FormularioConfiguracionBox({
                   }
                   required
                 />
-                <p
-                  id="hint-cfg-anticipacion"
-                  className="mt-1.5 text-xs text-muted-foreground"
-                >
-                  Entre <span className="tabular-nums">1</span> y{" "}
-                  <span className="tabular-nums">90</span> días hacia adelante.
-                </p>
-                {errores.anticipacionReservaDias ? (
-                  <p
-                    id="error-cfg-anticipacion"
-                    role="alert"
-                    className="mt-1.5 text-xs text-[#FF6D6D]"
-                  >
-                    {errores.anticipacionReservaDias}
-                  </p>
-                ) : null}
-              </div>
+              </CampoConfiguracion>
 
-              <div className="min-w-0">
-                <Label
-                  htmlFor="cfg-ventana"
-                  className="field-label mb-1.5 block md:flex md:min-h-[2.5rem] md:items-end md:leading-[1.3]"
-                >
-                  Ventana de cancelación (minutos)
-                </Label>
+              <CampoConfiguracion
+                id="cfg-ventana"
+                label="Ventana de cancelación (minutos)"
+                hint={vistaPrevia.equivalenciaVentana}
+                hintClassName="tabular-nums"
+                error={errores.ventanaCancelacionMinutos}
+              >
                 <Input
                   id="cfg-ventana"
                   type="number"
@@ -417,22 +430,7 @@ export function FormularioConfiguracionBox({
                   }
                   required
                 />
-                <p
-                  id="hint-cfg-ventana"
-                  className="mt-1.5 text-xs text-muted-foreground tabular-nums"
-                >
-                  {vistaPrevia.equivalenciaVentana}
-                </p>
-                {errores.ventanaCancelacionMinutos ? (
-                  <p
-                    id="error-cfg-ventana"
-                    role="alert"
-                    className="mt-1.5 text-xs text-[#FF6D6D]"
-                  >
-                    {errores.ventanaCancelacionMinutos}
-                  </p>
-                ) : null}
-              </div>
+              </CampoConfiguracion>
             </div>
 
             <div className="space-y-2">
@@ -477,7 +475,7 @@ export function FormularioConfiguracionBox({
 
         <div
           className={cn(
-            "flex flex-wrap items-center justify-between gap-3 rounded-[20px] border bg-card px-4 py-3.5 transition-colors",
+            "flex flex-wrap items-center justify-between gap-3 rounded-3xl border bg-card px-5 py-4 transition-colors",
             hayCambios ? "border-[#FBBF24]/28" : "border-border"
           )}
         >
@@ -542,9 +540,9 @@ export function FormularioConfiguracionBox({
               detalle="Formato aplicado a membresías, pagos y morosos."
             />
             <PozoVistaPrevia
-              etiqueta="Horizonte de reservas"
-              valor={vistaPrevia.horizonteTitulo}
-              detalle={vistaPrevia.horizonteDetalle}
+              etiqueta="Anticipación de reserva"
+              valor={vistaPrevia.anticipacionTitulo}
+              detalle={vistaPrevia.anticipacionDetalle}
             />
             <PozoVistaPrevia
               etiqueta="Política de cancelación"
