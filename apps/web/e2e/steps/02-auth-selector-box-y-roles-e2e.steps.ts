@@ -801,17 +801,33 @@ When(
     // Estabilidad 0 desplazamiento de Guardar roles al activar "Cambios sin guardar" en desktop
     for (const width of [1280, 1440]) {
       await page.setViewportSize({ width, height: 900 });
+      await filaValentina.scrollIntoViewIfNeeded();
       const btnGuardar = filaValentina.getByRole("button", {
         name: /Guardar roles/i
       });
-      const antes = await btnGuardar.boundingBox();
+      const obtenerPosicionDocumento = async () => {
+        const box = await btnGuardar.boundingBox();
+        const scroll = await page.evaluate(() => ({
+          x: window.scrollX,
+          y: window.scrollY
+        }));
+        if (!box) return null;
+        return {
+          x: box.x + scroll.x,
+          y: box.y + scroll.y,
+          width: box.width,
+          height: box.height
+        };
+      };
+
+      const antes = await obtenerPosicionDocumento();
       expect(antes).not.toBeNull();
 
       const pillAtleta = filaValentina.locator('[data-testid^="checkbox-rol-atleta-"]');
       await pillAtleta.check();
       await expect(filaValentina).toContainText(/Cambios sin guardar/i);
 
-      const despues = await btnGuardar.boundingBox();
+      const despues = await obtenerPosicionDocumento();
       expect(despues).not.toBeNull();
       if (antes && despues) {
         expect(Math.abs(antes.x - despues.x)).toBeLessThanOrEqual(1);
