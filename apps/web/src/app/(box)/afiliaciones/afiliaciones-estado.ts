@@ -8,7 +8,7 @@ import {
 } from "@centris/shared";
 import { obtenerEtiquetaRol } from "@/lib/identidad-ui";
 
-export type FiltroRolAfiliacion = "ALL" | RolAfiliacion;
+export type FiltroRolAfiliacion = "TODOS" | RolAfiliacion;
 
 export interface OpcionRolAfiliacion {
   id: RolAfiliacion;
@@ -17,7 +17,7 @@ export interface OpcionRolAfiliacion {
 
 export interface KpisAfiliaciones {
   total: number;
-  staff: number;
+  equipoOperativo: number;
   atletas: number;
 }
 
@@ -49,11 +49,14 @@ export const OPCIONES_ROLES_AFILIACION: readonly OpcionRolAfiliacion[] =
     label: obtenerEtiquetaRol(rol).label
   }));
 
-const ROLES_STAFF: readonly RolAfiliacion[] = [
+const ROLES_EQUIPO_OPERATIVO: readonly RolAfiliacion[] = [
   "administrador",
   "coach",
   "recepcionista"
 ];
+
+const MENSAJE_MINIMO_UN_ROL =
+  "Cada persona debe conservar al menos un rol activo. Si querés quitarle acceso, usá Dar de baja.";
 
 const MENSAJES_ERROR_AFILIACION: Partial<Record<ErrorCode, string>> = {
   [ERROR_CODES.ULTIMO_ADMINISTRADOR]:
@@ -64,8 +67,7 @@ const MENSAJES_ERROR_AFILIACION: Partial<Record<ErrorCode, string>> = {
     "Seleccioná un Box activo antes de aplicar estos cambios.",
   [ERROR_CODES.NO_AUTENTICADO]:
     "Tu sesión venció. Volvé a iniciar sesión para continuar.",
-  [ERROR_CODES.VALIDACION_FALLIDA]:
-    "Cada persona debe conservar al menos un rol activo. Si querés quitarle acceso, usá Dar de baja."
+  [ERROR_CODES.VALIDACION_FALLIDA]: MENSAJE_MINIMO_UN_ROL
 };
 
 const MENSAJE_ERROR_RESPALDO =
@@ -77,12 +79,12 @@ const MENSAJE_ERROR_RESPALDO =
 export function calcularKpisAfiliaciones(
   afiliaciones: readonly AfiliacionConUsuario[]
 ): KpisAfiliaciones {
-  let staff = 0;
+  let equipoOperativo = 0;
   let atletas = 0;
 
   for (const afiliacion of afiliaciones) {
-    if (tieneAlgunRol(afiliacion.roles, ROLES_STAFF)) {
-      staff += 1;
+    if (tieneAlgunRol(afiliacion.roles, ROLES_EQUIPO_OPERATIVO)) {
+      equipoOperativo += 1;
     }
     if (afiliacion.roles.includes("atleta")) {
       atletas += 1;
@@ -91,7 +93,7 @@ export function calcularKpisAfiliaciones(
 
   return {
     total: afiliaciones.length,
-    staff,
+    equipoOperativo,
     atletas
   };
 }
@@ -119,7 +121,7 @@ export function filtrarAfiliaciones(
       }
     }
 
-    if (filtroRol !== "ALL" && !afiliacion.roles.includes(filtroRol)) {
+    if (filtroRol !== "TODOS" && !afiliacion.roles.includes(filtroRol)) {
       return false;
     }
 
@@ -171,8 +173,7 @@ export function validarRolesAfiliacionLocal(
   if (!validado.success) {
     return {
       ok: false,
-      error:
-        "Cada persona debe conservar al menos un rol activo. Si querés quitarle acceso, usá Dar de baja."
+      error: MENSAJE_MINIMO_UN_ROL
     };
   }
   return { ok: true, roles: validado.data.roles };

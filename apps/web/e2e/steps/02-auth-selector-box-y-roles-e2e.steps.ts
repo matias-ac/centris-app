@@ -338,7 +338,7 @@ When(
       .getByRole("button", { name: /Dar de baja/i })
       .click();
     await expect(
-      filaIntegrante.getByText(/No afectará sus cuentas en otros Boxes/i)
+      filaIntegrante.getByText(/No afectará sus Afiliaciones en otros Boxes/i)
     ).toBeVisible();
     await filaIntegrante
       .getByRole("button", { name: /Confirmar baja/i })
@@ -850,11 +850,19 @@ When(
     expect(textoAlerta).not.toMatch(/VALIDACION_FALLIDA|ERROR:|400|422/);
     await filaValentina.getByRole("button", { name: /Descartar/i }).click();
 
-    // Confirmación inline de baja con opción de cancelar
-    await filaValentina.getByRole("button", { name: /Dar de baja/i }).click();
+    // Confirmación inline de baja con Escape y cancelar + retorno de foco
+    const btnBaja = filaValentina.getByRole("button", { name: /Dar de baja/i });
+    await btnBaja.click();
     await expect(
-      filaValentina.getByText(/No afectará sus cuentas en otros Boxes/i)
+      filaValentina.getByText(/No afectará sus Afiliaciones en otros Boxes/i)
     ).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(
+      filaValentina.getByText(/No afectará sus Afiliaciones en otros Boxes/i)
+    ).toHaveCount(0);
+    await expect(btnBaja).toBeFocused();
+
+    await btnBaja.click();
     await filaValentina.getByRole("button", { name: /Cancelar/i }).click();
     await expect(filaValentina).toBeVisible();
   }

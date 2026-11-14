@@ -73,17 +73,21 @@ const AFILIACIONES_BASE: AfiliacionConUsuario[] = [
 
 describe("Rediseño Dark Bento Cockpit de /afiliaciones", () => {
   describe("Módulo afiliaciones-estado (KPIs, filtros, roles y errores)", () => {
-    it("calcula KPIs de integrantes activos, staff operativo y atletas", () => {
+    it("calcula KPIs de integrantes activos, equipo operativo y atletas", () => {
       const kpis = calcularKpisAfiliaciones(AFILIACIONES_BASE);
       expect(kpis).toEqual({
         total: 3,
-        staff: 2,
+        equipoOperativo: 2,
         atletas: 2
       });
     });
 
     it("filtra por nombre o email y por rol asignado sin distinguir mayúsculas", () => {
-      const porNombre = filtrarAfiliaciones(AFILIACIONES_BASE, "diego", "ALL");
+      const porNombre = filtrarAfiliaciones(
+        AFILIACIONES_BASE,
+        "diego",
+        "TODOS"
+      );
       expect(porNombre.map((a) => a.id)).toEqual([
         "e0000000-0000-4000-8000-000000000002"
       ]);
@@ -91,7 +95,7 @@ describe("Rediseño Dark Bento Cockpit de /afiliaciones", () => {
       const porEmail = filtrarAfiliaciones(
         AFILIACIONES_BASE,
         "SOFIA.CASTRO",
-        "ALL"
+        "TODOS"
       );
       expect(porEmail.map((a) => a.id)).toEqual([
         "e0000000-0000-4000-8000-000000000003"
@@ -214,9 +218,10 @@ describe("Rediseño Dark Bento Cockpit de /afiliaciones", () => {
 
       // KPIs y cifras tabulares
       expect(html).toContain("Integrantes activos");
-      expect(html).toContain("Staff con acceso operativo");
+      expect(html).toContain("Equipo operativo con acceso");
       expect(html).toContain("Con rol Atleta");
       expect(html).toContain("tabular-nums");
+      expect(html).not.toMatch(/\bstaff\b/i);
 
       // Buscador y filtros por rol
       expect(html).toContain('aria-label="Buscar integrante"');
@@ -270,10 +275,10 @@ describe("Rediseño Dark Bento Cockpit de /afiliaciones", () => {
       expect(html).toContain("confirm-inline");
       expect(html).toContain("Confirmar baja");
       expect(html).toContain("Cancelar");
-      expect(html).toContain("No afectará sus cuentas en otros Boxes");
+      expect(html).toContain("No afectará sus Afiliaciones en otros Boxes");
     });
 
-    it("renderiza acceso restringido preservando testid sin 403 Forbidden", () => {
+    it("renderiza acceso restringido preservando testid, h1 y sin 403 Forbidden", () => {
       const html = renderToStaticMarkup(
         createElement(AccesoRestringidoAfiliaciones, {
           nombreBox: "Box Centris Norte"
@@ -281,6 +286,7 @@ describe("Rediseño Dark Bento Cockpit de /afiliaciones", () => {
       );
 
       expect(html).toContain('data-testid="acceso-denegado-rol"');
+      expect(html).toContain("<h1");
       expect(html).toContain("Acceso exclusivo de Administración");
       expect(html).toContain("Permiso requerido");
       expect(html).toContain('href="/inicio"');

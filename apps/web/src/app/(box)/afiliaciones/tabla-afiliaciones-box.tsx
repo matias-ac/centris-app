@@ -1,18 +1,21 @@
 "use client";
 
-import Link from "next/link";
 import { AlertCircle, Check, CheckCircle2, Search } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AfiliacionConUsuario, RolAfiliacion } from "@centris/shared";
+import { AccesoRestringidoCard } from "@/components/ui/acceso-restringido-card";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonClassName } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import {
   FilterChips,
   type FilterChipOption
 } from "@/components/ui/filter-chips";
-import { manejarTeclaInlineConfirm } from "@/components/ui/inline-confirm";
+import {
+  InlineConfirmPanel,
+  useInlineConfirm
+} from "@/components/ui/inline-confirm";
 import { Input } from "@/components/ui/input";
 import {
   bajaAfiliacionAction,
@@ -39,6 +42,8 @@ export interface TablaAfiliacionesBoxProps {
   confirmandoBajaInicialId?: string | null;
 }
 
+type OperacionFilaAfiliacion = "guardar" | "baja" | null;
+
 /**
  * Vista accesible cuando el usuario no posee el rol de Administrador en el Box activo.
  */
@@ -48,28 +53,10 @@ export function AccesoRestringidoAfiliaciones({
   nombreBox: string;
 }) {
   return (
-    <Card
-      data-testid="acceso-denegado-rol"
-      className="max-w-2xl border-[#FF6D6D]/28"
-    >
-      <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-3 space-y-0">
-        <CardTitle className="text-xl">
-          Acceso exclusivo de Administración
-        </CardTitle>
-        <Badge variant="coral">Permiso requerido</Badge>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Tu afiliación actual en {nombreBox} no tiene permiso de Administrador
-          para modificar roles o quitar accesos de integrantes.
-        </p>
-        <div>
-          <Link href="/inicio" className={buttonClassName("secondary")}>
-            Volver al panel
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
+    <AccesoRestringidoCard
+      headingAs="h1"
+      descripcion={`Tu afiliación actual en ${nombreBox} no tiene permiso de Administrador para modificar roles o quitar accesos de integrantes.`}
+    />
   );
 }
 
@@ -89,9 +76,7 @@ function TarjetaKpiAfiliacion({
   return (
     <Card className="min-w-0 p-5">
       <div className="flex flex-col gap-2">
-        <span className="text-sm text-muted-foreground">
-          {etiqueta}
-        </span>
+        <span className="text-sm text-muted-foreground">{etiqueta}</span>
         <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
           <strong className="text-[clamp(1.375rem,1.2rem+0.8vw,1.625rem)] font-medium leading-none tracking-[-0.02em] text-foreground tabular-nums">
             {valor}
@@ -113,69 +98,61 @@ function FilaAfiliacionBox({
   afiliacion,
   boxId,
   nombreBox,
-  borradorInicial,
+  rolesSeleccionados,
   confirmandoInicial,
+  onCambiarRoles,
+  onDescartarRoles,
   onRolesGuardados,
   onBajaCompletada
 }: {
   afiliacion: AfiliacionConUsuario;
   boxId: string;
   nombreBox: string;
-  borradorInicial?: RolAfiliacion[];
+  rolesSeleccionados: RolAfiliacion[];
   confirmandoInicial?: boolean;
+  onCambiarRoles: (afiliacionId: string, roles: RolAfiliacion[]) => void;
+  onDescartarRoles: (afiliacionId: string) => void;
   onRolesGuardados: (afiliacionId: string, roles: RolAfiliacion[]) => void;
   onBajaCompletada: (afiliacionId: string) => void;
 }) {
   const router = useRouter();
-  const [rolesGuardados, setRolesGuardados] = useState<RolAfiliacion[]>(
-    afiliacion.roles
-  );
-  const [rolesSeleccionados, setRolesSeleccionados] = useState<RolAfiliacion[]>(
-    () => borradorInicial ?? afiliacion.roles
-  );
-  const [confirmandoBaja, setConfirmandoBaja] = useState(
-    Boolean(confirmandoInicial)
-  );
   const [guardadoOk, setGuardadoOk] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [isPending, startTransition] = useTransition();
+  const [operacionPendiente, setOperacionPendiente] =
+    useState<OperacionFilaAfiliacion>(null);
 
-  const darDeBajaBtnRef = useRef<HTMLButtonElement>(null);
-  const cancelarBajaBtnRef = useRef<HTMLButtonElement>(null);
+  const operacionEnCurso = operacionPendiente !== null;
 
-  useEffect(() => {
-    setRolesGuardados(afiliacion.roles);
-    if (!borradorInicial) {
-      setRolesSeleccionados(afiliacion.roles);
-    }
-  }, [afiliacion.roles, borradorInicial]);
+  const confirmBaja = useInlineConfirm({
+    defaultOpen: Boolean(confirmandoInicial),
+    pending: operacionPendiente === "baja"
+  });
 
-  useEffect(() => {
-    if (confirmandoBaja && !confirmandoInicial) {
-      cancelarBajaBtnRef.current?.focus();
-    }
-  }, [confirmandoBaja, confirmandoInicial]);
-
-  const isDirty = !sonRolesIguales(rolesGuardados, rolesSeleccionados);
+  const hayCambios = !sonRolesIguales(afiliacion.roles, rolesSeleccionados);
   const iniciales = obtenerInicialesUsuario(afiliacion.usuario.nombre);
 
   function alternarRol(rol: RolAfiliacion) {
     setGuardadoOk(false);
     setErrorMsg(null);
-    setRolesSeleccionados((prev) => alternarRolEnBorrador(prev, rol));
+    onCambiarRoles(afiliacion.id, alternarRolEnBorrador(rolesSeleccionados, rol));
   }
 
   function handleDescartar() {
     setErrorMsg(null);
     setGuardadoOk(false);
-    setRolesSeleccionados(rolesGuardados);
+    onDescartarRoles(afiliacion.id);
   }
 
-  function handleGuardarRoles() {
+  async function handleGuardarRoles() {
+    if (operacionEnCurso || confirmBaja.confirmando) {
+      return;
+    }
+
     setErrorMsg(null);
     setGuardadoOk(false);
+    setOperacionPendiente("guardar");
 
-    startTransition(async () => {
+    try {
       const resultado = await procesarGuardadoRoles(
         boxId,
         afiliacion.id,
@@ -188,31 +165,32 @@ function FilaAfiliacionBox({
         return;
       }
 
-      setRolesGuardados(resultado.rolesGuardados);
-      setRolesSeleccionados(resultado.rolesGuardados);
       setGuardadoOk(true);
       onRolesGuardados(afiliacion.id, resultado.rolesGuardados);
       router.refresh();
-    });
+    } finally {
+      setOperacionPendiente(null);
+    }
   }
 
   function abrirConfirmacionBaja() {
-    setErrorMsg(null);
-    setConfirmandoBaja(true);
-  }
-
-  function cerrarConfirmacionBaja() {
-    if (isPending) {
+    if (operacionEnCurso) {
       return;
     }
-    setConfirmandoBaja(false);
-    queueMicrotask(() => darDeBajaBtnRef.current?.focus());
+    setErrorMsg(null);
+    setGuardadoOk(false);
+    confirmBaja.abrir();
   }
 
-  function handleConfirmarBaja() {
-    setErrorMsg(null);
+  async function handleConfirmarBaja() {
+    if (operacionEnCurso) {
+      return;
+    }
 
-    startTransition(async () => {
+    setErrorMsg(null);
+    setOperacionPendiente("baja");
+
+    try {
       const resultado = await procesarBajaAfiliacion(
         boxId,
         afiliacion.id,
@@ -220,15 +198,17 @@ function FilaAfiliacionBox({
       );
 
       if (!resultado.ok) {
-        setConfirmandoBaja(false);
+        confirmBaja.cerrar({ restaurarFoco: true });
         setErrorMsg(resultado.error);
         return;
       }
 
-      setConfirmandoBaja(false);
+      confirmBaja.cerrar({ restaurarFoco: false });
       onBajaCompletada(afiliacion.id);
       router.refresh();
-    });
+    } finally {
+      setOperacionPendiente(null);
+    }
   }
 
   return (
@@ -236,10 +216,10 @@ function FilaAfiliacionBox({
       data-testid={`fila-afiliacion-${afiliacion.id}`}
       className={cn(
         "flex min-w-0 flex-col gap-3.5 rounded-2xl border bg-secondary p-4 transition-colors",
-        isDirty ? "border-[#FBBF24]/28" : "border-border"
+        hayCambios ? "border-[#FBBF24]/28" : "border-border"
       )}
     >
-      <div className="flex min-w-0 flex-col gap-3.5 min-[1100px]:grid min-[1100px]:grid-cols-[minmax(210px,1fr)_minmax(300px,1.55fr)_264px] min-[1100px]:items-center min-[1100px]:gap-[18px]">
+      <div className="flex min-w-0 flex-col gap-3.5 min-[1200px]:grid min-[1200px]:grid-cols-[minmax(210px,1fr)_minmax(300px,1.55fr)_264px] min-[1200px]:items-center min-[1200px]:gap-[18px]">
         <div className="flex min-w-0 items-center gap-3">
           <span
             aria-hidden="true"
@@ -271,7 +251,7 @@ function FilaAfiliacionBox({
                 role="switch"
                 aria-checked={activo}
                 data-testid={`checkbox-rol-${opcion.id}-${afiliacion.id}`}
-                disabled={isPending}
+                disabled={operacionEnCurso}
                 onClick={() => alternarRol(opcion.id)}
                 className={cn(
                   "inline-flex min-h-11 cursor-pointer items-center gap-2 rounded-full border px-3.5 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
@@ -299,30 +279,32 @@ function FilaAfiliacionBox({
           })}
         </div>
 
-        <div className="flex min-w-0 flex-wrap items-center gap-2 min-[1100px]:justify-end">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 min-[1200px]:justify-end">
           <Button
             type="button"
-            variant={isDirty ? "primary" : "secondary"}
-            disabled={!isDirty || isPending}
-            onClick={handleGuardarRoles}
-            className="flex-1 whitespace-nowrap min-[1100px]:flex-initial"
+            variant={hayCambios ? "primary" : "secondary"}
+            disabled={!hayCambios || operacionEnCurso || confirmBaja.confirmando}
+            onClick={() => {
+              void handleGuardarRoles();
+            }}
+            className="flex-1 whitespace-nowrap min-[1200px]:flex-initial"
           >
-            {isPending && !confirmandoBaja ? "Guardando..." : "Guardar roles"}
+            {operacionPendiente === "guardar" ? "Guardando..." : "Guardar roles"}
           </Button>
           <Button
-            ref={darDeBajaBtnRef}
+            ref={confirmBaja.triggerRef}
             type="button"
             variant="destructive"
-            disabled={isPending || confirmandoBaja}
+            disabled={operacionEnCurso || confirmBaja.confirmando}
             onClick={abrirConfirmacionBaja}
-            className="flex-1 whitespace-nowrap min-[1100px]:flex-initial"
+            className="flex-1 whitespace-nowrap min-[1200px]:flex-initial"
           >
             Dar de baja
           </Button>
         </div>
       </div>
 
-      {isDirty ? (
+      {hayCambios ? (
         <div
           role="status"
           className="dirty-strip flex flex-wrap items-center justify-between gap-2.5 rounded-[14px] border border-[#FBBF24]/28 bg-[#FBBF24]/14 px-3.5 py-2.5 text-sm text-[#FDE68A]"
@@ -337,7 +319,7 @@ function FilaAfiliacionBox({
           <Button
             type="button"
             variant="secondary"
-            disabled={isPending}
+            disabled={operacionEnCurso}
             onClick={handleDescartar}
           >
             Descartar
@@ -345,7 +327,7 @@ function FilaAfiliacionBox({
         </div>
       ) : null}
 
-      {guardadoOk && !isDirty ? (
+      {guardadoOk && !hayCambios ? (
         <div
           role="status"
           aria-live="polite"
@@ -368,39 +350,27 @@ function FilaAfiliacionBox({
         </div>
       ) : null}
 
-      {confirmandoBaja ? (
-        <div
-          role="group"
-          aria-label={`Confirmar baja de ${afiliacion.usuario.nombre}`}
-          onKeyDown={(e) =>
-            manejarTeclaInlineConfirm(e.key, isPending, cerrarConfirmacionBaja)
+      {confirmBaja.confirmando ? (
+        <InlineConfirmPanel
+          ariaLabel={`Confirmar baja de ${afiliacion.usuario.nombre}`}
+          message={
+            <>
+              ¿Quitar el acceso de <strong>{afiliacion.usuario.nombre}</strong> a{" "}
+              {nombreBox}? No afectará sus Afiliaciones en otros Boxes.
+            </>
           }
-          className="confirm-inline flex flex-wrap items-center justify-between gap-2.5 rounded-[14px] border border-[#FF6D6D]/28 bg-[#FF6D6D]/14 px-3.5 py-3 text-sm text-[#FECACA]"
-        >
-          <span>
-            ¿Quitar el acceso de <strong>{afiliacion.usuario.nombre}</strong> a{" "}
-            {nombreBox}? No afectará sus cuentas en otros Boxes.
-          </span>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={isPending}
-              onClick={handleConfirmarBaja}
-            >
-              {isPending ? "Procesando..." : "Confirmar baja"}
-            </Button>
-            <Button
-              ref={cancelarBajaBtnRef}
-              type="button"
-              variant="secondary"
-              disabled={isPending}
-              onClick={cerrarConfirmacionBaja}
-            >
-              Cancelar
-            </Button>
-          </div>
-        </div>
+          confirmLabel="Confirmar baja"
+          cancelLabel="Cancelar"
+          confirmVariant="destructive"
+          bloqueado={confirmBaja.bloqueado}
+          cancelRef={confirmBaja.cancelRef}
+          onConfirm={() => {
+            void handleConfirmarBaja();
+          }}
+          onCancel={confirmBaja.cancelar}
+          className="confirm-inline rounded-[14px] border-[#FF6D6D]/28 bg-[#FF6D6D]/14 py-3"
+          messageClassName="text-sm font-normal text-[#FECACA]"
+        />
       ) : null}
     </article>
   );
@@ -418,8 +388,11 @@ export function TablaAfiliacionesBox({
 }: TablaAfiliacionesBoxProps) {
   const [listaAfiliaciones, setListaAfiliaciones] =
     useState<AfiliacionConUsuario[]>(afiliaciones);
+  const [borradoresPorId, setBorradoresPorId] = useState<
+    Record<string, RolAfiliacion[]>
+  >(() => borradoresIniciales ?? {});
   const [busqueda, setBusqueda] = useState("");
-  const [filtroRol, setFiltroRol] = useState<FiltroRolAfiliacion>("ALL");
+  const [filtroRol, setFiltroRol] = useState<FiltroRolAfiliacion>("TODOS");
 
   useEffect(() => {
     setListaAfiliaciones(afiliaciones);
@@ -437,7 +410,7 @@ export function TablaAfiliacionesBox({
 
   const opcionesFiltroRol: FilterChipOption<FiltroRolAfiliacion>[] = useMemo(
     () => [
-      { value: "ALL", label: "Todos" },
+      { value: "TODOS", label: "Todos" },
       ...OPCIONES_ROLES_AFILIACION.map((rol) => ({
         value: rol.id,
         label: rol.label
@@ -446,10 +419,26 @@ export function TablaAfiliacionesBox({
     []
   );
 
+  function handleCambiarRoles(afiliacionId: string, roles: RolAfiliacion[]) {
+    setBorradoresPorId((prev) => ({
+      ...prev,
+      [afiliacionId]: roles
+    }));
+  }
+
+  function handleDescartarRoles(afiliacionId: string) {
+    setBorradoresPorId((prev) => {
+      const siguiente = { ...prev };
+      delete siguiente[afiliacionId];
+      return siguiente;
+    });
+  }
+
   function handleRolesGuardados(
     afiliacionId: string,
     rolesActualizados: RolAfiliacion[]
   ) {
+    handleDescartarRoles(afiliacionId);
     setListaAfiliaciones((prev) =>
       prev.map((item) =>
         item.id === afiliacionId ? { ...item, roles: rolesActualizados } : item
@@ -458,6 +447,7 @@ export function TablaAfiliacionesBox({
   }
 
   function handleBajaCompletada(afiliacionId: string) {
+    handleDescartarRoles(afiliacionId);
     setListaAfiliaciones((prev) =>
       prev.filter((item) => item.id !== afiliacionId)
     );
@@ -477,9 +467,9 @@ export function TablaAfiliacionesBox({
           pie="Personas vinculadas a este Box"
         />
         <TarjetaKpiAfiliacion
-          etiqueta="Staff con acceso operativo"
-          valor={kpis.staff}
-          badgeLabel="Admin · Coach · Recep"
+          etiqueta="Equipo operativo con acceso"
+          valor={kpis.equipoOperativo}
+          badgeLabel="Administrador · Coach · Recepcionista"
           badgeVariant="zinc"
           pie="Pueden operar clases, caja o configuración"
         />
@@ -488,7 +478,7 @@ export function TablaAfiliacionesBox({
           valor={kpis.atletas}
           badgeLabel="Habilitados a reservar"
           badgeVariant="zinc"
-          pie="Incluye miembros del staff que también entrenan"
+          pie="Incluye integrantes del equipo que también entrenan"
         />
       </section>
 
@@ -528,13 +518,13 @@ export function TablaAfiliacionesBox({
               <p className="text-sm text-muted-foreground">
                 No hay afiliaciones activas que coincidan con los filtros.
               </p>
-              {busqueda || filtroRol !== "ALL" ? (
+              {busqueda || filtroRol !== "TODOS" ? (
                 <Button
                   type="button"
                   variant="secondary"
                   onClick={() => {
                     setBusqueda("");
-                    setFiltroRol("ALL");
+                    setFiltroRol("TODOS");
                   }}
                 >
                   Limpiar filtros
@@ -549,10 +539,14 @@ export function TablaAfiliacionesBox({
                   afiliacion={afiliacion}
                   boxId={boxId}
                   nombreBox={nombreBox}
-                  borradorInicial={borradoresIniciales?.[afiliacion.id]}
+                  rolesSeleccionados={
+                    borradoresPorId[afiliacion.id] ?? afiliacion.roles
+                  }
                   confirmandoInicial={
                     confirmandoBajaInicialId === afiliacion.id
                   }
+                  onCambiarRoles={handleCambiarRoles}
+                  onDescartarRoles={handleDescartarRoles}
                   onRolesGuardados={handleRolesGuardados}
                   onBajaCompletada={handleBajaCompletada}
                 />
