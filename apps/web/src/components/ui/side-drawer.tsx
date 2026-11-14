@@ -20,6 +20,7 @@ export interface SideDrawerProps {
   children: React.ReactNode;
   footer?: React.ReactNode;
   closeLabel?: string;
+  closeTestId?: string;
   testId?: string;
   className?: string;
 }
@@ -36,6 +37,7 @@ export function SideDrawer({
   children,
   footer,
   closeLabel = "Cerrar panel",
+  closeTestId,
   testId,
   className
 }: SideDrawerProps) {
@@ -114,6 +116,7 @@ export function SideDrawer({
             type="button"
             variant="iconCircle"
             aria-label={closeLabel}
+            data-testid={closeTestId}
             onClick={() => onCloseRef.current()}
           >
             <X className="h-4 w-4" aria-hidden="true" />
