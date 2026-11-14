@@ -9,6 +9,7 @@ export interface ContextoOperativoWeb {
   sesion: SesionUsuarioWeb;
   afiliaciones: AfiliacionConBox[];
   afiliacionActiva: AfiliacionConBox | null;
+  errorCargaAfiliaciones?: boolean;
 }
 
 export async function fijarCookieBoxActivo(boxId: string): Promise<void> {
@@ -31,19 +32,29 @@ export async function obtenerContextoOperativoWeb(): Promise<ContextoOperativoWe
     return null;
   }
 
-  const resultadoAfiliaciones = await obtenerMisAfiliacionesResultadoApi(
-    sesion.accessToken
-  );
-  if (
-    !resultadoAfiliaciones.ok &&
-    resultadoAfiliaciones.error.statusCode === 401
-  ) {
-    return null;
+  let afiliaciones: AfiliacionConBox[] = [];
+  let errorCargaAfiliaciones = false;
+
+  try {
+    const resultadoAfiliaciones = await obtenerMisAfiliacionesResultadoApi(
+      sesion.accessToken
+    );
+    if (
+      !resultadoAfiliaciones.ok &&
+      resultadoAfiliaciones.error.statusCode === 401
+    ) {
+      return null;
+    }
+
+    if (resultadoAfiliaciones.ok) {
+      afiliaciones = resultadoAfiliaciones.data;
+    } else {
+      errorCargaAfiliaciones = true;
+    }
+  } catch {
+    errorCargaAfiliaciones = true;
   }
 
-  const afiliaciones = resultadoAfiliaciones.ok
-    ? resultadoAfiliaciones.data
-    : [];
   const store = await cookies();
   const boxIdCookie = store.get(COOKIE_BOX_ACTIVO)?.value;
 
@@ -58,6 +69,7 @@ export async function obtenerContextoOperativoWeb(): Promise<ContextoOperativoWe
   return {
     sesion,
     afiliaciones,
-    afiliacionActiva
+    afiliacionActiva,
+    errorCargaAfiliaciones
   };
 }

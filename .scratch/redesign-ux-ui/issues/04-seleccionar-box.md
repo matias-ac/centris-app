@@ -1,6 +1,6 @@
 # 04 — Rediseño UX/UI de `/seleccionar-box`
 
-**Status:** ready-for-agent
+**Status:** done
 **Branch:** `feat/ui-04-seleccionar-box`
 **Blocked by:** `01`
 
@@ -25,10 +25,10 @@ Migra `/seleccionar-box` a **Dark Bento Cockpit** (`propuesta-seleccionar-box.ht
 
 ## Acceptance Criteria (TDD / BDD)
 
-- [ ] **Tests en Red $\rightarrow$ Green**: Verificar selección de Box activo, visualización de roles componibles en español ([ADR 0007](../../../docs/adr/0007-cuatro-roles-atomicos-componibles.md)), manejo de estado vacío/error sin jerga técnica y preservación de selectores E2E.
-- [ ] **Estabilidad anti-salto en Desktop y Mobile**: Separar el eyebrow superior (`moneda` + badge `Activo ahora`) en su propia fila independiente de ancho completo respecto al bloque de nombre del Box + ciudad/zona horaria, reservando altura uniforme en desktop para que cambiar de Box activo o variar la longitud del nombre nunca modifique la altura ni desalinee las cards vecinas.
-- [ ] **Geometría y Contraste v2**: Cards `#111214` (`rounded-3xl`, borde `#232428`), card activa con realce sutil, roles en `Badge` semánticos y botón de ingreso `#C1F429` (`#000000`) o secundario `min-h-11` (`rounded-full`).
-- [ ] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` y `/code-review`.
+- [x] **Tests en Red $\rightarrow$ Green**: Verificar selección de Box activo, visualización de roles componibles en español ([ADR 0007](../../../docs/adr/0007-cuatro-roles-atomicos-componibles.md)), manejo de estado vacío/error sin jerga técnica y preservación de selectores E2E.
+- [x] **Estabilidad anti-salto en Desktop y Mobile**: Separar el eyebrow superior (`moneda` + badge `Activo ahora`) en su propia fila independiente de ancho completo respecto al bloque de nombre del Box + ciudad/zona horaria, reservando altura uniforme en desktop para que cambiar de Box activo o variar la longitud del nombre nunca modifique la altura ni desalinee las cards vecinas.
+- [x] **Geometría y Contraste v2**: Cards `#111214` (`rounded-3xl`, borde `#232428`), card activa con realce sutil, roles en `Badge` semánticos y botón de ingreso `#C1F429` (`#000000`) o secundario `min-h-11` (`rounded-full`).
+- [x] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` y `/code-review`.
 
 ## Comments
 

@@ -32,6 +32,12 @@ const E2E_EQUIPO = {
   nombre: "Bruno Equipo E2E"
 };
 
+const E2E_SIN_BOX = {
+  usuarioId: "d0000000-0000-4000-8000-000000000003",
+  email: "sinbox.e2e@centris.dev",
+  nombre: "Lucía Sin Box E2E"
+};
+
 async function ejecutarSqlOwner(
   query: string,
   params: unknown[] = []
@@ -53,13 +59,18 @@ After(async () => {
       E2E_EQUIPO.afiliacionSurId
     ]
   );
-  await ejecutarSqlOwner(`DELETE FROM usuarios WHERE id IN ($1, $2)`, [
+  await ejecutarSqlOwner(`DELETE FROM usuarios WHERE id IN ($1, $2, $3)`, [
     E2E_MOSTRADOR.usuarioId,
-    E2E_EQUIPO.usuarioId
+    E2E_EQUIPO.usuarioId,
+    E2E_SIN_BOX.usuarioId
   ]);
   await ejecutarSqlOwner(
     `UPDATE boxes SET nombre = 'Box Centris Norte', timezone = 'America/Argentina/Buenos_Aires', moneda = 'ARS', anticipacion_reserva_dias = 7, ventana_cancelacion_minutos = 120 WHERE id = $1`,
     [SEED_BOX_IDS.boxCentrisNorte]
+  );
+  await ejecutarSqlOwner(
+    `UPDATE boxes SET nombre = 'Box Centris Sur' WHERE id = $1`,
+    [SEED_BOX_IDS.boxCentrisSur]
   );
 });
 
@@ -506,6 +517,150 @@ Then(
     const linkBox = await loginLink.boundingBox();
     expect(linkBox?.height).toBeGreaterThanOrEqual(44);
     await loginLink.click();
+    await expect(page).toHaveURL(/\/login/);
+  }
+);
+
+Given(
+  "un Usuario con Afiliaciones activas y un Box ya activo en su sesión",
+  async ({ page }) => {
+    await ejecutarSqlOwner(
+      `UPDATE boxes SET nombre = 'Box Centris Sur Entrenamiento Funcional y Fuerza' WHERE id = $1`,
+      [SEED_BOX_IDS.boxCentrisSur]
+    );
+    await page.context().clearCookies();
+    await page.goto("/login");
+    await page
+      .getByLabel(/Correo electrónico/i)
+      .fill("coach.multi@centris.dev");
+    await page.getByLabel(/Contraseña/i).fill("Centris123!");
+    await page.getByRole("button", { name: /Iniciar sesión/i }).click();
+    await expect(page).toHaveURL(/\/seleccionar-box/);
+
+    await page
+      .getByTestId(`opcion-box-${SEED_BOX_IDS.boxCentrisNorte}`)
+      .getByRole("button", { name: /Ingresar al Box/i })
+      .click();
+    await expect(page).toHaveURL(/\/inicio/);
+  }
+);
+
+When(
+  "visita la pantalla de selección de Box en móvil y escritorio",
+  async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("/seleccionar-box");
+    await expect(
+      page.getByRole("heading", { name: /Seleccioná tu Box/i })
+    ).toBeVisible();
+  }
+);
+
+Then(
+  "visualiza la marca del Box activo, los roles en español sin string IANA crudo, cards alineadas sin saltos ni desborde horizontal y puede continuar en su Box",
+  async ({ page }) => {
+    const cardNorte = page.getByTestId(
+      `opcion-box-${SEED_BOX_IDS.boxCentrisNorte}`
+    );
+    const cardSur = page.getByTestId(
+      `opcion-box-${SEED_BOX_IDS.boxCentrisSur}`
+    );
+
+    await expect(cardNorte).toContainText("Activo ahora");
+    await expect(cardNorte).toContainText("Coach");
+    await expect(cardNorte).toContainText("Recepcionista");
+    await expect(cardNorte).toContainText("Buenos Aires");
+    await expect(cardNorte).not.toContainText("America/Argentina/Buenos_Aires");
+    await expect(
+      cardNorte.getByRole("button", { name: /Continuar en este Box/i })
+    ).toBeVisible();
+
+    await expect(cardSur).not.toContainText("Activo ahora");
+    await expect(cardSur).toContainText("Atleta");
+    await expect(
+      cardSur.getByRole("button", { name: /Ingresar al Box/i })
+    ).toBeVisible();
+
+    // Sin desborde horizontal en móvil (375px) ni escritorio (1280px y 1440px)
+    await verificarSinDesbordeResponsive(page);
+
+    // En desktop, cards en fila alineadas con la misma altura y posición vertical
+    for (const width of [1280, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      const rectNorte = await cardNorte.boundingBox();
+      const rectSur = await cardSur.boundingBox();
+      expect(rectNorte).not.toBeNull();
+      expect(rectSur).not.toBeNull();
+      if (rectNorte && rectSur) {
+        expect(Math.abs(rectNorte.y - rectSur.y)).toBeLessThanOrEqual(1);
+        expect(Math.abs(rectNorte.height - rectSur.height)).toBeLessThanOrEqual(
+          1
+        );
+      }
+    }
+
+    await cardNorte
+      .getByRole("button", { name: /Continuar en este Box/i })
+      .click();
+    await expect(page).toHaveURL(/\/inicio/);
+    await expect(page.getByTestId("box-activo-nombre")).toContainText(
+      "Box Centris Norte"
+    );
+  }
+);
+
+Given(
+  "un Usuario autenticado sin afiliaciones activas en ningún Box",
+  async ({ page }) => {
+    await ejecutarSqlOwner(
+      `DELETE FROM afiliaciones WHERE usuario_id = $1`,
+      [E2E_SIN_BOX.usuarioId]
+    );
+    await ejecutarSqlOwner(
+      `DELETE FROM usuarios WHERE id = $1 OR email = $2`,
+      [E2E_SIN_BOX.usuarioId, E2E_SIN_BOX.email]
+    );
+    await ejecutarSqlOwner(
+      `INSERT INTO usuarios (id, email, nombre, password_hash)
+       SELECT $1, $2, $3, password_hash
+       FROM usuarios
+       WHERE email = 'coach.multi@centris.dev'
+       LIMIT 1`,
+      [E2E_SIN_BOX.usuarioId, E2E_SIN_BOX.email, E2E_SIN_BOX.nombre]
+    );
+
+    await page.context().clearCookies();
+    await page.goto("/login");
+    await page.getByLabel(/Correo electrónico/i).fill(E2E_SIN_BOX.email);
+    await page.getByLabel(/Contraseña/i).fill("Centris123!");
+    await page.getByRole("button", { name: /Iniciar sesión/i }).click();
+  }
+);
+
+When("accede al selector de Box", async ({ page }) => {
+  await expect(page).toHaveURL(/\/seleccionar-box/);
+});
+
+Then(
+  "visualiza el estado vacío con opciones para actualizar el listado o cerrar sesión sin jerga técnica",
+  async ({ page }) => {
+    const estadoVacio = page.getByTestId("sin-afiliaciones-box");
+    await expect(estadoVacio).toBeVisible();
+    await expect(estadoVacio).toContainText("No tenés afiliaciones activas");
+
+    const texto = (await estadoVacio.textContent()) ?? "";
+    expect(texto).not.toMatch(/401|403|500|ERROR_|gimnasio/i);
+
+    await expect(
+      estadoVacio.getByRole("button", { name: /Actualizar listado/i })
+    ).toBeVisible();
+    await expect(
+      estadoVacio.getByRole("button", { name: /Cerrar sesión/i })
+    ).toBeVisible();
+
+    await verificarSinDesbordeResponsive(page);
+
+    await estadoVacio.getByRole("button", { name: /Cerrar sesión/i }).click();
     await expect(page).toHaveURL(/\/login/);
   }
 );
