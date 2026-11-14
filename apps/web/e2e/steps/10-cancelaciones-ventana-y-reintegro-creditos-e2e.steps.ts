@@ -517,6 +517,7 @@ When(
   'el Administrador cancela la Clase desde el Calendario de Clases indicando el motivo {string}',
   async ({ page }, motivo: string) => {
     await loginEnBoxNorte(page, E2E_CANCELACIONES.adminNorteEmail, "/clases");
+    await page.getByTestId("tab-dia-TODOS").click();
     await page
       .getByTestId(`btn-abrir-cancelar-clase-${E2E_CANCELACIONES.claseId}`)
       .click();

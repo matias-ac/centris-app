@@ -8,7 +8,8 @@ import {
 import {
   listarAfiliacionesBoxApi,
   listarAtletasApi,
-  listarClasesApi
+  listarClasesApi,
+  listarReservasApi
 } from "@/lib/api-client";
 import { obtenerContextoOperativoWeb } from "@/lib/contexto-box";
 import { ClasesView } from "./clases-view";
@@ -25,26 +26,36 @@ export default async function ClasesPage() {
   const esAdmin = tieneAlgunRol(afiliacionActiva.roles, ["administrador"]);
   const esRecep = tieneAlgunRol(afiliacionActiva.roles, ["recepcionista"]);
   const esCoach = tieneAlgunRol(afiliacionActiva.roles, ["coach"]);
+  const esAtleta = tieneAlgunRol(afiliacionActiva.roles, ["atleta"]);
   const esSoloCoach = esCoachSinPermisosStaff(afiliacionActiva.roles);
 
-  const timezone = afiliacionActiva.box.timezone ?? "America/Argentina/Buenos_Aires";
-  const hoy = obtenerFechaLocal(new Date(), timezone);
+  const timezone =
+    afiliacionActiva.box.timezone ?? "America/Argentina/Buenos_Aires";
+  const ahora = new Date();
+  const hoy = obtenerFechaLocal(ahora, timezone);
   const desde = sumarDiasAFecha(hoy, -2);
   const hasta = sumarDiasAFecha(hoy, 14);
 
-  const [resClases, resAfiliaciones, resAtletas] = await Promise.all([
-    listarClasesApi(sesion.accessToken, afiliacionActiva.boxId, {
-      desde,
-      hasta,
-      coachAfiliacionId: esSoloCoach ? afiliacionActiva.id : undefined
-    }),
-    esAdmin
-      ? listarAfiliacionesBoxApi(sesion.accessToken, afiliacionActiva.boxId)
-      : Promise.resolve({ ok: true as const, data: [] }),
-    esAdmin || esRecep
-      ? listarAtletasApi(sesion.accessToken, afiliacionActiva.boxId, { soloActivos: true })
-      : Promise.resolve({ ok: true as const, data: [] })
-  ]);
+  const [resClases, resAfiliaciones, resAtletas, resMisReservas] =
+    await Promise.all([
+      listarClasesApi(sesion.accessToken, afiliacionActiva.boxId, {
+        desde,
+        hasta,
+        coachAfiliacionId: esSoloCoach ? afiliacionActiva.id : undefined
+      }),
+      esAdmin
+        ? listarAfiliacionesBoxApi(sesion.accessToken, afiliacionActiva.boxId)
+        : Promise.resolve({ ok: true as const, data: [] }),
+      esAdmin || esRecep
+        ? listarAtletasApi(sesion.accessToken, afiliacionActiva.boxId)
+        : Promise.resolve({ ok: true as const, data: [] }),
+      esAtleta
+        ? listarReservasApi(sesion.accessToken, afiliacionActiva.boxId, {
+            afiliacionId: afiliacionActiva.id,
+            estado: "CONFIRMADA"
+          })
+        : Promise.resolve({ ok: true as const, data: [] })
+    ]);
 
   const clases = resClases.ok ? resClases.data : [];
   const coaches = resAfiliaciones.ok
@@ -52,7 +63,12 @@ export default async function ClasesPage() {
         (a) => a.roles.includes("coach") && a.activo
       )
     : [];
-  const atletas = resAtletas.ok ? resAtletas.data : [];
+  const atletas = resAtletas.ok
+    ? resAtletas.data.filter((a) => a.activo)
+    : [];
+  const misReservasClaseIds = resMisReservas.ok
+    ? resMisReservas.data.map((r) => r.claseId)
+    : [];
 
   return (
     <div className="space-y-6">
@@ -62,12 +78,15 @@ export default async function ClasesPage() {
         esAdmin={esAdmin}
         esRecep={esRecep}
         esCoach={esCoach}
+        esAtleta={esAtleta}
         afiliacionActivaId={afiliacionActiva.id}
         clasesIniciales={clases}
         coaches={coaches}
         atletas={atletas}
+        misReservasClaseIds={misReservasClaseIds}
         fechaDesdeInicial={hoy}
         fechaHastaInicial={hasta}
+        ahoraInicialIso={ahora.toISOString()}
       />
     </div>
   );
