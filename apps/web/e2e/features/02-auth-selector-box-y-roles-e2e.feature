@@ -36,3 +36,13 @@ Característica: Identidad Global, Autenticación, Selector de Box y Guard de 4 
     Dado un Usuario no autenticado en la pantalla de activación de cuenta
     Cuando valida campos inválidos individualmente, evalúa el mínimo de contraseña, alterna su visibilidad y envía un correo no elegible
     Entonces visualiza errores accesibles de activación sin códigos técnicos, sin desborde horizontal en móvil ni escritorio y puede volver a iniciar sesión
+
+  Escenario: Marca de Box activo, roles componibles en español, estabilidad de cards y responsive en /seleccionar-box
+    Dado un Usuario con Afiliaciones activas y un Box ya activo en su sesión
+    Cuando visita la pantalla de selección de Box en móvil y escritorio
+    Entonces visualiza la marca del Box activo, los roles en español sin string IANA crudo, cards alineadas sin saltos ni desborde horizontal y puede continuar en su Box
+
+  Escenario: Estado vacío sin afiliaciones activas en /seleccionar-box
+    Dado un Usuario autenticado sin afiliaciones activas en ningún Box
+    Cuando accede al selector de Box
+    Entonces visualiza el estado vacío con opciones para actualizar el listado o cerrar sesión sin jerga técnica
