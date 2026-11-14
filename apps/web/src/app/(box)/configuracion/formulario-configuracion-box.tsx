@@ -441,7 +441,7 @@ export function FormularioConfiguracionBox({
               </span>
               <div
                 role="group"
-                aria-label="Atajos de ventana de cancelación"
+                aria-label="Atajos rápidos de cancelación"
                 className="flex flex-wrap gap-2"
               >
                 {ATAJOS_VENTANA_CANCELACION.map((atajo) => {
