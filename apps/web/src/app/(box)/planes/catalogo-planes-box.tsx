@@ -84,7 +84,7 @@ function TarjetaKpiPlan({
       <div className="flex flex-col gap-2">
         <span className="text-sm text-muted-foreground">{etiqueta}</span>
         <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-3 gap-y-2">
-          <strong className="text-[clamp(1.25rem,1.1rem+0.7vw,1.5rem)] font-medium leading-none tracking-[-0.02em] text-foreground tabular-nums">
+          <strong className="text-[clamp(1.375rem,1.2rem+0.8vw,1.75rem)] font-medium leading-[1.2] tracking-[-0.02em] text-foreground tabular-nums">
             {valor}
           </strong>
           {badgeLabel && badgeVariant ? (
@@ -154,7 +154,7 @@ function TarjetaPlanCatalogo({
         </div>
 
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-          <strong className="text-[1.875rem] font-light leading-[1.1] tracking-[-0.03em] text-foreground tabular-nums">
+          <strong className="text-[clamp(1.75rem,1.45rem+1.4vw,2.375rem)] font-light leading-[1.1] tracking-[-0.025em] text-foreground tabular-nums">
             {formatearPrecioPlan(plan.precioBase, moneda)}
           </strong>
           <span className="text-xs text-muted-foreground">
