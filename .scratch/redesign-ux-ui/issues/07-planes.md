@@ -1,6 +1,6 @@
 # 07 — Rediseño UX/UI de `/planes`
 
-**Status:** ready-for-agent
+**Status:** in-progress
 **Branch:** `feat/ui-07-planes`
 **Blocked by:** `01`
 
