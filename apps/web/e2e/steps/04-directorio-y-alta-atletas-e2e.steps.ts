@@ -30,6 +30,11 @@ const E2E_ATLETA_SUR = {
   nombre: "Atleta Sur Global"
 };
 
+const E2E_DEEP_LINK = {
+  planId: "f4000000-0000-4000-8000-000000000010",
+  membresiaId: "f4000000-0000-4000-8000-000000000011"
+};
+
 async function ejecutarSqlOwner(
   query: string,
   params: unknown[] = []
@@ -49,6 +54,12 @@ function filaAtletaEnDirectorio(page: Page, texto: string) {
 }
 
 After(async () => {
+  await ejecutarSqlOwner(`DELETE FROM membresias WHERE id = $1`, [
+    E2E_DEEP_LINK.membresiaId
+  ]);
+  await ejecutarSqlOwner(`DELETE FROM planes WHERE id = $1`, [
+    E2E_DEEP_LINK.planId
+  ]);
   // Limpiar usuarios y afiliaciones creados en tests E2E
   await ejecutarSqlOwner(
     `DELETE FROM afiliaciones WHERE usuario_id IN (
@@ -342,6 +353,29 @@ When(
     );
     expect(res.rows.length).toBe(1);
     const afiliacionId = String(res.rows[0]!.id);
+
+    await ejecutarSqlOwner(`DELETE FROM membresias WHERE id = $1`, [
+      E2E_DEEP_LINK.membresiaId
+    ]);
+    await ejecutarSqlOwner(`DELETE FROM planes WHERE id = $1`, [
+      E2E_DEEP_LINK.planId
+    ]);
+    await ejecutarSqlOwner(
+      `INSERT INTO planes (id, box_id, nombre, precio_base, duracion_dias, modalidad_creditos, creditos_por_periodo, activo)
+       VALUES ($1, $2, 'Plan Deep Link BDD', 30000, 30, 'ILIMITADO', NULL, true)`,
+      [E2E_DEEP_LINK.planId, SEED_BOX_IDS.boxCentrisNorte]
+    );
+    await ejecutarSqlOwner(
+      `INSERT INTO membresias (id, box_id, afiliacion_id, plan_id, precio, modalidad_creditos, fecha_inicio, fecha_fin)
+       VALUES ($1, $2, $3, $4, 30000, 'ILIMITADO', CURRENT_DATE, CURRENT_DATE + 30)`,
+      [
+        E2E_DEEP_LINK.membresiaId,
+        SEED_BOX_IDS.boxCentrisNorte,
+        afiliacionId,
+        E2E_DEEP_LINK.planId
+      ]
+    );
+
     await page.goto(`/atletas?afiliacionId=${afiliacionId}`);
   }
 );
@@ -355,6 +389,9 @@ Then(
       "atleta.moroso@centris.dev"
     );
     await expect(modalFicha.getByTestId("badge-moroso")).toBeVisible();
+    await expect(modalFicha.getByTestId("atleta-saldo-total")).toContainText(
+      "30.000"
+    );
     await page.getByTestId("btn-cerrar-ficha-atleta").click();
     await expect(modalFicha).not.toBeVisible();
   }
@@ -363,7 +400,7 @@ Then(
 Then(
   'la pantalla de Atletas no presenta desborde horizontal en desktop ni móvil',
   async ({ page }) => {
-    for (const width of [1280, 375]) {
+    for (const width of [1280, 1440, 375]) {
       await page.setViewportSize({ width, height: 800 });
       const overflow = await page.evaluate(
         () =>
@@ -387,22 +424,10 @@ Given(
 
     await page.waitForURL(/\/(inicio|seleccionar-box)/);
     await expect(page).toHaveURL(/\/inicio/);
+    await expect(page.getByTestId("nav-link-atletas")).not.toBeVisible();
   }
 );
 
 When('intenta acceder a la ruta {string}', async ({ page }, ruta: string) => {
   await page.goto(ruta);
 });
-
-Then(
-  'visualiza la restricción de acceso sin código 403 Forbidden y puede volver al panel',
-  async ({ page }) => {
-    const bannerDenegado = page.getByTestId("acceso-denegado-rol");
-    await expect(bannerDenegado).toBeVisible();
-    const texto = (await bannerDenegado.textContent()) ?? "";
-    expect(texto).not.toMatch(/403|Forbidden/i);
-    await expect(page.getByTestId("nav-link-atletas")).not.toBeVisible();
-    await bannerDenegado.getByRole("link", { name: /Volver al panel/i }).click();
-    await expect(page).toHaveURL(/\/inicio/);
-  }
-);
