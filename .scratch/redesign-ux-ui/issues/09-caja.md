@@ -1,6 +1,6 @@
 # 09 — Rediseño UX/UI de `/caja` (Caja, Pagos y Morosos)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 **Branch:** `feat/ui-09-caja`
 **Blocked by:** `01`, `08`
 
