@@ -247,8 +247,8 @@ When(
     await page.getByTestId("nav-link-configuracion").click();
     await expect(page).toHaveURL(/\/configuracion/);
 
-    await page.getByLabel(/Zona horaria/i).fill(timezone);
-    await page.getByLabel(/Moneda/i).fill(moneda);
+    await page.getByLabel(/Zona horaria/i).selectOption(timezone);
+    await page.getByLabel(/Moneda/i).selectOption(moneda);
     await page
       .getByLabel(/Anticipación de reserva/i)
       .fill(String(anticipacion));
@@ -662,5 +662,101 @@ Then(
 
     await estadoVacio.getByRole("button", { name: /Cerrar sesión/i }).click();
     await expect(page).toHaveURL(/\/login/);
+  }
+);
+
+Given(
+  "un Usuario sin rol de Administrador en {string}",
+  async ({ page }, _nombreBox: string) => {
+    await page.context().clearCookies();
+    await page.goto("/login");
+    await page.getByLabel(/Correo electrónico/i).fill("recepcion@centris.dev");
+    await page.getByLabel(/Contraseña/i).fill("Centris123!");
+    await page.getByRole("button", { name: /Iniciar sesión/i }).click();
+    await expect(page).toHaveURL(/\/inicio/);
+  }
+);
+
+When("intenta abrir la configuración del Box", async ({ page }) => {
+  await page.goto("/configuracion");
+});
+
+Then(
+  "visualiza la restricción de acceso sin código 403 Forbidden y puede volver al panel",
+  async ({ page }) => {
+    const card = page.getByTestId("acceso-denegado-rol");
+    await expect(card).toBeVisible();
+    const texto = (await card.textContent()) ?? "";
+    expect(texto).not.toMatch(/403|Forbidden/i);
+    await card.getByRole("link", { name: /Volver al panel/i }).click();
+    await expect(page).toHaveURL(/\/inicio/);
+  }
+);
+
+When(
+  "verifica la alineación responsive de \\/configuracion, prueba validación individual y usa atajos de cancelación",
+  async ({ page }) => {
+    await page.getByTestId("nav-link-configuracion").click();
+    await expect(page).toHaveURL(/\/configuracion/);
+
+    const anticipacionInput = page.getByLabel(/Anticipación de reserva/i);
+    const ventanaInput = page.getByLabel(/Ventana de cancelación/i);
+
+    // En móvil (375px), los campos .two-cols se apilan en 1 columna sin desborde
+    await verificarSinDesbordeResponsive(page, [375]);
+    const rectAntMovil = await anticipacionInput.boundingBox();
+    const rectVenMovil = await ventanaInput.boundingBox();
+    expect(rectAntMovil).not.toBeNull();
+    expect(rectVenMovil).not.toBeNull();
+    if (rectAntMovil && rectVenMovil) {
+      expect(rectVenMovil.y).toBeGreaterThan(rectAntMovil.y + 10);
+    }
+
+    // En tablet/desktop (768px, 1280px, 1440px), los inputs horizontales arrancan a la misma altura
+    for (const width of [768, 1280, 1440]) {
+      await verificarSinDesbordeResponsive(page, [width]);
+
+      const rectAnt = await anticipacionInput.boundingBox();
+      const rectVen = await ventanaInput.boundingBox();
+      expect(rectAnt).not.toBeNull();
+      expect(rectVen).not.toBeNull();
+      if (rectAnt && rectVen) {
+        expect(Math.abs(rectAnt.y - rectVen.y)).toBeLessThanOrEqual(1);
+      }
+    }
+
+    // Validación individual sin marcar otros campos ni exponer códigos técnicos
+    const nombreInput = page.getByLabel(/Nombre del Box/i);
+    await anticipacionInput.fill("0");
+    await page
+      .getByRole("button", { name: /Guardar configuración/i })
+      .click();
+    await expect(anticipacionInput).toHaveAttribute("aria-invalid", "true");
+    await expect(nombreInput).not.toHaveAttribute("aria-invalid", "true");
+    await expect(ventanaInput).not.toHaveAttribute("aria-invalid", "true");
+
+    // Atajo frecuente de ventana de cancelación
+    const chip6h = page.getByRole("button", { name: "6 horas (360 min)" });
+    await chip6h.click();
+    await expect(chip6h).toHaveAttribute("aria-pressed", "true");
+    await expect(ventanaInput).toHaveValue("360");
+  }
+);
+
+Then(
+  "las columnas se apilan en móvil y alinean sus inputs en escritorio, sin desborde horizontal ni códigos técnicos y con opción de restablecer",
+  async ({ page }) => {
+    const preview = page.getByLabel("Vista previa operativa");
+    await expect(preview).toContainText("6 horas (360 min)");
+
+    const restablecerBtn = page.getByRole("button", { name: /Restablecer/i });
+    await expect(restablecerBtn).toBeEnabled();
+    await restablecerBtn.click();
+
+    await expect(page.getByLabel(/Anticipación de reserva/i)).toHaveValue("7");
+    await expect(page.getByLabel(/Ventana de cancelación/i)).toHaveValue("120");
+    await expect(
+      page.getByRole("button", { name: /Guardar configuración/i })
+    ).toBeDisabled();
   }
 );

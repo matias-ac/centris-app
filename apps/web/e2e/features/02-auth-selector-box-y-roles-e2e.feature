@@ -46,3 +46,11 @@ Característica: Identidad Global, Autenticación, Selector de Box y Guard de 4 
     Dado un Usuario autenticado sin afiliaciones activas en ningún Box
     Cuando accede al selector de Box
     Entonces visualiza el estado vacío con opciones para actualizar el listado o cerrar sesión sin jerga técnica
+
+  Escenario: Diseño Bento, alineación responsive, atajos y validación accesible en /configuracion
+    Dado un Usuario sin rol de Administrador en "Box Centris Norte"
+    Cuando intenta abrir la configuración del Box
+    Entonces visualiza la restricción de acceso sin código 403 Forbidden y puede volver al panel
+    Dado un Administrador autenticado operando en "Box Centris Norte"
+    Cuando verifica la alineación responsive de /configuracion, prueba validación individual y usa atajos de cancelación
+    Entonces las columnas se apilan en móvil y alinean sus inputs en escritorio, sin desborde horizontal ni códigos técnicos y con opción de restablecer

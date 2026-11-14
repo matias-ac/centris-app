@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { tieneAlgunRol } from "@centris/shared";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { obtenerConfiguracionBoxApi } from "@/lib/api-client";
 import { obtenerContextoOperativoWeb } from "@/lib/contexto-box";
-import { FormularioConfiguracionBox } from "./formulario-configuracion-box";
+import {
+  AccesoRestringidoConfiguracion,
+  FormularioConfiguracionBox
+} from "./formulario-configuracion-box";
 
 export const dynamic = "force-dynamic";
 
@@ -20,17 +21,7 @@ export default async function ConfiguracionBoxPage() {
 
   if (!tieneAlgunRol(afiliacionActiva.roles, ["administrador"])) {
     return (
-      <Card data-testid="acceso-denegado-rol">
-        <CardHeader className="flex flex-row items-center justify-between space-y-0">
-          <CardTitle>Acceso restringido al Administrador</CardTitle>
-          <Badge variant="rose">403 Forbidden</Badge>
-        </CardHeader>
-        <CardContent className="text-sm text-muted-foreground">
-          Tu Afiliación actual en {afiliacionActiva.box.nombre} no posee el rol
-          de Administrador requerido para modificar la configuración general del
-          Box.
-        </CardContent>
-      </Card>
+      <AccesoRestringidoConfiguracion nombreBox={afiliacionActiva.box.nombre} />
     );
   }
 
@@ -43,16 +34,20 @@ export default async function ConfiguracionBoxPage() {
   return (
     <div className="space-y-6">
       <header className="space-y-1">
-        <h1 className="font-display text-3xl font-bold uppercase tracking-tight text-foreground">
+        <h1 className="text-[clamp(1.375rem,1.2rem+0.8vw,1.75rem)] font-medium leading-[1.2] tracking-[-0.02em] text-foreground">
           Configuración del Box
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Definí la zona horaria IANA, moneda ISO y ventanas operativas de{" "}
-          {box.nombre}.
+        <p className="max-w-[66ch] text-sm text-muted-foreground">
+          Ajustá el nombre visible, la zona horaria local para clases y las
+          reglas con las que tus atletas reservan o cancelan en {box.nombre}.
         </p>
       </header>
 
-      <FormularioConfiguracionBox key={box.id} box={box} />
+      <FormularioConfiguracionBox
+        key={box.id}
+        box={box}
+        fechaReferenciaIso={new Date().toISOString()}
+      />
     </div>
   );
 }
