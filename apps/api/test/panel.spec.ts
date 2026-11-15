@@ -4,7 +4,6 @@ import {
   calcularInstantesClase,
   obtenerFechaLocal,
   sumarDiasAFecha,
-  type Clase,
   type Membresia,
   type Pago,
   type Plan,

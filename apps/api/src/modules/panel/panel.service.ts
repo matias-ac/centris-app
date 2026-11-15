@@ -22,7 +22,7 @@ import {
   type ResumenPanel,
   type RolAfiliacion
 } from "@centris/shared";
-import { and, asc, eq, gte, inArray, isNull, lte, sql } from "drizzle-orm";
+import { and, asc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { DomainException } from "../../common/errors/domain.exception.js";
 import {
   DatabaseService,
