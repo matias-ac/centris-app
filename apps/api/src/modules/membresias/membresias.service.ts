@@ -2,6 +2,7 @@ import { HttpStatus, Inject, Injectable } from "@nestjs/common";
 import {
   ERROR_CODES,
   calcularFechaFinVigencia,
+  calcularSaldoMembresia,
   type AjustarCreditosExtra,
   type AjustarPrecioMembresia,
   type BajaAnticipada,
@@ -20,6 +21,7 @@ import {
   boxes,
   clases,
   membresias,
+  pagos,
   planes,
   reservas
 } from "../../database/schema/index.js";
@@ -170,7 +172,46 @@ export class MembresiasService {
         .from(membresias)
         .where(and(...condiciones))
         .orderBy(asc(membresias.fechaInicio));
-      return filas.map(mapearMembresia);
+      if (filas.length === 0) {
+        return [];
+      }
+
+      const membresiaIds = filas.map((f) => f.id);
+      const filasPagos = await tx
+        .select({
+          membresiaId: pagos.membresiaId,
+          monto: pagos.monto,
+          anuladoEn: pagos.anuladoEn
+        })
+        .from(pagos)
+        .where(
+          and(
+            eq(pagos.boxId, boxId),
+            inArray(pagos.membresiaId, membresiaIds),
+            isNull(pagos.anuladoEn)
+          )
+        );
+
+      const pagosPorMembresia = new Map<
+        string,
+        Array<{ monto: number; anuladoEn: Date | null }>
+      >();
+      for (const p of filasPagos) {
+        const lista = pagosPorMembresia.get(p.membresiaId) ?? [];
+        lista.push({ monto: p.monto, anuladoEn: p.anuladoEn });
+        pagosPorMembresia.set(p.membresiaId, lista);
+      }
+
+      return filas.map((fila) => {
+        const listaPagos = pagosPorMembresia.get(fila.id) ?? [];
+        const totalPagado = listaPagos.reduce((acc, p) => acc + p.monto, 0);
+        const saldo = calcularSaldoMembresia(fila.precio, listaPagos);
+        return {
+          ...mapearMembresia(fila),
+          totalPagado,
+          saldo
+        };
+      });
     });
   }
 

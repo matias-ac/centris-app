@@ -4,6 +4,7 @@ import {
   AjustarPrecioMembresiaSchema,
   BajaAnticipadaSchema,
   CrearMembresiaSchema,
+  MembresiaSchema,
   calcularFechaFinVigencia
 } from "../src/index.js";
 
@@ -109,6 +110,30 @@ describe("Seam 1 — Esquemas Zod y cálculo de Vigencia de Membresías (@centri
       expect(
         BajaAnticipadaSchema.safeParse({ fechaFin: "mañana" }).success
       ).toBe(false);
+    });
+  });
+
+  describe("MembresiaSchema", () => {
+    it("acepta totalPagado y saldo derivados opcionales", () => {
+      const parsed = MembresiaSchema.safeParse({
+        id: UUID_AFILIACION,
+        boxId: UUID_PLAN,
+        afiliacionId: UUID_AFILIACION,
+        planId: UUID_PLAN,
+        precio: 42000,
+        modalidadCreditos: "SEMANAL",
+        creditosPorPeriodo: 3,
+        creditosExtra: 0,
+        fechaInicio: "2026-11-01",
+        fechaFin: "2026-11-30",
+        bajaAnticipadaEn: null,
+        bajaPorUsuarioId: null,
+        createdAt: "2026-11-01T12:00:00.000Z",
+        updatedAt: "2026-11-01T12:00:00.000Z",
+        totalPagado: 15000,
+        saldo: 27000
+      });
+      expect(parsed.success).toBe(true);
     });
   });
 });
