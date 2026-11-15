@@ -1,647 +1,847 @@
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   AlertCircle,
   AlertTriangle,
   Calendar,
-  CheckCircle,
+  CheckCircle2,
+  ChevronDown,
   Clock,
-  CreditCard,
-  Dumbbell,
+  RefreshCw,
   Sparkles,
+  UserCheck,
   Users,
-  XCircle
+  X
 } from "lucide-react";
-import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
 import {
-  ESTADOS_RESERVA_QUE_CONSUMEN_CREDITO,
-  calcularDisponibilidadCreditos,
-  evaluarVentanaCancelacion,
   obtenerFechaLocal,
-  obtenerRangoPeriodoSemanal,
+  type Atleta,
   type Clase,
-  type EstadoReserva,
   type Membresia,
   type Reserva
 } from "@centris/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
+import { FilterChips } from "@/components/ui/filter-chips";
 import { cancelarReservaAction, crearReservaAction } from "@/lib/actions";
+import { cn, formatearMoneda } from "@/lib/utils";
+import { DrawerReservaMostrador } from "./drawer-reserva-mostrador";
+import {
+  clasificarReservasAtleta,
+  construirOpcionesTipoReservas,
+  construirPestanasDiasReservas,
+  evaluarEstadoTarjetaClase,
+  evaluarResumenMembresiaAtleta,
+  filtrarAtletasMostrador,
+  filtrarClasesReservas,
+  formatearFechaRangoEsAr,
+  procesarCancelacionAtleta,
+  procesarReservaAtleta,
+  procesarReservaMostrador,
+  type ProximaReservaUI
+} from "./reservas-estado";
+import {
+  FilaHistorialReserva,
+  TarjetaClaseDisponible,
+  TarjetaProximaReserva
+} from "./tarjetas-reservas";
 
-interface ReservasAtletaViewProps {
+export {
+  TarjetaClaseDisponible,
+  TarjetaProximaReserva,
+  type TarjetaClaseDisponibleProps,
+  type TarjetaProximaReservaProps
+} from "./tarjetas-reservas";
+
+export interface ReservasAtletaViewProps {
   boxId: string;
   timezone: string;
+  moneda: string;
   anticipacionReservaDias: number;
   ventanaCancelacionMinutos?: number;
+  esAtleta: boolean;
+  esStaffMostrador: boolean;
   clasesDisponibles: Clase[];
   misReservas: Reserva[];
-  membresiaVigente: Membresia | null;
+  membresias?: Membresia[];
+  membresiaVigente?: Membresia | null;
+  atletas?: Atleta[];
+  errorCarga?: string | null;
+  ahoraInicialIso?: string;
+  diaInicialSeleccionado?: string;
 }
 
-function formatearHora(isoString: string | Date, timezone: string): string {
-  const d = typeof isoString === "string" ? new Date(isoString) : isoString;
-  return new Intl.DateTimeFormat("es-AR", {
-    timeZone: timezone,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false
-  }).format(d);
-}
+type ToastState =
+  | { tipo: "exito"; mensaje: string }
+  | { tipo: "error"; mensaje: string; errorCode?: string }
+  | null;
 
-function formatearFecha(isoString: string | Date, timezone: string): string {
-  const d = typeof isoString === "string" ? new Date(isoString) : isoString;
-  return new Intl.DateTimeFormat("es-AR", {
-    timeZone: timezone,
-    weekday: "short",
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric"
-  }).format(d);
-}
-
-function HorarioReservaTexto({
-  inicio,
-  fin,
-  timezone
-}: {
-  inicio?: string | Date;
-  fin?: string | Date;
-  timezone: string;
-}) {
-  if (!inicio || !fin) return null;
-  return (
-    <p className="text-xs capitalize tabular-nums text-muted-foreground">
-      {formatearFecha(inicio, timezone)} ·{" "}
-      <span className="font-sans font-semibold tabular-nums text-foreground">
-        {formatearHora(inicio, timezone)} - {formatearHora(fin, timezone)}
-      </span>
-    </p>
-  );
-}
-
-const ETIQUETA_MODALIDAD: Record<Membresia["modalidadCreditos"], string> = {
-  SEMANAL: "Semanal",
-  VIGENCIA_TOTAL: "Vigencia total",
-  ILIMITADO: "Ilimitado"
-};
-
-const ETIQUETA_ESTADO_CANCELADA: Record<
-  Exclude<EstadoReserva, "CONFIRMADA">,
-  { etiqueta: string; variante: "zinc" | "amber" | "rose"; detalle: string }
-> = {
-  CANCELADA: {
-    etiqueta: "Cancelada",
-    variante: "zinc",
-    detalle: "Cancelada en término · Crédito restituido al Período"
-  },
-  CANCELADA_TARDIA: {
-    etiqueta: "Cancelación Tardía",
-    variante: "amber",
-    detalle: "Cancelada dentro de la Ventana de Cancelación · Crédito consumido"
-  },
-  CANCELADA_POR_BOX: {
-    etiqueta: "Cancelada por el Box",
-    variante: "rose",
-    detalle: "Clase cancelada por el Box · Crédito restituido íntegramente"
-  }
-};
-
+/**
+ * Cockpit de reservas Dark Bento para atletas (agenda, créditos, ADR 0006,
+ * cancelaciones inline, historial colapsado) y mostrador de recepción/administración.
+ */
 export function ReservasAtletaView({
   boxId,
   timezone,
+  moneda,
   anticipacionReservaDias,
   ventanaCancelacionMinutos = 120,
+  esAtleta,
+  esStaffMostrador,
   clasesDisponibles,
   misReservas,
-  membresiaVigente
+  membresias,
+  membresiaVigente = null,
+  atletas = [],
+  errorCarga = null,
+  ahoraInicialIso,
+  diaInicialSeleccionado
 }: ReservasAtletaViewProps) {
   const router = useRouter();
-  const [isPending, startTransition] = useTransition();
-  const [claseReservandoId, setClaseReservandoId] = useState<string | null>(
-    null
+  const ahoraRef = useMemo(
+    () => (ahoraInicialIso ? new Date(ahoraInicialIso) : new Date()),
+    [ahoraInicialIso]
   );
-  const [claseCancelandoId, setClaseCancelandoId] = useState<string | null>(
-    null
+  const hoyLocal = useMemo(
+    () => obtenerFechaLocal(ahoraRef, timezone),
+    [ahoraRef, timezone]
   );
-  const [claseAdvirtiendoTardiaId, setClaseAdvirtiendoTardiaId] = useState<
+
+  const membresiasEvaluadas = useMemo(() => {
+    if (membresias && membresias.length > 0) {
+      return membresias;
+    }
+    return membresiaVigente ? [membresiaVigente] : [];
+  }, [membresias, membresiaVigente]);
+
+  const pestanasDias = useMemo(
+    () =>
+      construirPestanasDiasReservas(
+        clasesDisponibles,
+        hoyLocal,
+        anticipacionReservaDias,
+        timezone
+      ),
+    [clasesDisponibles, hoyLocal, anticipacionReservaDias, timezone]
+  );
+
+  const hoyValue = pestanasDias[0]?.value ?? "TODOS";
+  const [diaSeleccionado, setDiaSeleccionado] = useState<string>(
+    diaInicialSeleccionado ?? hoyValue
+  );
+  const [tipoSeleccionado, setTipoSeleccionado] = useState<string>("TODAS");
+  const [historialAbierto, setHistorialAbierto] = useState<boolean>(false);
+  const [advertenciaTardiaClaseId, setAdvertenciaTardiaClaseId] = useState<
     string | null
   >(null);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [errorCode, setErrorCode] = useState<string | null>(null);
-  const [exitoMsg, setExitoMsg] = useState<string | null>(null);
 
-  const hoyLocal = obtenerFechaLocal(new Date(), timezone);
-  const periodoActual = obtenerRangoPeriodoSemanal(hoyLocal);
-
-  const reservasConfirmadas = misReservas.filter(
-    (r) => r.estado === "CONFIRMADA"
+  const [pendingClaseId, setPendingClaseId] = useState<string | null>(null);
+  const [cancelandoReservaId, setCancelandoReservaId] = useState<string | null>(
+    null
   );
-  const reservasCanceladas = misReservas.filter(
-    (r): r is Reserva & { estado: Exclude<EstadoReserva, "CONFIRMADA"> } =>
-      r.estado !== "CONFIRMADA"
-  );
-  const claseIdsConReservaActiva = new Set(
-    reservasConfirmadas.map((r) => r.claseId)
-  );
+  const [feedback, setFeedback] = useState<ToastState>(null);
 
-  // Calcular disponibilidad de Créditos en el Período actual de la Membresía vigente
-  const disponibilidadActual = membresiaVigente
-    ? calcularDisponibilidadCreditos({
-        modalidadCreditos: membresiaVigente.modalidadCreditos,
-        creditosPorPeriodo: membresiaVigente.creditosPorPeriodo,
-        creditosExtra: membresiaVigente.creditosExtra,
-        fechasClasesConsumidas: misReservas
-          .filter(
-            (r) =>
-              r.membresiaId === membresiaVigente.id &&
-              ESTADOS_RESERVA_QUE_CONSUMEN_CREDITO.includes(r.estado) &&
-              r.claseInicio !== undefined
-          )
-          .map((r) => obtenerFechaLocal(new Date(r.claseInicio!), timezone)),
-        fechaClaseObjetivo: hoyLocal
-      })
-    : null;
+  // Estado del SideDrawer de Mostrador
+  const [claseMostrador, setClaseMostrador] = useState<Clase | null>(null);
+  const [busquedaAtleta, setBusquedaAtleta] = useState<string>("");
+  const [atletaSeleccionadoId, setAtletaSeleccionadoId] = useState<string>("");
+  const [enviandoMostrador, setEnviandoMostrador] = useState<boolean>(false);
+  const [errorDrawer, setErrorDrawer] = useState<{
+    mensaje: string;
+    errorCode?: string;
+  } | null>(null);
 
-  function handleReservar(claseId: string) {
-    setErrorMsg(null);
-    setErrorCode(null);
-    setExitoMsg(null);
-    setClaseReservandoId(claseId);
+  const timerToastRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-    startTransition(async () => {
-      const res = await crearReservaAction(boxId, { claseId });
-      setClaseReservandoId(null);
+  useEffect(() => {
+    if (!feedback) {
+      return;
+    }
+    if (timerToastRef.current) {
+      clearTimeout(timerToastRef.current);
+    }
+    timerToastRef.current = setTimeout(() => {
+      setFeedback(null);
+    }, 6000);
 
-      if (!res.ok) {
-        setErrorCode(res.errorCode ?? null);
-        setErrorMsg(res.message ?? "No se pudo confirmar la Reserva.");
-      } else {
-        setExitoMsg("Reserva confirmada exitosamente.");
-        router.refresh();
+    return () => {
+      if (timerToastRef.current) {
+        clearTimeout(timerToastRef.current);
       }
-    });
-  }
+    };
+  }, [feedback]);
 
-  function ejecutarCancelacion(reserva: Reserva, esTardia: boolean) {
-    setErrorMsg(null);
-    setErrorCode(null);
-    setExitoMsg(null);
-    setClaseAdvirtiendoTardiaId(null);
-    setClaseCancelandoId(reserva.claseId);
+  const resumenMembresia = useMemo(
+    () =>
+      evaluarResumenMembresiaAtleta({
+        membresias: membresiasEvaluadas,
+        misReservas,
+        hoyLocal,
+        timezone
+      }),
+    [membresiasEvaluadas, misReservas, hoyLocal, timezone]
+  );
 
-    startTransition(async () => {
-      const res = await cancelarReservaAction(boxId, reserva.id);
-      setClaseCancelandoId(null);
-
-      if (!res.ok) {
-        setErrorCode(res.errorCode ?? null);
-        setErrorMsg(res.message ?? "No se pudo cancelar la Reserva.");
-      } else {
-        setExitoMsg(
-          esTardia
-            ? "Cancelación Tardía registrada: se liberó el Cupo sin devolver el Crédito."
-            : "Reserva cancelada en término: se liberó el Cupo y se restituyó el Crédito al Período."
-        );
-        router.refresh();
-      }
-    });
-  }
-
-  function handleSolicitarCancelacion(reserva: Reserva) {
-    setErrorMsg(null);
-    setErrorCode(null);
-    setExitoMsg(null);
-
-    if (reserva.claseInicio) {
-      const evaluacion = evaluarVentanaCancelacion({
-        claseInicio: reserva.claseInicio,
-        ahora: new Date(),
+  const { proximas, historial } = useMemo(
+    () =>
+      clasificarReservasAtleta(
+        misReservas,
+        timezone,
+        ahoraRef,
         ventanaCancelacionMinutos
-      });
-      if (evaluacion.permitida && evaluacion.esTardia) {
-        setClaseAdvirtiendoTardiaId(reserva.claseId);
-        return;
-      }
+      ),
+    [misReservas, timezone, ahoraRef, ventanaCancelacionMinutos]
+  );
+
+  const reservasActivas = useMemo(
+    () => proximas.map((item) => item.reserva),
+    [proximas]
+  );
+
+  const claseIdsReservadas = useMemo(
+    () => new Set(reservasActivas.map((r) => r.claseId)),
+    [reservasActivas]
+  );
+
+  const clasesDelDia = useMemo(
+    () =>
+      filtrarClasesReservas(clasesDisponibles, {
+        diaSeleccionado,
+        tipoSeleccionado: "TODAS",
+        timezone
+      }),
+    [clasesDisponibles, diaSeleccionado, timezone]
+  );
+
+  const opcionesTipo = useMemo(
+    () => construirOpcionesTipoReservas(clasesDelDia),
+    [clasesDelDia]
+  );
+
+  const clasesFiltradas = useMemo(
+    () =>
+      filtrarClasesReservas(clasesDisponibles, {
+        diaSeleccionado,
+        tipoSeleccionado,
+        timezone
+      }),
+    [clasesDisponibles, diaSeleccionado, tipoSeleccionado, timezone]
+  );
+
+  const atletasFiltrados = useMemo(
+    () => filtrarAtletasMostrador(atletas, busquedaAtleta),
+    [atletas, busquedaAtleta]
+  );
+
+  async function manejarReservar(claseId: string) {
+    setFeedback(null);
+    setPendingClaseId(claseId);
+
+    const resultado = await procesarReservaAtleta(
+      boxId,
+      claseId,
+      crearReservaAction
+    );
+
+    setPendingClaseId(null);
+
+    if (resultado.ok) {
+      setFeedback({ tipo: "exito", mensaje: resultado.message });
+      router.refresh();
+      return;
     }
 
-    ejecutarCancelacion(reserva, false);
+    setFeedback({
+      tipo: "error",
+      mensaje: resultado.error,
+      errorCode: resultado.errorCode
+    });
+  }
+
+  async function ejecutarCancelacion(item: ProximaReservaUI) {
+    setFeedback(null);
+    setCancelandoReservaId(item.reserva.id);
+
+    const resultado = await procesarCancelacionAtleta(
+      boxId,
+      item.reserva.id,
+      item.enVentanaTardia,
+      cancelarReservaAction
+    );
+
+    setCancelandoReservaId(null);
+    setAdvertenciaTardiaClaseId(null);
+
+    if (resultado.ok) {
+      setFeedback({ tipo: "exito", mensaje: resultado.message });
+      router.refresh();
+      return;
+    }
+
+    setFeedback({
+      tipo: "error",
+      mensaje: resultado.error,
+      errorCode: resultado.errorCode
+    });
+  }
+
+  function manejarSolicitarCancelacion(item: ProximaReservaUI) {
+    if (item.enCurso) {
+      return;
+    }
+    if (item.enVentanaTardia) {
+      setAdvertenciaTardiaClaseId(item.reserva.claseId);
+      return;
+    }
+    void ejecutarCancelacion(item);
+  }
+
+  function abrirDrawerMostrador(clase: Clase) {
+    setClaseMostrador(clase);
+    setBusquedaAtleta("");
+    setAtletaSeleccionadoId(atletas[0]?.id ?? "");
+    setErrorDrawer(null);
+  }
+
+  function cerrarDrawerMostrador() {
+    setClaseMostrador(null);
+    setBusquedaAtleta("");
+    setAtletaSeleccionadoId("");
+    setErrorDrawer(null);
+  }
+
+  async function manejarConfirmarMostrador(e: React.FormEvent) {
+    e.preventDefault();
+    if (!claseMostrador) {
+      return;
+    }
+    setErrorDrawer(null);
+    setEnviandoMostrador(true);
+
+    const resultado = await procesarReservaMostrador(
+      boxId,
+      claseMostrador.id,
+      atletaSeleccionadoId,
+      crearReservaAction
+    );
+
+    setEnviandoMostrador(false);
+
+    if (resultado.ok) {
+      cerrarDrawerMostrador();
+      setFeedback({ tipo: "exito", mensaje: resultado.message });
+      router.refresh();
+      return;
+    }
+
+    setErrorDrawer({
+      mensaje: resultado.error,
+      errorCode: resultado.errorCode
+    });
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
-        <div>
-          <h1 className="font-display text-2xl font-bold uppercase tracking-tight text-foreground md:text-3xl">
-            Mis Reservas y Clases
+    <div className="space-y-6 pb-20">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-[1.75rem]">
+            Mis reservas
           </h1>
           <p className="text-sm text-muted-foreground">
-            Reservá tu Cupo en las Clases del Box dentro del horizonte de{" "}
-            <span className="font-medium tabular-nums text-foreground">
-              {anticipacionReservaDias} días
-            </span>{" "}
-            de Anticipación de Reserva.
+            {esAtleta
+              ? "Consultá tus créditos disponibles, gestioná tus reservas próximas y elegí tu clase."
+              : "Modo mostrador: gestioná reservas presenciales de atletas en la grilla del Box."}
           </p>
         </div>
-      </div>
 
-      {errorMsg ? (
-        <div
-          data-testid="alerta-error-reserva"
-          data-error-code={errorCode ?? ""}
-          role="alert"
-          className="flex items-center gap-3 rounded-lg border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive"
+        {esStaffMostrador && (
+          <Badge variant="mint" className="self-start sm:self-auto">
+            <UserCheck className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>Modo mostrador activo</span>
+          </Badge>
+        )}
+      </header>
+
+      {errorCarga && (
+        <Card
+          data-testid="error-carga-reservas"
+          className="border-[#FF6D6D]/35 bg-[#FF6D6D]/8"
         >
-          <AlertCircle className="h-5 w-5 shrink-0" />
-          <span>{errorMsg}</span>
-        </div>
-      ) : null}
-
-      {exitoMsg ? (
-        <div
-          data-testid="alerta-exito-reserva"
-          role="status"
-          className="flex items-center gap-3 rounded-lg border border-emerald-500/50 bg-emerald-500/10 p-4 text-sm text-emerald-400"
-        >
-          <CheckCircle className="h-5 w-5 shrink-0" />
-          <span>{exitoMsg}</span>
-        </div>
-      ) : null}
-
-      {/* Tarjeta de estado de Membresía y Créditos */}
-      <Card
-        data-testid="resumen-membresia-atleta"
-        className="border-border bg-card"
-      >
-        <CardHeader className="pb-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <CardTitle className="flex items-center gap-2 font-display text-lg uppercase tracking-tight text-foreground">
-              <CreditCard className="h-5 w-5 text-primary" />
-              Estado de Mi Membresía
-            </CardTitle>
-            {membresiaVigente ? (
-              <Badge variant="emerald">Membresía Vigente</Badge>
-            ) : (
-              <Badge variant="rose">Sin Membresía Vigente</Badge>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {membresiaVigente && disponibilidadActual ? (
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="rounded-lg border border-border bg-secondary/40 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Vigencia Activa
+          <CardContent className="flex flex-col items-start justify-between gap-4 p-5 sm:flex-row sm:items-center">
+            <div className="flex items-start gap-3">
+              <AlertCircle
+                className="mt-0.5 h-5 w-5 shrink-0 text-[#FF6D6D]"
+                aria-hidden="true"
+              />
+              <div className="space-y-1">
+                <p className="text-sm font-semibold text-foreground">
+                  No pudimos cargar las reservas en este momento
                 </p>
-                <p
-                  data-testid="vigencia-membresia-atleta"
-                  className="mt-1 text-sm font-semibold tabular-nums text-foreground"
-                >
-                  {membresiaVigente.fechaInicio} al {membresiaVigente.fechaFin}
-                </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Modalidad:{" "}
-                  {ETIQUETA_MODALIDAD[membresiaVigente.modalidadCreditos]}
-                </p>
-              </div>
-
-              <div className="rounded-lg border border-border bg-secondary/40 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Créditos del Período
-                </p>
-                <p
-                  data-testid="creditos-periodo-restantes"
-                  className="mt-1 font-display text-2xl font-bold tabular-nums text-foreground"
-                >
-                  {membresiaVigente.modalidadCreditos === "ILIMITADO"
-                    ? "Ilimitado"
-                    : `${disponibilidadActual.creditosRestantesPeriodo ?? 0} / ${membresiaVigente.creditosPorPeriodo ?? 0}`}
-                </p>
-                {membresiaVigente.modalidadCreditos === "SEMANAL" ? (
-                  <p className="mt-0.5 text-xs tabular-nums text-muted-foreground">
-                    Semana: {periodoActual.lunes} al {periodoActual.domingo}
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="rounded-lg border border-border bg-secondary/40 p-3">
-                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                  Bolsa Créditos Extra
-                </p>
-                <p className="mt-1 flex items-center gap-1.5 font-display text-2xl font-bold tabular-nums text-foreground">
-                  <Sparkles className="h-4 w-4 text-primary" />
-                  <span data-testid="creditos-extra-restantes">
-                    {disponibilidadActual.creditosExtraRestantes}
-                  </span>
-                </p>
-                <p className="mt-0.5 text-xs text-muted-foreground">
-                  Válidos durante toda la Vigencia
-                </p>
+                <p className="text-sm text-muted-foreground">{errorCarga}</p>
               </div>
             </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              No contás con una Membresía activa para hoy ({hoyLocal}). Acercate
-              a Recepción para habilitar tu Membresía.
+            <Button
+              variant="secondary"
+              className="w-full shrink-0 sm:w-auto"
+              onClick={() => router.refresh()}
+            >
+              <RefreshCw className="h-4 w-4" aria-hidden="true" />
+              <span>Reintentar</span>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {!errorCarga && esAtleta && (
+        <section
+          aria-label="Resumen de créditos y vigencia"
+          className="sticky top-2 z-20 rounded-3xl border border-border bg-[#111214]/95 p-4 backdrop-blur-md sm:p-5"
+        >
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 sm:items-center">
+            <div className="flex items-center justify-between gap-3 sm:block sm:space-y-1">
+              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Sparkles
+                  className="h-3.5 w-3.5 text-primary"
+                  aria-hidden="true"
+                />
+                <span>Créditos disponibles</span>
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span
+                  data-testid="creditos-periodo-restantes"
+                  className="text-xl font-semibold tabular-nums text-foreground sm:text-2xl"
+                >
+                  {!resumenMembresia.membresiaVigente
+                    ? "—"
+                    : resumenMembresia.membresiaVigente.modalidadCreditos ===
+                        "ILIMITADO"
+                      ? "Ilimitados"
+                      : `${resumenMembresia.disponibilidadActual?.creditosRestantesPeriodo ?? 0} / ${resumenMembresia.membresiaVigente.creditosPorPeriodo ?? 0}`}
+                </span>
+                {resumenMembresia.membresiaVigente && (
+                  <span className="text-xs text-muted-foreground">
+                    {resumenMembresia.etiquetaModalidad}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-3 sm:block sm:space-y-1 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
+              <span className="text-xs text-muted-foreground">
+                Créditos extra
+              </span>
+              <p
+                data-testid="creditos-extra-restantes"
+                className="text-xl font-semibold tabular-nums text-foreground sm:text-2xl"
+              >
+                {resumenMembresia.membresiaVigente
+                  ? resumenMembresia.disponibilidadActual
+                      ?.creditosExtraRestantes ?? 0
+                  : "0"}
+              </p>
+            </div>
+
+            <div className="flex items-center justify-between gap-3 border-t border-border/70 pt-3 sm:block sm:space-y-1 sm:border-l sm:border-t-0 sm:pl-4 sm:pt-0">
+              <span className="text-xs text-muted-foreground">
+                Vigencia de la membresía
+              </span>
+              <div className="flex flex-wrap items-center justify-end gap-2 sm:justify-start">
+                <span
+                  data-testid="vigencia-membresia-atleta"
+                  className="text-sm font-medium tabular-nums text-foreground"
+                >
+                  {resumenMembresia.membresiaVigente
+                    ? formatearFechaRangoEsAr(
+                        resumenMembresia.membresiaVigente.fechaInicio,
+                        resumenMembresia.membresiaVigente.fechaFin
+                      )
+                    : "Sin membresía vigente"}
+                </span>
+                {resumenMembresia.membresiaVigente ? (
+                  resumenMembresia.esFutura ? (
+                    <Badge variant="amber">
+                      <Clock className="h-3 w-3" aria-hidden="true" />
+                      <span>Inicia luego</span>
+                    </Badge>
+                  ) : (
+                    <Badge variant="mint">
+                      <CheckCircle2 className="h-3 w-3" aria-hidden="true" />
+                      <span>Activa</span>
+                    </Badge>
+                  )
+                ) : (
+                  <Badge variant="coral">
+                    <AlertCircle className="h-3 w-3" aria-hidden="true" />
+                    <span>Sin membresía</span>
+                  </Badge>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {!resumenMembresia.membresiaVigente && !esStaffMostrador && (
+            <p className="mt-3 border-t border-border/70 pt-3 text-xs text-muted-foreground">
+              No tenés una membresía vigente asignada. Consultá en recepción para
+              activar una membresía y empezar a reservar.
             </p>
           )}
-        </CardContent>
-      </Card>
+        </section>
+      )}
 
-      {/* Sección Mis Reservas Confirmadas */}
-      <section data-testid="seccion-mis-reservas" className="space-y-3">
-        <h2 className="font-display text-xl font-semibold uppercase tracking-tight text-foreground">
-          Mis Reservas Confirmadas (
-          <span className="tabular-nums">{reservasConfirmadas.length}</span>)
-        </h2>
+      {!errorCarga && esAtleta && resumenMembresia.esMoroso && (
+        <div
+          data-testid="banner-saldo-pendiente"
+          role="status"
+          className="flex flex-col justify-between gap-3 rounded-2xl border border-[#FF6D6D]/35 bg-[#FF6D6D]/10 px-4 py-3.5 sm:flex-row sm:items-center"
+        >
+          <div className="flex items-start gap-3">
+            <AlertTriangle
+              className="mt-0.5 h-5 w-5 shrink-0 text-[#FF6D6D]"
+              aria-hidden="true"
+            />
+            <div className="space-y-0.5 text-sm">
+              <p className="font-semibold text-foreground">
+                Tenés un saldo pendiente de{" "}
+                <span className="tabular-nums text-[#FF6D6D]">
+                  {formatearMoneda(
+                    resumenMembresia.saldoPendienteTotal,
+                    moneda
+                  )}
+                </span>
+              </p>
+              <p className="text-xs leading-relaxed text-[#FCA5A5]">
+                Tu acceso a clases sigue habilitado mientras tengas membresía y
+                créditos disponibles. Podés regularizar el pago en recepción.
+              </p>
+            </div>
+          </div>
+          <Badge variant="coral" className="self-start shrink-0 sm:self-center">
+            <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>Saldo pendiente</span>
+          </Badge>
+        </div>
+      )}
 
-        {reservasConfirmadas.length === 0 ? (
-          <Card className="border-dashed bg-card/60">
-            <CardContent className="py-6 text-center text-sm text-muted-foreground">
-              Todavía no tenés Reservas confirmadas. Elegí una Clase disponible
-              más abajo para reservar tu Cupo.
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {reservasConfirmadas.map((reserva) => {
-              const mostrandoAdvertenciaTardia =
-                claseAdvirtiendoTardiaId === reserva.claseId;
+      {!errorCarga && !esAtleta && esStaffMostrador && (
+        <div
+          role="status"
+          className="flex items-start gap-3 rounded-2xl border border-border bg-[#18191C] px-4 py-3.5 text-sm text-muted-foreground"
+        >
+          <Users
+            className="mt-0.5 h-5 w-5 shrink-0 text-[#18FFC8]"
+            aria-hidden="true"
+          />
+          <p>
+            Modo mostrador: seleccioná cualquier clase con cupo disponible para
+            anotar a un atleta del Box.
+          </p>
+        </div>
+      )}
 
+      {!errorCarga && esAtleta && (
+        <section
+          aria-labelledby="titulo-proximas-reservas"
+          data-testid="seccion-mis-reservas"
+          className="space-y-4"
+        >
+          <div className="flex items-center gap-2.5">
+            <h2
+              id="titulo-proximas-reservas"
+              className="text-[1.0625rem] font-semibold tracking-[-0.01em] text-foreground"
+            >
+              Próximas reservas
+            </h2>
+            <span className="rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
+              {proximas.length}
+            </span>
+          </div>
+
+          {proximas.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-start gap-2 p-5 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2.5">
+                  <Calendar
+                    className="h-4 w-4 shrink-0 text-muted-foreground"
+                    aria-hidden="true"
+                  />
+                  <span>
+                    Todavía no tenés reservas próximas confirmadas.
+                  </span>
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  Elegí un horario disponible más abajo para anotarte.
+                </span>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {proximas.map((item) => (
+                <TarjetaProximaReserva
+                  key={item.reserva.id}
+                  item={item}
+                  ventanaCancelacionMinutos={ventanaCancelacionMinutos}
+                  mostrandoAdvertenciaTardia={
+                    advertenciaTardiaClaseId === item.reserva.claseId
+                  }
+                  cancelando={cancelandoReservaId === item.reserva.id}
+                  deshabilitado={cancelandoReservaId !== null}
+                  onSolicitarCancelacion={manejarSolicitarCancelacion}
+                  onConfirmarTardia={(target) =>
+                    void ejecutarCancelacion(target)
+                  }
+                  onCancelarAdvertencia={() =>
+                    setAdvertenciaTardiaClaseId(null)
+                  }
+                />
+              ))}
+            </div>
+          )}
+        </section>
+      )}
+
+      {!errorCarga && (
+        <section
+          aria-labelledby="titulo-clases-disponibles"
+          data-testid="grilla-clases-disponibles"
+          className="space-y-4"
+        >
+          <div className="space-y-1">
+            <h2
+              id="titulo-clases-disponibles"
+              className="text-[1.0625rem] font-semibold tracking-[-0.01em] text-foreground"
+            >
+              Clases disponibles
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Horarios habilitados del Box según tu ventana de anticipación.
+            </p>
+          </div>
+
+          <div
+            role="tablist"
+            aria-label="Filtrar clases por día"
+            className="flex items-center gap-2 overflow-x-auto pb-1"
+          >
+            {pestanasDias.map((tab) => {
+              const activo = diaSeleccionado === tab.value;
               return (
-                <Card
-                  key={reserva.id}
-                  data-testid={`item-mi-reserva-${reserva.claseId}`}
-                  className="border-emerald-500/30 bg-card"
+                <button
+                  key={tab.value}
+                  type="button"
+                  role="tab"
+                  aria-selected={activo}
+                  data-testid={`tab-dia-${tab.value}`}
+                  onClick={() => {
+                    setDiaSeleccionado(tab.value);
+                    setTipoSeleccionado("TODAS");
+                  }}
+                  className={cn(
+                    "inline-flex min-h-11 shrink-0 cursor-pointer items-center gap-2 rounded-full px-4 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                    activo
+                      ? "bg-primary font-semibold text-primary-foreground"
+                      : "border border-border bg-secondary font-medium text-muted-foreground hover:border-[#3A3C42] hover:text-foreground"
+                  )}
                 >
-                  <CardContent className="space-y-3 p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          {reserva.asistenciaMarcadaEn !== null ? (
-                            <Badge
-                              variant="emerald"
-                              data-testid={`badge-asistencia-${reserva.id}`}
-                              className="uppercase tracking-wider font-semibold"
-                            >
-                              Presente
-                            </Badge>
-                          ) : reserva.ausenciaConsolidada ? (
-                            <Badge
-                              variant="rose"
-                              data-testid={`badge-ausencia-${reserva.id}`}
-                              className="uppercase tracking-wider font-semibold"
-                            >
-                              Ausencia
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="emerald"
-                              className="uppercase tracking-wider"
-                            >
-                              Confirmada
-                            </Badge>
-                          )}
-                          <span className="font-display text-sm font-semibold uppercase text-foreground">
-                            {reserva.tipoClaseNombre ?? "Clase"}
-                          </span>
-                        </div>
-                        <HorarioReservaTexto
-                          inicio={reserva.claseInicio}
-                          fin={reserva.claseFin}
-                          timezone={timezone}
-                        />
-                      </div>
-
-                      {!mostrandoAdvertenciaTardia &&
-                      !reserva.ausenciaConsolidada &&
-                      reserva.asistenciaMarcadaEn === null ? (
-                        <Button
-                          type="button"
-                          variant="secondary"
-                          data-testid={`btn-cancelar-reserva-${reserva.claseId}`}
-                          disabled={isPending}
-                          onClick={() => handleSolicitarCancelacion(reserva)}
-                          className="min-h-8 shrink-0 px-2.5 py-1.5 text-xs"
-                        >
-                          <XCircle className="mr-1 h-3.5 w-3.5" />
-                          {claseCancelandoId === reserva.claseId
-                            ? "Cancelando..."
-                            : "Cancelar Reserva"}
-                        </Button>
-                      ) : null}
-                    </div>
-
-                    {mostrandoAdvertenciaTardia ? (
-                      <div
-                        data-testid={`advertencia-cancelacion-tardia-${reserva.claseId}`}
-                        role="alert"
-                        className="space-y-2 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs text-amber-300"
-                      >
-                        <div className="flex items-start gap-2">
-                          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-400" />
-                          <p>
-                            Estás dentro de la{" "}
-                            <span className="font-semibold">
-                              Ventana de Cancelación (
-                              <span className="tabular-nums">
-                                {ventanaCancelacionMinutos}
-                              </span>{" "}
-                              min)
-                            </span>
-                            . Se registrará como{" "}
-                            <span className="font-semibold">
-                              Cancelación Tardía
-                            </span>
-                            : liberarás el Cupo para otro compañero, pero{" "}
-                            <span className="font-semibold">
-                              no recuperarás el Crédito consumido
-                            </span>
-                            .
-                          </p>
-                        </div>
-                        <div className="flex justify-end gap-2 pt-1">
-                          <Button
-                            type="button"
-                            variant="secondary"
-                            onClick={() => setClaseAdvirtiendoTardiaId(null)}
-                            disabled={isPending}
-                            className="min-h-7 px-2 py-1 text-xs"
-                          >
-                            Mantener Reserva
-                          </Button>
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            data-testid={`btn-confirmar-cancelacion-tardia-${reserva.claseId}`}
-                            onClick={() => ejecutarCancelacion(reserva, true)}
-                            disabled={isPending}
-                            className="min-h-7 px-2.5 py-1 text-xs font-semibold"
-                          >
-                            Confirmar Cancelación Tardía
-                          </Button>
-                        </div>
-                      </div>
-                    ) : null}
-                  </CardContent>
-                </Card>
+                  <span>{tab.label}</span>
+                  <span
+                    className={cn(
+                      "rounded-full px-2 py-0.5 text-xs tabular-nums",
+                      activo
+                        ? "bg-black/15 text-primary-foreground"
+                        : "bg-background/60 text-muted-foreground"
+                    )}
+                  >
+                    {tab.count}
+                  </span>
+                </button>
               );
             })}
           </div>
-        )}
-      </section>
 
-      {reservasCanceladas.length > 0 ? (
+          {opcionesTipo.length > 0 && (
+            <FilterChips
+              ariaLabel="Filtrar por tipo de clase"
+              value={tipoSeleccionado}
+              onChange={setTipoSeleccionado}
+              options={opcionesTipo}
+            />
+          )}
+
+          {clasesFiltradas.length === 0 ? (
+            <Card>
+              <CardHeader>
+                <CardTitle>No hay clases para este filtro</CardTitle>
+                <CardDescription>
+                  Probá seleccionando otro día o la pestaña{" "}
+                  <strong className="font-medium text-foreground">Todas</strong>{" "}
+                  para ver el calendario completo del Box.
+                </CardDescription>
+              </CardHeader>
+              {diaSeleccionado !== "TODOS" && (
+                <CardContent>
+                  <Button
+                    variant="secondary"
+                    onClick={() => {
+                      setDiaSeleccionado("TODOS");
+                      setTipoSeleccionado("TODAS");
+                    }}
+                  >
+                    Ver todas las clases
+                  </Button>
+                </CardContent>
+              )}
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {clasesFiltradas.map((clase) => {
+                const estado = evaluarEstadoTarjetaClase(clase, {
+                  ahora: ahoraRef,
+                  claseIdsReservadas,
+                  reservasActivas,
+                  disponibilidad: resumenMembresia.disponibilidadActual,
+                  tieneMembresiaVigente: Boolean(
+                    resumenMembresia.membresiaVigente
+                  )
+                });
+
+                return (
+                  <TarjetaClaseDisponible
+                    key={clase.id}
+                    clase={clase}
+                    timezone={timezone}
+                    hoyLocal={hoyLocal}
+                    estado={estado}
+                    esAtleta={esAtleta}
+                    esStaffMostrador={esStaffMostrador}
+                    reservando={pendingClaseId === clase.id}
+                    onReservar={(id) => void manejarReservar(id)}
+                    onAbrirMostrador={abrirDrawerMostrador}
+                  />
+                );
+              })}
+            </div>
+          )}
+        </section>
+      )}
+
+      {!errorCarga && esAtleta && (
         <section
+          aria-labelledby="titulo-historial-reservas"
           data-testid="seccion-historial-cancelaciones"
           className="space-y-3"
         >
-          <h2 className="font-display text-xl font-semibold uppercase tracking-tight text-foreground">
-            Historial de Reservas Canceladas (
-            <span className="tabular-nums">{reservasCanceladas.length}</span>)
-          </h2>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {reservasCanceladas.map((reserva) => {
-              const infoEstado = ETIQUETA_ESTADO_CANCELADA[reserva.estado];
-              return (
-                <Card
-                  key={reserva.id}
-                  data-testid={`item-historial-reserva-${reserva.id}`}
-                  className="border-border bg-card/80"
-                >
-                  <CardContent className="space-y-1.5 p-4">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <Badge
-                        variant={infoEstado.variante}
-                        className="uppercase tracking-wider"
-                      >
-                        {infoEstado.etiqueta}
-                      </Badge>
-                      <span className="font-display text-sm font-semibold uppercase text-foreground">
-                        {reserva.tipoClaseNombre ?? "Clase"}
-                      </span>
-                    </div>
-                    <HorarioReservaTexto
-                      inicio={reserva.claseInicio}
-                      fin={reserva.claseFin}
-                      timezone={timezone}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      {infoEstado.detalle}
-                    </p>
-                  </CardContent>
-                </Card>
-              );
-            })}
-          </div>
+          <button
+            type="button"
+            id="titulo-historial-reservas"
+            data-testid="btn-historial-reservas"
+            aria-expanded={historialAbierto}
+            onClick={() => setHistorialAbierto((prev) => !prev)}
+            className="flex min-h-11 w-full cursor-pointer items-center justify-between gap-3 rounded-2xl border border-border bg-card px-5 py-3.5 text-left transition-colors hover:border-[#3A3C42] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <div className="flex items-center gap-2.5">
+              <span className="text-[1.0625rem] font-semibold tracking-[-0.01em] text-foreground">
+                Historial de clases y cancelaciones
+              </span>
+              <span className="rounded-full border border-border bg-secondary px-2.5 py-0.5 text-xs font-medium tabular-nums text-muted-foreground">
+                {historial.length}
+              </span>
+            </div>
+            <ChevronDown
+              className={cn(
+                "h-5 w-5 shrink-0 text-muted-foreground transition-transform",
+                historialAbierto && "rotate-180"
+              )}
+              aria-hidden="true"
+            />
+          </button>
+
+          {historialAbierto && (
+            <div className="space-y-2.5 rounded-3xl border border-border bg-card p-4 sm:p-5">
+              {historial.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  Todavía no registrás asistencias, ausencias ni cancelaciones.
+                </p>
+              ) : (
+                historial.map((item) => (
+                  <FilaHistorialReserva key={item.reserva.id} item={item} />
+                ))
+              )}
+            </div>
+          )}
         </section>
-      ) : null}
+      )}
 
-      {/* Grilla Mobile-First de Clases Disponibles */}
-      <section data-testid="grilla-clases-disponibles" className="space-y-3">
-        <h2 className="font-display text-xl font-semibold uppercase tracking-tight text-foreground">
-          Clases Disponibles para Reservar
-        </h2>
+      {esStaffMostrador && (
+        <DrawerReservaMostrador
+          clase={claseMostrador}
+          timezone={timezone}
+          hoyLocal={hoyLocal}
+          busquedaAtleta={busquedaAtleta}
+          onBusquedaChange={setBusquedaAtleta}
+          atletasFiltrados={atletasFiltrados}
+          atletaSeleccionadoId={atletaSeleccionadoId}
+          onSeleccionarAtleta={setAtletaSeleccionadoId}
+          enviando={enviandoMostrador}
+          errorInline={errorDrawer}
+          onClose={cerrarDrawerMostrador}
+          onSubmit={(e) => void manejarConfirmarMostrador(e)}
+        />
+      )}
 
-        {clasesDisponibles.length === 0 ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
-              <Calendar className="mb-2 h-8 w-8 text-muted-foreground/60" />
-              <p className="text-sm font-medium">
-                No hay Clases programadas dentro del horizonte de Anticipación de
-                Reserva.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {clasesDisponibles.map((clase) => {
-              const horaInicio = formatearHora(clase.inicio, timezone);
-              const horaFin = formatearHora(clase.fin, timezone);
-              const fechaLabel = formatearFecha(clase.inicio, timezone);
-              const confirmadas = clase.reservasConfirmadas ?? 0;
-              const yaReservada = claseIdsConReservaActiva.has(clase.id);
-              const sinCupo = confirmadas >= clase.cupos;
-
-              return (
-                <Card
-                  key={clase.id}
-                  data-testid={`card-reserva-clase-${clase.id}`}
-                  className="flex flex-col justify-between border-border bg-card transition-colors hover:border-border/80"
-                >
-                  <CardHeader className="pb-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <Badge
-                        variant="zinc"
-                        className="font-semibold uppercase tracking-wider"
-                      >
-                        {clase.tipoClaseNombre ?? "Clase"}
-                      </Badge>
-                      <span className="text-xs capitalize tabular-nums text-muted-foreground">
-                        {fechaLabel}
-                      </span>
-                    </div>
-                    <CardTitle className="mt-2 flex items-center gap-2 font-display text-xl text-foreground">
-                      <Clock className="h-4 w-4 text-primary" />
-                      <span className="tabular-nums">
-                        {horaInicio} - {horaFin}
-                      </span>
-                    </CardTitle>
-                  </CardHeader>
-
-                  <CardContent className="space-y-4 pt-0">
-                    <div className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-1.5 text-muted-foreground">
-                        <Dumbbell className="h-4 w-4" />
-                        <span className="font-medium text-foreground">
-                          {clase.coachNombre ?? "Coach"}
-                        </span>
-                      </div>
-
-                      <div className="flex items-center gap-1 text-sm">
-                        <Users className="h-4 w-4 text-muted-foreground" />
-                        <span
-                          data-testid={`cupos-disponibles-clase-${clase.id}`}
-                          className="font-sans font-medium tabular-nums text-foreground"
-                        >
-                          {confirmadas} / {clase.cupos}
-                        </span>
-                      </div>
-                    </div>
-
-                    {yaReservada ? (
-                      <div className="flex justify-end">
-                        <Badge
-                          variant="emerald"
-                          data-testid={`badge-reserva-confirmada-${clase.id}`}
-                          className="w-full justify-center py-1.5 uppercase tracking-wider"
-                        >
-                          Reserva Confirmada
-                        </Badge>
-                      </div>
-                    ) : (
-                      <Button
-                        type="button"
-                        data-testid={`btn-reservar-clase-${clase.id}`}
-                        disabled={isPending || sinCupo}
-                        onClick={() => handleReservar(clase.id)}
-                        className="w-full font-semibold"
-                      >
-                        {claseReservandoId === clase.id
-                          ? "Reservando..."
-                          : sinCupo
-                            ? "Cupo Agotado"
-                            : "Reservar"}
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              );
-            })}
+      {feedback && (
+        <div
+          role={feedback.tipo === "error" ? "alert" : "status"}
+          aria-live="polite"
+          data-testid={
+            feedback.tipo === "error"
+              ? "alerta-error-reserva"
+              : "alerta-exito-reserva"
+          }
+          data-error-code={
+            feedback.tipo === "error" ? feedback.errorCode ?? "" : undefined
+          }
+          className={cn(
+            "fixed bottom-4 left-4 right-4 z-[60] flex items-start justify-between gap-3 rounded-2xl border bg-[#111214]/95 p-4 backdrop-blur-md sm:left-auto sm:w-full sm:max-w-md",
+            feedback.tipo === "error"
+              ? "border-[#FF6D6D]/45 text-foreground"
+              : "border-[#18FFC8]/45 text-foreground"
+          )}
+        >
+          <div className="flex items-start gap-3">
+            {feedback.tipo === "error" ? (
+              <AlertCircle
+                className="mt-0.5 h-5 w-5 shrink-0 text-[#FF6D6D]"
+                aria-hidden="true"
+              />
+            ) : (
+              <CheckCircle2
+                className="mt-0.5 h-5 w-5 shrink-0 text-[#18FFC8]"
+                aria-hidden="true"
+              />
+            )}
+            <p className="text-sm leading-snug text-foreground">
+              {feedback.mensaje}
+            </p>
           </div>
-        )}
-      </section>
+          <button
+            type="button"
+            aria-label="Cerrar notificación"
+            onClick={() => setFeedback(null)}
+            className="inline-flex h-11 w-11 min-w-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <X className="h-4 w-4" aria-hidden="true" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

@@ -567,4 +567,70 @@ describe("Seam 2 — Membresías: Vigencia, permisos por rol y aislamiento RLS e
     );
     expect(planesSur.some((p) => p.id === planNorte.id)).toBe(false);
   });
+
+  it("Saldo derivado para el Atleta: GET /membresias incluye totalPagado y saldo descontando solo Pagos no anulados", async () => {
+    const plan = await crearPlan(tokenAdminNorte, IDS.boxNorte, {
+      nombre: "Plan Saldo Atleta",
+      precioBase: 42000,
+      duracionDias: 30,
+      modalidadCreditos: "SEMANAL",
+      creditosPorPeriodo: 3
+    });
+
+    const alta = await api.pedir<Membresia>("/membresias", {
+      method: "POST",
+      token: tokenRecepNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        afiliacionId: IDS.afiliacionAtletaNorte,
+        planId: plan.id,
+        fechaInicio: "2028-04-01"
+      }
+    });
+    expect(alta.status).toBe(201);
+
+    const pagoValido = await api.pedir<{ id: string }>("/pagos", {
+      method: "POST",
+      token: tokenRecepNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        membresiaId: alta.body.id,
+        monto: 15000,
+        medioPago: "EFECTIVO",
+        fechaPago: "2028-04-01"
+      }
+    });
+    expect(pagoValido.status).toBe(201);
+
+    const pagoAnulado = await api.pedir<{ id: string }>("/pagos", {
+      method: "POST",
+      token: tokenRecepNorte,
+      boxId: IDS.boxNorte,
+      body: {
+        membresiaId: alta.body.id,
+        monto: 5000,
+        medioPago: "TRANSFERENCIA",
+        fechaPago: "2028-04-01"
+      }
+    });
+    expect(pagoAnulado.status).toBe(201);
+
+    const anular = await api.pedir(`/pagos/${pagoAnulado.body.id}/anular`, {
+      method: "POST",
+      token: tokenAdminNorte,
+      boxId: IDS.boxNorte,
+      body: { motivoAnulacion: "Error de carga" }
+    });
+    expect(anular.status).toBe(200);
+
+    const consultaAtleta = await api.pedir<Membresia[]>("/membresias", {
+      token: tokenAtletaNorte,
+      boxId: IDS.boxNorte
+    });
+    expect(consultaAtleta.status).toBe(200);
+    const encontrada = consultaAtleta.body.find((m) => m.id === alta.body.id);
+    expect(encontrada).toBeDefined();
+    expect(encontrada?.totalPagado).toBe(15000);
+    expect(encontrada?.saldo).toBe(27000);
+  });
 });

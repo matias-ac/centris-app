@@ -542,6 +542,10 @@ When(
   "el Atleta consulta su historial de reservas",
   async ({ page }) => {
     await loginEIrA(page, E2E_ASISTENCIAS.atletaAlDiaEmail, "/reservas");
+    const btnHistorial = page.getByTestId("btn-historial-reservas");
+    if ((await btnHistorial.getAttribute("aria-expanded")) === "false") {
+      await btnHistorial.click();
+    }
   }
 );
 

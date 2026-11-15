@@ -46,7 +46,9 @@ export const MembresiaSchema = z.object({
   bajaPorUsuarioId: z.string().uuid().nullable(),
   createdAt: z.union([z.date(), z.string()]),
   updatedAt: z.union([z.date(), z.string()]),
-  deletedAt: z.union([z.date(), z.string()]).nullable().optional()
+  deletedAt: z.union([z.date(), z.string()]).nullable().optional(),
+  totalPagado: z.number().int().min(0).optional(),
+  saldo: z.number().int().min(0).optional()
 });
 
 export type Membresia = z.infer<typeof MembresiaSchema>;

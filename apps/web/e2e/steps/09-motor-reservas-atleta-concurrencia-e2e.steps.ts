@@ -3,6 +3,7 @@ import { createBdd } from "playwright-bdd";
 import {
   SEED_BOX_IDS,
   calcularInstantesClase,
+  diaSemanaIso,
   obtenerFechaLocal,
   sumarDiasAFecha
 } from "@centris/shared";
@@ -140,8 +141,9 @@ async function loginEIrAReservas(page: Page, email: string): Promise<void> {
   await page.goto("/reservas");
   await expect(page).toHaveURL(/\/reservas/);
   await expect(
-    page.getByRole("heading", { name: /Mis Reservas y Clases/i })
+    page.getByRole("heading", { name: /Mis reservas/i })
   ).toBeVisible();
+  await page.getByTestId("tab-dia-TODOS").click();
 }
 
 // ---------------- ESCENARIO 1 ----------------
@@ -282,12 +284,18 @@ Given(
       duracionMinutos: 60,
       timezone: TIMEZONE_BA
     });
-    const clase2 = calcularInstantesClase({
-      fechaLocal: fechaMismaSemana,
-      horaInicio: "19:00",
-      duracionMinutos: 60,
-      timezone: TIMEZONE_BA
-    });
+    const clase2 =
+      diaSemanaIso(hoy) < 7
+        ? calcularInstantesClase({
+            fechaLocal: sumarDiasAFecha(hoy, 1),
+            horaInicio: "19:00",
+            duracionMinutos: 60,
+            timezone: TIMEZONE_BA
+          })
+        : {
+            inicio: new Date(Date.now() + 20 * 60_000),
+            fin: new Date(Date.now() + 80 * 60_000)
+          };
 
     await ejecutarSqlOwner(
       `INSERT INTO clases (id, box_id, tipo_clase_id, coach_afiliacion_id, inicio, fin, cupos)

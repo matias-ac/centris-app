@@ -169,6 +169,16 @@ async function loginEnBoxNorte(
   }
 
   await page.goto(rutaDestino);
+  if (rutaDestino === "/reservas") {
+    await page.getByTestId("tab-dia-TODOS").click();
+  }
+}
+
+async function abrirHistorialSiCerrado(page: Page): Promise<void> {
+  const btnHistorial = page.getByTestId("btn-historial-reservas");
+  if ((await btnHistorial.getAttribute("aria-expanded")) === "false") {
+    await btnHistorial.click();
+  }
 }
 
 async function sembrarReservaParaMinutosFuturos(
@@ -279,11 +289,12 @@ Then(
 Then(
   'la Reserva figura en el historial con estado {string}',
   async ({ page }, estadoTexto: string) => {
+    await abrirHistorialSiCerrado(page);
     const itemHistorial = page.getByTestId(
       `item-historial-reserva-${E2E_CANCELACIONES.reservaId}`
     );
     await expect(itemHistorial).toBeVisible();
-    await expect(itemHistorial).toContainText(estadoTexto);
+    await expect(itemHistorial).toContainText(new RegExp(estadoTexto, "i"));
   }
 );
 
@@ -552,11 +563,12 @@ Then(
     await expect(page.getByTestId("creditos-periodo-restantes")).toContainText(
       creditosTexto
     );
+    await abrirHistorialSiCerrado(page);
     const itemHistorial = page.getByTestId(
       `item-historial-reserva-${E2E_CANCELACIONES.reservaId}`
     );
     await expect(itemHistorial).toBeVisible();
-    await expect(itemHistorial).toContainText(estadoReserva);
+    await expect(itemHistorial).toContainText(new RegExp(estadoReserva, "i"));
   }
 );
 
@@ -656,11 +668,12 @@ Then(
       E2E_CANCELACIONES.atletaAlDiaEmail,
       "/reservas"
     );
+    await abrirHistorialSiCerrado(page);
     const itemHistorial = page.getByTestId(
       `item-historial-reserva-${E2E_CANCELACIONES.reservaId}`
     );
     await expect(itemHistorial).toBeVisible();
-    await expect(itemHistorial).toContainText(estadoTexto);
+    await expect(itemHistorial).toContainText(new RegExp(estadoTexto, "i"));
     await expect(
       page.getByTestId(`cupos-disponibles-clase-${E2E_CANCELACIONES.claseId}`)
     ).toContainText(cuposTexto);
