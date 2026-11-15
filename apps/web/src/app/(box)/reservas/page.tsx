@@ -12,7 +12,10 @@ import {
 } from "@/lib/api-client";
 import { obtenerContextoOperativoWeb } from "@/lib/contexto-box";
 import { ReservasAtletaView } from "./reservas-atleta-view";
-import { traducirErrorReservas } from "./reservas-estado";
+import {
+  seleccionarMembresiaVigente,
+  traducirErrorReservas
+} from "./reservas-estado";
 
 export const dynamic = "force-dynamic";
 
@@ -80,16 +83,7 @@ export default async function ReservasPage() {
   const misReservas = resReservas.ok ? resReservas.data : [];
   const membresias = resMembresias.ok ? resMembresias.data : [];
   const atletas = resAtletas.ok ? resAtletas.data.filter((a) => a.activo) : [];
-
-  const membresiasActivasOFuturas = membresias.filter(
-    (m) => m.bajaAnticipadaEn === null && m.fechaFin >= hoy
-  );
-  const membresiaVigente =
-    membresiasActivasOFuturas.find(
-      (m) => m.fechaInicio <= hoy && m.fechaFin >= hoy
-    ) ??
-    membresiasActivasOFuturas[0] ??
-    null;
+  const membresiaVigente = seleccionarMembresiaVigente(membresias, hoy);
 
   return (
     <ReservasAtletaView

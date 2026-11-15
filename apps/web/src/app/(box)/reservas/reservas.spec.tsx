@@ -34,7 +34,7 @@ import {
   formatearFechaRangoEsAr,
   procesarCancelacionAtleta,
   procesarReservaAtleta,
-  procesarWalkinMostrador,
+  procesarReservaMostrador,
   traducirErrorReservas
 } from "./reservas-estado";
 
@@ -408,7 +408,7 @@ describe("Vista /reservas — Dark Bento Cockpit y reglas de negocio", () => {
       expect(estadoSinCreditos.motivoBloqueo).toBe("Sin créditos disponibles");
     });
 
-    it("procesa reserva, cancelación y walk-in validando contratos Zod y traduciendo errores", async () => {
+    it("procesa reserva, cancelación y reserva en mostrador validando contratos Zod y traduciendo errores", async () => {
       const crearOk = await procesarReservaAtleta(
         BOX_ID,
         CLASE_MANANA_DISPONIBLE.id,
@@ -445,13 +445,13 @@ describe("Vista /reservas — Dark Bento Cockpit y reglas de negocio", () => {
         expect(cancelTardia.message).toMatch(/Cancelación tardía/i);
       }
 
-      const walkinInvalido = await procesarWalkinMostrador(
+      const mostradorInvalido = await procesarReservaMostrador(
         BOX_ID,
         CLASE_MANANA_DISPONIBLE.id,
         "",
         async () => ({ ok: true })
       );
-      expect(walkinInvalido.ok).toBe(false);
+      expect(mostradorInvalido.ok).toBe(false);
     });
   });
 
@@ -554,19 +554,20 @@ describe("Vista /reservas — Dark Bento Cockpit y reglas de negocio", () => {
 
       expect(htmlErrorCarga).toContain('data-testid="error-carga-reservas"');
       expect(htmlErrorCarga).toContain("Reintentar");
-      expect(htmlErrorCarga).not.toContain("Sin plan vigente");
+      expect(htmlErrorCarga).not.toContain("Sin membresía vigente");
     });
 
     it("renderiza tarjetas individuales de Próxima Reserva y Clase Disponible con tokens Bento", () => {
+      const proximaItem = clasificarReservasAtleta(
+        [RESERVAS_BASE[0]!],
+        TIMEZONE,
+        AHORA_REF,
+        120
+      ).proximas[0]!;
+
       const htmlProxima = renderToStaticMarkup(
         createElement(TarjetaProximaReserva, {
-          item: clasificarReservasAtleta(
-            [RESERVAS_BASE[0]!],
-            TIMEZONE,
-            AHORA_REF,
-            120
-          ).proximas[0]!,
-          timezone: TIMEZONE,
+          item: proximaItem,
           ventanaCancelacionMinutos: 120,
           mostrandoAdvertenciaTardia: true,
           cancelando: false,
@@ -583,10 +584,26 @@ describe("Vista /reservas — Dark Bento Cockpit y reglas de negocio", () => {
       expect(htmlProxima).toContain("Confirmar cancelación tardía");
       expect(htmlProxima).toContain("Mantener reserva");
 
+      const htmlEnCurso = renderToStaticMarkup(
+        createElement(TarjetaProximaReserva, {
+          item: { ...proximaItem, enCurso: true, enVentanaTardia: false },
+          ventanaCancelacionMinutos: 120,
+          mostrandoAdvertenciaTardia: false,
+          cancelando: false,
+          deshabilitado: false,
+          onSolicitarCancelacion: vi.fn(),
+          onConfirmarTardia: vi.fn(),
+          onCancelarAdvertencia: vi.fn()
+        })
+      );
+      expect(htmlEnCurso).toContain("En curso");
+      expect(htmlEnCurso).not.toContain("Cancelar reserva");
+
       const htmlClase = renderToStaticMarkup(
         createElement(TarjetaClaseDisponible, {
           clase: CLASE_MANANA_DISPONIBLE,
           timezone: TIMEZONE,
+          hoyLocal: HOY_LOCAL,
           estado: evaluarEstadoTarjetaClase(CLASE_MANANA_DISPONIBLE, {
             ahora: AHORA_REF,
             claseIdsReservadas: new Set(),

@@ -37,6 +37,7 @@ export interface ResumenMembresiaAtletaUI {
 
 export interface ProximaReservaUI {
   reserva: Reserva;
+  enCurso: boolean;
   enVentanaTardia: boolean;
   horaLimiteSinCargo: string;
   diaLabel: string;
@@ -213,6 +214,20 @@ export function formatearDiaTabLabel(
   return base;
 }
 
+export function seleccionarMembresiaVigente(
+  membresias: readonly Membresia[],
+  hoyLocal: string
+): Membresia | null {
+  const activasOFuturas = membresias.filter(
+    (m) => m.bajaAnticipadaEn === null && m.fechaFin >= hoyLocal
+  );
+  const vigenteHoy =
+    activasOFuturas.find(
+      (m) => m.fechaInicio <= hoyLocal && m.fechaFin >= hoyLocal
+    ) ?? null;
+  return vigenteHoy ?? activasOFuturas[0] ?? null;
+}
+
 /**
  * Calcula créditos disponibles en la zona horaria del Box y saldo pendiente total (ADR 0006).
  */
@@ -227,14 +242,7 @@ export function evaluarResumenMembresiaAtleta({
   hoyLocal: string;
   timezone: string;
 }): ResumenMembresiaAtletaUI {
-  const activasOFuturas = membresias.filter(
-    (m) => m.bajaAnticipadaEn === null && m.fechaFin >= hoyLocal
-  );
-  const vigenteHoy =
-    activasOFuturas.find(
-      (m) => m.fechaInicio <= hoyLocal && m.fechaFin >= hoyLocal
-    ) ?? null;
-  const membresiaVigente = vigenteHoy ?? activasOFuturas[0] ?? null;
+  const membresiaVigente = seleccionarMembresiaVigente(membresias, hoyLocal);
 
   const saldoPendienteTotal = membresias.reduce(
     (acc, m) => acc + Math.max(0, m.saldo ?? 0),
@@ -247,7 +255,7 @@ export function evaluarResumenMembresiaAtleta({
       disponibilidadActual: null,
       saldoPendienteTotal,
       esMoroso: saldoPendienteTotal > 0,
-      etiquetaModalidad: "Sin plan",
+      etiquetaModalidad: "Sin membresía",
       esFutura: false
     };
   }
@@ -363,24 +371,32 @@ export function clasificarReservasAtleta(
       (!fin || fin.getTime() > ahora.getTime());
 
     if (esFuturaActiva) {
-      const evaluacion = inicio
-        ? evaluarVentanaCancelacion({
-            claseInicio: inicio,
-            ahora,
-            ventanaCancelacionMinutos
-          })
-        : { permitida: true, esTardia: false };
+      const enCurso = Boolean(
+        inicio &&
+          inicio.getTime() <= ahora.getTime() &&
+          (!fin || fin.getTime() > ahora.getTime())
+      );
+      const evaluacion =
+        inicio && !enCurso
+          ? evaluarVentanaCancelacion({
+              claseInicio: inicio,
+              ahora,
+              ventanaCancelacionMinutos
+            })
+          : { permitida: false, esTardia: false };
 
       proximas.push({
         reserva,
-        enVentanaTardia: evaluacion.permitida && evaluacion.esTardia,
-        horaLimiteSinCargo: inicio
-          ? describirLimiteCancelacion(
-              inicio,
-              ventanaCancelacionMinutos,
-              timezone
-            )
-          : "",
+        enCurso,
+        enVentanaTardia: !enCurso && evaluacion.permitida && evaluacion.esTardia,
+        horaLimiteSinCargo:
+          inicio && !enCurso
+            ? describirLimiteCancelacion(
+                inicio,
+                ventanaCancelacionMinutos,
+                timezone
+              )
+            : "",
         diaLabel,
         rangoHorario
       });
@@ -619,7 +635,7 @@ export function evaluarEstadoTarjetaClase(
   } else if (llena) {
     motivoBloqueo = "Sin cupos · Sin lista de espera";
   } else if (!contexto.tieneMembresiaVigente) {
-    motivoBloqueo = "Requiere plan vigente";
+    motivoBloqueo = "Requiere membresía vigente";
   } else if (sinCreditos) {
     motivoBloqueo = "Sin créditos disponibles";
   }
@@ -640,6 +656,22 @@ export function evaluarEstadoTarjetaClase(
   };
 }
 
+async function ejecutarOperacionReservas(
+  ejecutar: () => Promise<ResultadoAccionReservas>,
+  mensajeExito: string
+): Promise<ResultadoOperacionReservas> {
+  const res = await ejecutar();
+  if (!res.ok) {
+    return {
+      ok: false,
+      errorCode: res.errorCode,
+      error: traducirErrorReservas(res.errorCode, res.message)
+    };
+  }
+
+  return { ok: true, message: mensajeExito };
+}
+
 export async function procesarReservaAtleta(
   boxId: string,
   claseId: string,
@@ -657,19 +689,10 @@ export async function procesarReservaAtleta(
     };
   }
 
-  const res = await ejecutar(boxId, { claseId: validado.data.claseId });
-  if (!res.ok) {
-    return {
-      ok: false,
-      errorCode: res.errorCode,
-      error: traducirErrorReservas(res.errorCode, res.message)
-    };
-  }
-
-  return {
-    ok: true,
-    message: "Listo: tu lugar quedó reservado."
-  };
+  return ejecutarOperacionReservas(
+    () => ejecutar(boxId, { claseId: validado.data.claseId }),
+    "Listo: tu lugar quedó reservado."
+  );
 }
 
 export async function procesarCancelacionAtleta(
@@ -681,24 +704,15 @@ export async function procesarCancelacionAtleta(
     reservaId: string
   ) => Promise<ResultadoAccionReservas>
 ): Promise<ResultadoOperacionReservas> {
-  const res = await ejecutar(boxId, reservaId);
-  if (!res.ok) {
-    return {
-      ok: false,
-      errorCode: res.errorCode,
-      error: traducirErrorReservas(res.errorCode, res.message)
-    };
-  }
-
-  return {
-    ok: true,
-    message: esTardia
+  return ejecutarOperacionReservas(
+    () => ejecutar(boxId, reservaId),
+    esTardia
       ? "Cancelación tardía registrada: liberaste el lugar sin devolución de crédito."
       : "Reserva cancelada: liberaste el lugar y recuperaste tu crédito."
-  };
+  );
 }
 
-export async function procesarWalkinMostrador(
+export async function procesarReservaMostrador(
   boxId: string,
   claseId: string,
   afiliacionId: string,
@@ -716,22 +730,14 @@ export async function procesarWalkinMostrador(
     };
   }
 
-  const res = await ejecutar(boxId, {
-    claseId: validado.data.claseId,
-    afiliacionId: validado.data.afiliacionId
-  });
-  if (!res.ok) {
-    return {
-      ok: false,
-      errorCode: res.errorCode,
-      error: traducirErrorReservas(res.errorCode, res.message)
-    };
-  }
-
-  return {
-    ok: true,
-    message: "Atleta anotado correctamente en la clase."
-  };
+  return ejecutarOperacionReservas(
+    () =>
+      ejecutar(boxId, {
+        claseId: validado.data.claseId,
+        afiliacionId: validado.data.afiliacionId!
+      }),
+    "Atleta anotado correctamente en la clase."
+  );
 }
 
 export function formatearVentanaCancelacionHumana(minutos: number): string {

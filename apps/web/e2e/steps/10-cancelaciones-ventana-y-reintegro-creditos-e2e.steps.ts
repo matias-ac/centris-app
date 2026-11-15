@@ -174,6 +174,13 @@ async function loginEnBoxNorte(
   }
 }
 
+async function abrirHistorialSiCerrado(page: Page): Promise<void> {
+  const btnHistorial = page.getByTestId("btn-historial-reservas");
+  if ((await btnHistorial.getAttribute("aria-expanded")) === "false") {
+    await btnHistorial.click();
+  }
+}
+
 async function sembrarReservaParaMinutosFuturos(
   minutosHastaInicio: number
 ): Promise<void> {
@@ -282,10 +289,7 @@ Then(
 Then(
   'la Reserva figura en el historial con estado {string}',
   async ({ page }, estadoTexto: string) => {
-    const btnHistorial = page.getByTestId("btn-historial-reservas");
-    if ((await btnHistorial.getAttribute("aria-expanded")) === "false") {
-      await btnHistorial.click();
-    }
+    await abrirHistorialSiCerrado(page);
     const itemHistorial = page.getByTestId(
       `item-historial-reserva-${E2E_CANCELACIONES.reservaId}`
     );
@@ -559,10 +563,7 @@ Then(
     await expect(page.getByTestId("creditos-periodo-restantes")).toContainText(
       creditosTexto
     );
-    const btnHistorial = page.getByTestId("btn-historial-reservas");
-    if ((await btnHistorial.getAttribute("aria-expanded")) === "false") {
-      await btnHistorial.click();
-    }
+    await abrirHistorialSiCerrado(page);
     const itemHistorial = page.getByTestId(
       `item-historial-reserva-${E2E_CANCELACIONES.reservaId}`
     );
@@ -667,10 +668,7 @@ Then(
       E2E_CANCELACIONES.atletaAlDiaEmail,
       "/reservas"
     );
-    const btnHistorial = page.getByTestId("btn-historial-reservas");
-    if ((await btnHistorial.getAttribute("aria-expanded")) === "false") {
-      await btnHistorial.click();
-    }
+    await abrirHistorialSiCerrado(page);
     const itemHistorial = page.getByTestId(
       `item-historial-reserva-${E2E_CANCELACIONES.reservaId}`
     );
