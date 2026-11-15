@@ -78,8 +78,8 @@ export function GraficoOcupacionSemanal({
               <div
                 className={
                   dia.esHoy
-                    ? "w-full rounded-[12px] bg-primary text-center text-[11px] font-semibold text-primary-foreground"
-                    : "w-full rounded-[12px] bg-[#262830] text-center text-[11px] font-medium text-muted-foreground"
+                    ? "w-full rounded-[12px] bg-primary text-center text-xs font-semibold text-primary-foreground"
+                    : "w-full rounded-[12px] bg-[#262830] text-center text-xs font-medium text-muted-foreground"
                 }
                 style={{ height: `${Math.max(dia.porcentaje, dia.porcentaje > 0 ? 18 : 0)}%` }}
               >
@@ -165,7 +165,7 @@ export function GraficoOcupacionSemanal({
               }
               style={{
                 fill: "#A1A1AA",
-                fontSize: 11,
+                fontSize: 12,
                 fontWeight: 500
               }}
             />
