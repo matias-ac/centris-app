@@ -1,6 +1,6 @@
 # 12 — Rediseño UX/UI de `/reservas` (Vista Atleta Mobile-First y Mostrador)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 **Branch:** `feat/ui-12-reservas`
 **Blocked by:** `01`
 
