@@ -1,6 +1,6 @@
 # 13 — Rediseño UX/UI e Integración de Datos Reales en `/inicio` (Panel Bento)
 
-**Status:** ready-for-agent
+**Status:** done
 **Branch:** `feat/ui-13-inicio-dashboard`
 **Blocked by:** `01`, `06`, `07`, `08`, `09`, `10`, `11`, `12`
 
@@ -30,11 +30,11 @@ Ticket final del rediseño UX/UI. Reconstruye `/inicio` siguiendo el tablero **D
 
 ## Acceptance Criteria (TDD / BDD)
 
-- [ ] **Agregaciones Reales con Aislamiento RLS (Red $\rightarrow$ Green)**: Cualquier nueva consulta o endpoint de resumen para `/inicio` debe ejecutar dentro de transacción Drizzle con `SET LOCAL app.box_id`, filtrar por zona horaria del Box ([ADR 0005](../../../docs/adr/0005-calculos-de-calendario-en-zona-horaria-del-box.md)) y cubrirse con tests (`Vitest`) que validen aislamiento entre Boxes y autorización por rol.
-- [ ] **Tablero Bento Adaptado por Rol (ADR 0007)**: Verificar en tests que un usuario exclusivamente `Coach` o `Atleta` nunca reciba ni visualice cifras financieras de recaudación del Box en `/inicio`, mientras `Administrador` / `Recepcionista` ven KPIs reales de ingresos, morosos y ocupación semanal.
-- [ ] **Gráficos `recharts` y Botones `↗` Bento**: Implementar gráfico semanal con estética `#C1F429` + pista con rayado diagonal oscuro, cifras KPI `tabular-nums` en *Display*, cards `24px` (`#111214`, borde `#232428`) y botones circulares `↗` (`44x44px`) apuntando a `/reservas`, `/clases`, `/horarios`, `/planes`, `/atletas`, `/caja` y `/afiliaciones`.
-- [ ] **Estabilidad Notebook y Mobile**: Cero desbordes horizontales en `375px`, `1280px` y `1440px`, sin datos *hardcodeados* ni *placeholders* ficticios.
-- [ ] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` (`Vitest` + las 12 suites `playwright-bdd`) y `/code-review`.
+- [x] **Agregaciones Reales con Aislamiento RLS (Red $\rightarrow$ Green)**: Cualquier nueva consulta o endpoint de resumen para `/inicio` debe ejecutar dentro de transacción Drizzle con `SET LOCAL app.box_id`, filtrar por zona horaria del Box ([ADR 0005](../../../docs/adr/0005-calculos-de-calendario-en-zona-horaria-del-box.md)) y cubrirse con tests (`Vitest`) que validen aislamiento entre Boxes y autorización por rol.
+- [x] **Tablero Bento Adaptado por Rol (ADR 0007)**: Verificar en tests que un usuario exclusivamente `Coach` o `Atleta` nunca reciba ni visualice cifras financieras de recaudación del Box en `/inicio`, mientras `Administrador` / `Recepcionista` ven KPIs reales de ingresos, morosos y ocupación semanal.
+- [x] **Gráficos `recharts` y Botones `↗` Bento**: Implementar gráfico semanal con estética `#C1F429` + pista con rayado diagonal oscuro, cifras KPI `tabular-nums` en *Display*, cards `24px` (`#111214`, borde `#232428`) y botones circulares `↗` (`44x44px`) apuntando a `/reservas`, `/clases`, `/horarios`, `/planes`, `/atletas`, `/caja` y `/afiliaciones`.
+- [x] **Estabilidad Notebook y Mobile**: Cero desbordes horizontales en `375px`, `1280px` y `1440px`, sin datos *hardcodeados* ni *placeholders* ficticios.
+- [x] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` (`Vitest` + las 12 suites `playwright-bdd`) y `/code-review`.
 
 ## Comments
 

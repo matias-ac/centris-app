@@ -178,5 +178,32 @@ export {
   type EntradaEvaluarAusenciaConsolidada
 } from "./schemas/reservas.schema.js";
 
+export {
+  DiaOcupacionSemanalSchema,
+  DesgloseMedioPagoPanelSchema,
+  MorosoResumenPanelSchema,
+  ResumenGestionPanelSchema,
+  ClaseCoachHoyPanelSchema,
+  ResumenCoachPanelSchema,
+  MembresiaAtletaPanelSchema,
+  ProximaReservaAtletaPanelSchema,
+  ResumenAtletaPanelSchema,
+  ResumenPanelSchema,
+  obtenerRangoMesLocal,
+  construirDiasSemanaPanel,
+  type RangoMesLocal,
+  type DiaSemanaPanelBase,
+  type DiaOcupacionSemanal,
+  type DesgloseMedioPagoPanel,
+  type MorosoResumenPanel,
+  type ResumenGestionPanel,
+  type ClaseCoachHoyPanel,
+  type ResumenCoachPanel,
+  type MembresiaAtletaPanel,
+  type ProximaReservaAtletaPanel,
+  type ResumenAtletaPanel,
+  type ResumenPanel
+} from "./schemas/panel.schema.js";
+
 
 

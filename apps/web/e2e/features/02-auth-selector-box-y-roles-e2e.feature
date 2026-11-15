@@ -62,3 +62,13 @@ Característica: Identidad Global, Autenticación, Selector de Box y Guard de 4 
     Dado un Administrador autenticado operando en "Box Centris Norte"
     Cuando gestiona filtros, edición de roles con cambios sin guardar y confirmación inline en /afiliaciones
     Entonces el botón Guardar roles no se desplaza ni deforma en escritorio, valida al menos un rol y mantiene el diseño sin desborde en móvil y escritorio
+
+  Escenario: Panel Bento /inicio adaptado por rol, gráficos reales y estabilidad responsive
+    Dado un Administrador autenticado operando en "Box Centris Norte"
+    Cuando observa el panel de inicio del Box
+    Entonces visualiza el tablero Bento de Administrador con gráficos recharts, accesos directos operables y sin desborde en móvil ni escritorio
+    Cuando inicia sesión en "/inicio" un Coach exclusivo del Box
+    Entonces visualiza la agenda de Coach sin cifras financieras ni accesos de caja ni desborde horizontal
+    Cuando inicia sesión en "/inicio" un Atleta Moroso del Box
+    Entonces visualiza su membresía con aviso no bloqueante de saldo pendiente, acceso a /reservas y sin desborde horizontal
+

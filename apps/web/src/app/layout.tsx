@@ -1,13 +1,9 @@
+import "@fontsource/inter/300.css";
+import "@fontsource/inter/400.css";
+import "@fontsource/inter/500.css";
+import "@fontsource/inter/600.css";
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
-
-const inter = Inter({
-  subsets: ["latin", "latin-ext"],
-  weight: ["300", "400", "500", "600"],
-  variable: "--font-inter",
-  display: "swap"
-});
 
 export const metadata: Metadata = {
   title: "Centris — Gestión Multitenant de Boxes",
@@ -21,7 +17,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={`${inter.variable} dark`}>
+    <html lang="es" className="dark">
       <body className="min-h-screen bg-background text-foreground font-sans antialiased">
         {children}
       </body>

@@ -11,6 +11,7 @@ import {
   PagoSchema,
   PlanSchema,
   ReservaSchema,
+  ResumenPanelSchema,
   SesionAuthSchema,
   TipoClaseSchema,
   type ActivarCuentaInput,
@@ -52,6 +53,7 @@ import {
   type PagoConRegistrador,
   type Plan,
   type Reserva,
+  type ResumenPanel,
   type RolAfiliacion,
   type SesionAuth,
   type TipoClase
@@ -1124,6 +1126,26 @@ export async function registrarAsistenciaApi(
 
   const json = await response.json();
   return { ok: true, data: ReservaSchema.parse(json) };
+}
+
+export async function obtenerResumenPanelApi(
+  accessToken: string,
+  boxId: string
+): Promise<ResultadoApi<ResumenPanel>> {
+  const response = await fetch(`${API_URL}/panel/resumen`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      "X-Box-Id": boxId
+    },
+    cache: "no-store"
+  });
+
+  if (!response.ok) {
+    return { ok: false, error: await parsearErrorHttp(response) };
+  }
+
+  const json = await response.json();
+  return { ok: true, data: ResumenPanelSchema.parse(json) };
 }
 
 

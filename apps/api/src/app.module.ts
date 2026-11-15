@@ -14,6 +14,7 @@ import { TiposClaseModule } from "./modules/tipos-clase/tipos-clase.module.js";
 import { HorariosModule } from "./modules/horarios/horarios.module.js";
 import { PagosModule } from "./modules/pagos/pagos.module.js";
 import { ClasesModule } from "./modules/clases/clases.module.js";
+import { PanelModule } from "./modules/panel/panel.module.js";
 import { ReservasModule } from "./modules/reservas/reservas.module.js";
 
 @Module({
@@ -30,6 +31,7 @@ import { ReservasModule } from "./modules/reservas/reservas.module.js";
     HorariosModule,
     PagosModule,
     ClasesModule,
+    PanelModule,
     ReservasModule
   ],
   providers: [
