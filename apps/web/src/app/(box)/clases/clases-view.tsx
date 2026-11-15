@@ -35,7 +35,7 @@ import {
 } from "@centris/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClassName } from "@/components/ui/button";
-import { BENTO_TITLE_CLASSES, Card } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { FilterChips } from "@/components/ui/filter-chips";
 import { InlineConfirmPanel } from "@/components/ui/inline-confirm";
 import { Input } from "@/components/ui/input";
@@ -222,7 +222,7 @@ export function ClaseCard({
           </p>
         </div>
 
-        <div className="space-y-2.5 rounded-2xl border border-white/[0.06] bg-[#18191C] p-3.5">
+        <div className="space-y-2.5 rounded-xl bg-[#18191C] p-3.5">
           <div className="flex items-center justify-between gap-2 text-xs">
             <span className="inline-flex items-center gap-1.5 font-medium text-muted-foreground">
               <Users className="size-3.5" aria-hidden="true" />
@@ -1247,62 +1247,62 @@ export function ClasesView({
 
   return (
     <div className="space-y-6">
-      <Card className="p-5 sm:p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-2">
-            <p className="text-xs font-medium tracking-[0.02em] text-muted-foreground">
-              Agenda operativa
+      <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div className="space-y-2">
+          <p className="text-xs font-medium tracking-[0.02em] text-muted-foreground">
+            Agenda operativa
+          </p>
+          <div className="space-y-1">
+            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              Calendario de clases
+            </h1>
+            <p className="text-sm text-muted-foreground tabular-nums">
+              Ventana activa del {fechaDesdeInicial} al {fechaHastaInicial}
             </p>
-            <div className="space-y-1">
-              <h1 className={BENTO_TITLE_CLASSES}>Calendario de clases</h1>
-              <p className="text-sm text-muted-foreground tabular-nums">
-                Ventana activa del {fechaDesdeInicial} al {fechaHastaInicial}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/[0.06] bg-[#18191C] px-4 py-2.5 text-sm tabular-nums">
-              <span className="font-semibold text-foreground">
-                {resumen.totalClases}{" "}
-                {resumen.totalClases === 1 ? "clase" : "clases"}
-              </span>
-              <span className="text-muted-foreground">·</span>
-              <span className="text-muted-foreground">
-                Cupos{" "}
-                <strong className="text-foreground">
-                  {resumen.cuposOcupados} / {resumen.cuposTotales}
-                </strong>
-              </span>
-              {resumen.clasesEnCurso > 0 ? (
-                <>
-                  <span className="text-muted-foreground">·</span>
-                  <Badge variant="mint">
-                    {resumen.clasesEnCurso} en curso
-                  </Badge>
-                </>
-              ) : null}
-            </div>
-
-            {esAdmin ? (
-              <Button
-                type="button"
-                variant="primary"
-                className="min-h-11 w-full sm:w-auto"
-                data-testid="btn-materializar-clases"
-                disabled={isPending}
-                onClick={handleMaterializar}
-              >
-                <RefreshCw
-                  className={cn("size-4", isPending && "animate-spin")}
-                  aria-hidden="true"
-                />
-                Generar próximas clases
-              </Button>
-            ) : null}
           </div>
         </div>
-      </Card>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+          <div className="flex flex-wrap items-center gap-2 rounded-full border border-white/[0.08] bg-[#111214] px-4 py-2 text-sm tabular-nums">
+            <span className="font-semibold text-foreground">
+              {resumen.totalClases}{" "}
+              {resumen.totalClases === 1 ? "clase" : "clases"}
+            </span>
+            <span className="text-muted-foreground">·</span>
+            <span className="text-muted-foreground">
+              Cupos{" "}
+              <strong className="text-foreground">
+                {resumen.cuposOcupados} / {resumen.cuposTotales}
+              </strong>
+            </span>
+            {resumen.clasesEnCurso > 0 ? (
+              <>
+                <span className="text-muted-foreground">·</span>
+                <Badge variant="mint">
+                  {resumen.clasesEnCurso} en curso
+                </Badge>
+              </>
+            ) : null}
+          </div>
+
+          {esAdmin ? (
+            <Button
+              type="button"
+              variant="primary"
+              className="min-h-11 w-full sm:w-auto"
+              data-testid="btn-materializar-clases"
+              disabled={isPending}
+              onClick={handleMaterializar}
+            >
+              <RefreshCw
+                className={cn("size-4", isPending && "animate-spin")}
+                aria-hidden="true"
+              />
+              Generar próximas clases
+            </Button>
+          ) : null}
+        </div>
+      </header>
 
       {exitoGlobal ? (
         <div
@@ -1384,7 +1384,7 @@ export function ClasesView({
           })}
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-white/[0.06] pt-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 pt-1 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex flex-wrap items-center gap-3">
             {opcionesTipos.length > 2 ? (
               <FilterChips
