@@ -169,6 +169,9 @@ async function loginEnBoxNorte(
   }
 
   await page.goto(rutaDestino);
+  if (rutaDestino === "/reservas") {
+    await page.getByTestId("tab-dia-TODOS").click();
+  }
 }
 
 async function sembrarReservaParaMinutosFuturos(
@@ -279,6 +282,10 @@ Then(
 Then(
   'la Reserva figura en el historial con estado {string}',
   async ({ page }, estadoTexto: string) => {
+    const btnHistorial = page.getByTestId("btn-historial-reservas");
+    if ((await btnHistorial.getAttribute("aria-expanded")) === "false") {
+      await btnHistorial.click();
+    }
     const itemHistorial = page.getByTestId(
       `item-historial-reserva-${E2E_CANCELACIONES.reservaId}`
     );
@@ -552,6 +559,10 @@ Then(
     await expect(page.getByTestId("creditos-periodo-restantes")).toContainText(
       creditosTexto
     );
+    const btnHistorial = page.getByTestId("btn-historial-reservas");
+    if ((await btnHistorial.getAttribute("aria-expanded")) === "false") {
+      await btnHistorial.click();
+    }
     const itemHistorial = page.getByTestId(
       `item-historial-reserva-${E2E_CANCELACIONES.reservaId}`
     );
@@ -656,6 +667,10 @@ Then(
       E2E_CANCELACIONES.atletaAlDiaEmail,
       "/reservas"
     );
+    const btnHistorial = page.getByTestId("btn-historial-reservas");
+    if ((await btnHistorial.getAttribute("aria-expanded")) === "false") {
+      await btnHistorial.click();
+    }
     const itemHistorial = page.getByTestId(
       `item-historial-reserva-${E2E_CANCELACIONES.reservaId}`
     );

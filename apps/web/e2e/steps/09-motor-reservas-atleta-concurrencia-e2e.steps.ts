@@ -140,8 +140,9 @@ async function loginEIrAReservas(page: Page, email: string): Promise<void> {
   await page.goto("/reservas");
   await expect(page).toHaveURL(/\/reservas/);
   await expect(
-    page.getByRole("heading", { name: /Mis Reservas y Clases/i })
+    page.getByRole("heading", { name: /Mis reservas/i })
   ).toBeVisible();
+  await page.getByTestId("tab-dia-TODOS").click();
 }
 
 // ---------------- ESCENARIO 1 ----------------
