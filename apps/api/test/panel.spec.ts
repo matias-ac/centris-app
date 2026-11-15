@@ -447,4 +447,19 @@ describe("Seam 2 — Resumen del Panel Bento con RLS, Timezone y Roles (@centris
     expect(parsed.atleta).toBeNull();
     expect(parsed.gestion?.cobranzaMes.totalCobrado).toBe(15000);
   });
+
+  it("Recepcionista exclusivo recibe métricas de gestión sin agenda de Coach ni panel de Atleta", async () => {
+    const res = await api.pedir("/panel/resumen", {
+      token: tokenRecepA,
+      boxId: IDS.boxA
+    });
+
+    expect(res.status).toBe(200);
+    const parsed = ResumenPanelSchema.parse(res.body);
+
+    expect(parsed.gestion).not.toBeNull();
+    expect(parsed.coach).toBeNull();
+    expect(parsed.atleta).toBeNull();
+    expect(parsed.gestion?.morosos.totalDeuda).toBe(27000);
+  });
 });

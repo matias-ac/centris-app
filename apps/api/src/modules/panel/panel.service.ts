@@ -22,7 +22,7 @@ import {
   type ResumenPanel,
   type RolAfiliacion
 } from "@centris/shared";
-import { and, asc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, gte, inArray, isNull, sql } from "drizzle-orm";
 import { DomainException } from "../../common/errors/domain.exception.js";
 import {
   DatabaseService,
@@ -53,6 +53,232 @@ function formatearHoraLocal(instante: Date, timezone: string): string {
     minute: "2-digit",
     hour12: false
   }).format(instante);
+}
+
+interface PagoBasico {
+  membresiaId: string;
+  monto: number;
+  anuladoEn: Date | null;
+}
+
+/**
+ * Agrupa los pagos por membresía preservando `anuladoEn` para delegar la regla de saldo al dominio compartido.
+ */
+function agruparPagosPorMembresia(
+  filasPagos: readonly PagoBasico[]
+): Map<string, Array<{ monto: number; anuladoEn: Date | null }>> {
+  const porMembresia = new Map<
+    string,
+    Array<{ monto: number; anuladoEn: Date | null }>
+  >();
+
+  for (const pago of filasPagos) {
+    const lista = porMembresia.get(pago.membresiaId) ?? [];
+    lista.push({ monto: pago.monto, anuladoEn: pago.anuladoEn });
+    porMembresia.set(pago.membresiaId, lista);
+  }
+
+  return porMembresia;
+}
+
+function calcularOcupacionSemanal(
+  filasClasesSemana: ReadonlyArray<{
+    inicio: Date;
+    cupos: number;
+    reservasConfirmadas: number;
+    asistenciasMarcadas: number;
+  }>,
+  boxTimezone: string,
+  fechaLocal: string,
+  lunesSemana: string,
+  ahora: Date
+) {
+  const diasBase = construirDiasSemanaPanel(lunesSemana, fechaLocal);
+  const acumuladoPorDia = new Map<
+    string,
+    { cupos: number; reservas: number; clasesCount: number }
+  >();
+  for (const d of diasBase) {
+    acumuladoPorDia.set(d.fecha, { cupos: 0, reservas: 0, clasesCount: 0 });
+  }
+
+  let asistenciasSemana = 0;
+  let reservasCerradasSemana = 0;
+
+  for (const fila of filasClasesSemana) {
+    const fechaClase = obtenerFechaLocal(fila.inicio, boxTimezone);
+    const bucket = acumuladoPorDia.get(fechaClase);
+    if (bucket) {
+      bucket.cupos += fila.cupos;
+      bucket.reservas += fila.reservasConfirmadas;
+      bucket.clasesCount += 1;
+    }
+    asistenciasSemana += fila.asistenciasMarcadas;
+    if (fila.inicio <= ahora) {
+      reservasCerradasSemana += fila.reservasConfirmadas;
+    }
+  }
+
+  const dias = diasBase.map((d) => {
+    const datos = acumuladoPorDia.get(d.fecha) ?? {
+      cupos: 0,
+      reservas: 0,
+      clasesCount: 0
+    };
+    const porcentaje =
+      datos.cupos > 0
+        ? Math.min(100, Math.round((datos.reservas / datos.cupos) * 100))
+        : 0;
+    return {
+      ...d,
+      cuposTotales: datos.cupos,
+      reservasConfirmadas: datos.reservas,
+      porcentaje
+    };
+  });
+
+  const reservasSemana = dias.reduce(
+    (acc, d) => acc + d.reservasConfirmadas,
+    0
+  );
+  const cuposSemana = dias.reduce((acc, d) => acc + d.cuposTotales, 0);
+  const hoyDia = dias.find((d) => d.esHoy);
+  const clasesHoy = acumuladoPorDia.get(fechaLocal)?.clasesCount ?? 0;
+  const tasaAsistenciaPorcentaje =
+    reservasCerradasSemana > 0
+      ? Math.min(
+          100,
+          Math.round((asistenciasSemana / reservasCerradasSemana) * 100)
+        )
+      : 0;
+
+  return {
+    ocupacionSemanal: {
+      dias,
+      reservasSemana,
+      cuposSemana,
+      porcentajeHoy: hoyDia?.porcentaje ?? 0
+    },
+    clasesHoy,
+    asistenciasSemana,
+    reservasCerradasSemana,
+    tasaAsistenciaPorcentaje
+  };
+}
+
+function calcularCobranzaYMorosos(
+  filasMembresias: ReadonlyArray<{
+    id: string;
+    afiliacionId: string;
+    precio: number;
+    fechaInicio: string;
+    fechaFin: string;
+    planNombre: string;
+    usuarioNombre: string;
+  }>,
+  filasPagos: ReadonlyArray<{
+    membresiaId: string;
+    monto: number;
+    medioPago: string;
+    fechaPago: string;
+    anuladoEn: Date | null;
+  }>,
+  fechaLocal: string,
+  inicioMes: string,
+  finMes: string
+) {
+  const pagosPorMembresia = agruparPagosPorMembresia(filasPagos);
+  const cobradoPorMedio = new Map<MedioPago, number>();
+  let totalCobradoMes = 0;
+
+  for (const pago of filasPagos) {
+    if (
+      pago.anuladoEn === null &&
+      pago.fechaPago >= inicioMes &&
+      pago.fechaPago <= finMes
+    ) {
+      totalCobradoMes += pago.monto;
+      const medio = pago.medioPago as MedioPago;
+      cobradoPorMedio.set(medio, (cobradoPorMedio.get(medio) ?? 0) + pago.monto);
+    }
+  }
+
+  const limite7Dias = sumarDiasAFecha(fechaLocal, 7);
+  let membresiasActivas = 0;
+  let membresiasPorVencer7Dias = 0;
+  let totalPendiente = 0;
+
+  const morososPorAfiliacion = new Map<
+    string,
+    {
+      afiliacionId: string;
+      nombre: string;
+      planNombre: string;
+      deuda: number;
+    }
+  >();
+
+  for (const m of filasMembresias) {
+    const vigenteHoy = m.fechaInicio <= fechaLocal && m.fechaFin >= fechaLocal;
+    if (vigenteHoy) {
+      membresiasActivas += 1;
+      if (m.fechaFin <= limite7Dias) {
+        membresiasPorVencer7Dias += 1;
+      }
+    }
+
+    const saldo = calcularSaldoMembresia(
+      m.precio,
+      pagosPorMembresia.get(m.id) ?? []
+    );
+    if (saldo > 0) {
+      totalPendiente += saldo;
+      const existente = morososPorAfiliacion.get(m.afiliacionId);
+      if (!existente) {
+        morososPorAfiliacion.set(m.afiliacionId, {
+          afiliacionId: m.afiliacionId,
+          nombre: m.usuarioNombre,
+          planNombre: m.planNombre,
+          deuda: saldo
+        });
+      } else {
+        existente.deuda += saldo;
+      }
+    }
+  }
+
+  const morososOrdenados = Array.from(morososPorAfiliacion.values()).sort(
+    (a, b) => b.deuda - a.deuda
+  );
+  const totalCobranzaObjetivo = totalCobradoMes + totalPendiente;
+  const porcentajeCobrado =
+    totalCobranzaObjetivo > 0
+      ? Math.min(100, Math.round((totalCobradoMes / totalCobranzaObjetivo) * 100))
+      : 0;
+
+  const desglosePorMedio = Array.from(cobradoPorMedio.entries())
+    .map(([medioPago, total]) => ({
+      medioPago,
+      label: ETIQUETAS_MEDIO_PAGO[medioPago] ?? medioPago,
+      total
+    }))
+    .sort((a, b) => b.total - a.total);
+
+  return {
+    cobranzaMes: {
+      totalCobrado: totalCobradoMes,
+      totalPendiente,
+      porcentajeCobrado,
+      desglosePorMedio
+    },
+    morosos: {
+      totalCantidad: morososOrdenados.length,
+      totalDeuda: totalPendiente,
+      top: morososOrdenados.slice(0, 4)
+    },
+    membresiasActivas,
+    membresiasPorVencer7Dias
+  };
 }
 
 @Injectable()
@@ -216,7 +442,8 @@ export class PanelService {
           eq(afiliaciones.activo, true),
           isNull(afiliaciones.deletedAt)
         )
-      );
+      )
+      .orderBy(desc(membresias.fechaFin));
 
     const filasPagos = await tx
       .select({
@@ -230,178 +457,32 @@ export class PanelService {
       .from(pagos)
       .where(eq(pagos.boxId, box.id));
 
-    // 1. Ocupación semanal y KPIs de clases en timezone del Box
-    const diasBase = construirDiasSemanaPanel(semana.lunes, fechaLocal);
-    const acumuladoPorDia = new Map<
-      string,
-      { cupos: number; reservas: number; clasesCount: number }
-    >();
-    for (const d of diasBase) {
-      acumuladoPorDia.set(d.fecha, { cupos: 0, reservas: 0, clasesCount: 0 });
-    }
-
-    let asistenciasSemana = 0;
-    let reservasCerradasSemana = 0;
-
-    for (const fila of filasClasesSemana) {
-      const fechaClase = obtenerFechaLocal(fila.inicio, box.timezone);
-      const bucket = acumuladoPorDia.get(fechaClase);
-      if (bucket) {
-        bucket.cupos += fila.cupos;
-        bucket.reservas += fila.reservasConfirmadas;
-        bucket.clasesCount += 1;
-      }
-      asistenciasSemana += fila.asistenciasMarcadas;
-      if (fila.inicio <= ahora) {
-        reservasCerradasSemana += fila.reservasConfirmadas;
-      }
-    }
-
-    const diasOcupacion = diasBase.map((d) => {
-      const datos = acumuladoPorDia.get(d.fecha) ?? {
-        cupos: 0,
-        reservas: 0,
-        clasesCount: 0
-      };
-      const porcentaje =
-        datos.cupos > 0
-          ? Math.min(100, Math.round((datos.reservas / datos.cupos) * 100))
-          : 0;
-      return {
-        ...d,
-        cuposTotales: datos.cupos,
-        reservasConfirmadas: datos.reservas,
-        porcentaje
-      };
-    });
-
-    const reservasSemana = diasOcupacion.reduce(
-      (acc, d) => acc + d.reservasConfirmadas,
-      0
+    const ocupacion = calcularOcupacionSemanal(
+      filasClasesSemana,
+      box.timezone,
+      fechaLocal,
+      semana.lunes,
+      ahora
     );
-    const cuposSemana = diasOcupacion.reduce((acc, d) => acc + d.cuposTotales, 0);
-    const hoyDia = diasOcupacion.find((d) => d.esHoy);
-    const clasesHoy = acumuladoPorDia.get(fechaLocal)?.clasesCount ?? 0;
-
-    // 2. Cobranza del mes y Morosos (excluyendo Pagos anulados — ADR 0006)
-    const pagosPorMembresia = new Map<
-      string,
-      Array<{ monto: number; anuladoEn: Date | null }>
-    >();
-    const cobradoPorMedio = new Map<MedioPago, number>();
-    let totalCobradoMes = 0;
-
-    for (const pago of filasPagos) {
-      const lista = pagosPorMembresia.get(pago.membresiaId) ?? [];
-      lista.push({ monto: pago.monto, anuladoEn: pago.anuladoEn });
-      pagosPorMembresia.set(pago.membresiaId, lista);
-
-      if (
-        pago.anuladoEn === null &&
-        pago.fechaPago >= inicioMes &&
-        pago.fechaPago <= finMes
-      ) {
-        totalCobradoMes += pago.monto;
-        const medio = pago.medioPago as MedioPago;
-        cobradoPorMedio.set(medio, (cobradoPorMedio.get(medio) ?? 0) + pago.monto);
-      }
-    }
-
-    const limite7Dias = sumarDiasAFecha(fechaLocal, 7);
-    let membresiasActivas = 0;
-    let membresiasPorVencer7Dias = 0;
-    let totalPendiente = 0;
-
-    const morososPorAfiliacion = new Map<
-      string,
-      {
-        afiliacionId: string;
-        nombre: string;
-        planNombre: string;
-        deuda: number;
-      }
-    >();
-
-    for (const m of filasMembresias) {
-      const vigenteHoy =
-        m.fechaInicio <= fechaLocal && m.fechaFin >= fechaLocal;
-      if (vigenteHoy) {
-        membresiasActivas += 1;
-        if (m.fechaFin <= limite7Dias) {
-          membresiasPorVencer7Dias += 1;
-        }
-      }
-
-      const saldo = calcularSaldoMembresia(
-        m.precio,
-        pagosPorMembresia.get(m.id) ?? []
-      );
-      if (saldo > 0) {
-        totalPendiente += saldo;
-        const existente = morososPorAfiliacion.get(m.afiliacionId);
-        if (!existente) {
-          morososPorAfiliacion.set(m.afiliacionId, {
-            afiliacionId: m.afiliacionId,
-            nombre: m.usuarioNombre,
-            planNombre: m.planNombre,
-            deuda: saldo
-          });
-        } else {
-          existente.deuda += saldo;
-        }
-      }
-    }
-
-    const morososOrdenados = Array.from(morososPorAfiliacion.values()).sort(
-      (a, b) => b.deuda - a.deuda
+    const finanzas = calcularCobranzaYMorosos(
+      filasMembresias,
+      filasPagos,
+      fechaLocal,
+      inicioMes,
+      finMes
     );
-    const totalCobranzaObjetivo = totalCobradoMes + totalPendiente;
-    const porcentajeCobrado =
-      totalCobranzaObjetivo > 0
-        ? Math.min(100, Math.round((totalCobradoMes / totalCobranzaObjetivo) * 100))
-        : 0;
-
-    const desglosePorMedio = Array.from(cobradoPorMedio.entries())
-      .map(([medioPago, total]) => ({
-        medioPago,
-        label: ETIQUETAS_MEDIO_PAGO[medioPago] ?? medioPago,
-        total
-      }))
-      .sort((a, b) => b.total - a.total);
-
-    const tasaAsistenciaPorcentaje =
-      reservasCerradasSemana > 0
-        ? Math.min(
-            100,
-            Math.round((asistenciasSemana / reservasCerradasSemana) * 100)
-          )
-        : 0;
 
     return {
-      ocupacionSemanal: {
-        dias: diasOcupacion,
-        reservasSemana,
-        cuposSemana,
-        porcentajeHoy: hoyDia?.porcentaje ?? 0
-      },
-      cobranzaMes: {
-        totalCobrado: totalCobradoMes,
-        totalPendiente,
-        porcentajeCobrado,
-        desglosePorMedio
-      },
-      morosos: {
-        totalCantidad: morososOrdenados.length,
-        totalDeuda: totalPendiente,
-        top: morososOrdenados.slice(0, 4)
-      },
+      ocupacionSemanal: ocupacion.ocupacionSemanal,
+      cobranzaMes: finanzas.cobranzaMes,
+      morosos: finanzas.morosos,
       resumenOperativo: {
-        membresiasActivas,
-        membresiasPorVencer7Dias,
-        clasesHoy,
-        asistenciasSemana,
-        reservasCerradasSemana,
-        tasaAsistenciaPorcentaje
+        membresiasActivas: finanzas.membresiasActivas,
+        membresiasPorVencer7Dias: finanzas.membresiasPorVencer7Dias,
+        clasesHoy: ocupacion.clasesHoy,
+        asistenciasSemana: ocupacion.asistenciasSemana,
+        reservasCerradasSemana: ocupacion.reservasCerradasSemana,
+        tasaAsistenciaPorcentaje: ocupacion.tasaAsistenciaPorcentaje
       }
     };
   }
@@ -545,15 +626,7 @@ export class PanelService {
             )
         : [];
 
-    const pagosPorMembresia = new Map<
-      string,
-      Array<{ monto: number; anuladoEn: Date | null }>
-    >();
-    for (const pago of pagosAtleta) {
-      const lista = pagosPorMembresia.get(pago.membresiaId) ?? [];
-      lista.push({ monto: pago.monto, anuladoEn: pago.anuladoEn });
-      pagosPorMembresia.set(pago.membresiaId, lista);
-    }
+    const pagosPorMembresia = agruparPagosPorMembresia(pagosAtleta);
 
     let saldoPendienteTotal = 0;
     const saldoPorMembresia = new Map<string, number>();
