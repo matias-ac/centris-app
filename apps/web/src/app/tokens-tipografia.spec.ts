@@ -19,6 +19,7 @@ describe("Tokens Dark Bento Cockpit y tipografía única Inter", () => {
     expect(css).toContain("--color-amber-warning: #FBBF24");
     expect(css).toContain("--color-coral-alert: #FF6D6D");
     expect(css).toContain("--radius: 1.5rem");
+    expect(css).toContain("--font-inter:");
     expect(css).toContain("::selection");
     expect(css).toContain(".tabular-nums");
 
@@ -26,16 +27,14 @@ describe("Tokens Dark Bento Cockpit y tipografía única Inter", () => {
     expect(css).not.toMatch(/#e2f800/i);
   });
 
-  it("layout.tsx carga únicamente Inter (300, 400, 500, 600) mediante next/font/google y elimina Oswald", () => {
+  it("layout.tsx carga únicamente Inter (300, 400, 500, 600) de forma autohospedada sin depender de next/font/google ni Oswald", () => {
     const layout = fs.readFileSync(path.join(APP_DIR, "layout.tsx"), "utf8");
 
-    expect(layout).toContain('from "next/font/google"');
-    expect(layout).toContain("Inter(");
-    expect(layout).toContain('"300"');
-    expect(layout).toContain('"400"');
-    expect(layout).toContain('"500"');
-    expect(layout).toContain('"600"');
-    expect(layout).toContain("--font-inter");
+    expect(layout).toContain('@fontsource/inter/300.css');
+    expect(layout).toContain('@fontsource/inter/400.css');
+    expect(layout).toContain('@fontsource/inter/500.css');
+    expect(layout).toContain('@fontsource/inter/600.css');
+    expect(layout).not.toContain("next/font/google");
     expect(layout).not.toMatch(/Oswald/i);
   });
 });
