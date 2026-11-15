@@ -213,9 +213,9 @@ export function ClaseCard({
         </div>
 
         <div className="space-y-1">
-          <h3 className={BENTO_TITLE_CLASSES}>
+          <h2 className={BENTO_TITLE_CLASSES}>
             {clase.tipoClaseNombre ?? "Clase"}
-          </h3>
+          </h2>
           <p className="text-sm text-muted-foreground">
             Coach:{" "}
             <span
