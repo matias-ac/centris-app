@@ -1,6 +1,6 @@
 # 13 — Rediseño UX/UI e Integración de Datos Reales en `/inicio` (Panel Bento)
 
-**Status:** ready-for-agent
+**Status:** in-progress
 **Branch:** `feat/ui-13-inicio-dashboard`
 **Blocked by:** `01`, `06`, `07`, `08`, `09`, `10`, `11`, `12`
 
