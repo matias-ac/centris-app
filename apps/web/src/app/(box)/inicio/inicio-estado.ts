@@ -21,9 +21,7 @@ export interface AccesoRapidoPanel {
   descripcion: string;
 }
 
-export interface DatoGraficoOcupacion extends DiaOcupacionSemanal {
-  fondoPista: number;
-}
+export type DatoGraficoOcupacion = DiaOcupacionSemanal;
 
 export interface SegmentoGraficoCobranza {
   nombre: string;
@@ -115,7 +113,7 @@ export function resolverEncabezadoPanel(
   if (tieneAlgunRol(roles, ["coach"])) {
     return {
       titulo: "Piso de entrenamiento",
-      subtitulo: `Tus turnos de hoy, cupos confirmados y marcado de asistencia en ${nombreBox}.`,
+      subtitulo: `Tus clases de hoy, cupos confirmados y registro de asistencia en ${nombreBox}.`,
       ctaPrimario: {
         label: "Abrir clases de hoy",
         href: "/clases"
@@ -125,7 +123,7 @@ export function resolverEncabezadoPanel(
 
   return {
     titulo: "Tu entrenamiento",
-    subtitulo: `Estado de tu membresía, créditos disponibles y próximos turnos en ${nombreBox}.`,
+    subtitulo: `Estado de tu membresía, créditos disponibles y próximas clases en ${nombreBox}.`,
     ctaPrimario: {
       label: "Reservar lugar",
       href: "/reservas"
@@ -150,7 +148,7 @@ export function construirAccesosRapidosPanel(
       descripcion:
         esAdmin || esRecepcion
           ? "Cupos disponibles y anotación en mostrador"
-          : "Reservá o cancelá tus turnos"
+          : "Reservá o cancelá tus clases"
     });
   }
 
@@ -158,15 +156,15 @@ export function construirAccesosRapidosPanel(
     href: "/clases",
     label: "Calendario de Clases",
     descripcion: esCoach
-      ? "Nómina de inscriptos y marcado de asistencia"
-      : "Turnos programados en la zona horaria del Box"
+      ? "Nómina de inscriptos y registro de asistencia"
+      : "Clases programadas en la zona horaria del Box"
   });
 
   if (esAdmin || esRecepcion || esCoach) {
     accesos.push({
       href: "/horarios",
       label: "Horarios",
-      descripcion: "Tipos de clase y grilla semanal recurrente"
+      descripcion: "Tipos de clase y horarios semanales recurrentes"
     });
   }
 
@@ -204,13 +202,10 @@ export function construirAccesosRapidosPanel(
 export function prepararDatosGraficoOcupacion(
   dias: readonly DiaOcupacionSemanal[]
 ): DatoGraficoOcupacion[] {
-  return dias.map((dia) => ({
-    ...dia,
-    fondoPista: 100
-  }));
+  return [...dias];
 }
 
-const COLORES_MEDIO_PAGO: Record<string, string> = {
+export const COLORES_MEDIO_PAGO: Record<string, string> = {
   TRANSFERENCIA: "#C1F429",
   EFECTIVO: "#18FFC8",
   OTRO: "#A1A1AA"

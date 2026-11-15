@@ -947,7 +947,7 @@ Then(
     await expect(page.getByTestId("panel-rol-recepcionista")).toHaveCount(0);
 
     const textoMain = (await page.locator("main").textContent()) ?? "";
-    expect(textoMain).not.toMatch(/Cobranza del mes|Caja del Box|Total recaudado/i);
+    expect(textoMain).not.toMatch(/Cobranza de|Caja y Morosos|Seguimiento de saldos/i);
     await expect(page.locator('a[href="/caja"]')).toHaveCount(0);
 
     await verificarSinDesbordeResponsive(page, [375, 1280, 1440]);
@@ -1023,7 +1023,7 @@ Then(
     await expect(ctaReservar).toBeVisible();
 
     const textoMain = (await page.locator("main").textContent()) ?? "";
-    expect(textoMain).not.toMatch(/Cobranza del mes|Recaudación del mes/i);
+    expect(textoMain).not.toMatch(/Cobranza de|Seguimiento de saldos|Recaudación del mes/i);
 
     await verificarSinDesbordeResponsive(page, [375, 1280, 1440]);
   }

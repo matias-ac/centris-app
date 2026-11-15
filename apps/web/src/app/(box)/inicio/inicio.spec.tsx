@@ -240,7 +240,6 @@ describe("Seam 3 — Panel Bento /inicio y adaptación por roles (@centris/web)"
       expect(ocupacion[5]).toMatchObject({
         diaCorto: "Sáb",
         porcentaje: 85,
-        fondoPista: 100,
         esHoy: true
       });
 
@@ -286,7 +285,7 @@ describe("Seam 3 — Panel Bento /inicio y adaptación por roles (@centris/web)"
       expect(html).toContain("Ocupación semanal de clases");
       expect(html).toContain("Cobranza de noviembre");
       expect(html).toContain("684.000");
-      expect(html).toContain("Seguimiento de cobros");
+      expect(html).toContain("Seguimiento de saldos");
       expect(html).toContain("Nicolás Pérez");
       expect(html).toContain("tabular-nums");
       expect(html).toContain('href="/reservas"');
@@ -375,6 +374,47 @@ describe("Seam 3 — Panel Bento /inicio y adaptación por roles (@centris/web)"
       expect(html).toContain('data-testid="panel-rol-recepcionista"');
       expect(html).not.toContain('data-testid="panel-rol-administrador"');
       expect(html).not.toContain('href="/afiliaciones"');
+    });
+
+    it("Recepcionista exclusivo dirige Resumen operativo a /atletas y oculta rutas de Administrador", () => {
+      const html = renderToStaticMarkup(
+        createElement(InicioBentoView, {
+          roles: ["recepcionista"],
+          resumen: {
+            box: BOX_BASE,
+            fechaLocal: "2026-11-14",
+            semana: { desde: "2026-11-09", hasta: "2026-11-15" },
+            mes: { clave: "2026-11", etiqueta: "noviembre" },
+            gestion: RESUMEN_GESTION_COMPLETO,
+            coach: null,
+            atleta: null
+          },
+          errorCarga: null
+        })
+      );
+
+      expect(html).toContain('data-testid="panel-rol-recepcionista"');
+      expect(html).not.toContain('data-testid="panel-rol-administrador"');
+      expect(html).toContain("Ir al Directorio de Atletas");
+      expect(html).not.toContain('href="/configuracion"');
+      expect(html).not.toContain('href="/afiliaciones"');
+    });
+
+    it("Muestra mensaje amigable en español ante errorCarga sin filtrar códigos técnicos", () => {
+      const html = renderToStaticMarkup(
+        createElement(InicioBentoView, {
+          roles: ["administrador"],
+          resumen: null,
+          errorCarga:
+            "No pudimos actualizar los indicadores del Box en este momento."
+        })
+      );
+
+      expect(html).toContain(
+        "No pudimos actualizar los indicadores del Box en este momento."
+      );
+      expect(html).toContain('href="/reservas"');
+      expect(html).not.toContain("403");
     });
   });
 });
