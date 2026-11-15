@@ -1,6 +1,6 @@
 # 12 — Rediseño UX/UI de `/reservas` (Vista Atleta Mobile-First y Mostrador)
 
-**Status:** in-progress
+**Status:** done
 **Branch:** `feat/ui-12-reservas`
 **Blocked by:** `01`
 
@@ -30,11 +30,11 @@ Migra `/reservas` a **Dark Bento Cockpit** (`propuesta-reservas.html`), optimiza
 
 ## Acceptance Criteria (TDD / BDD)
 
-- [ ] **Tests en Red $\rightarrow$ Green (Reglas de Negocio + ADR 0006)**: Verificar que tarjetas de clase permitan reservar y cancelar (mostrando claramente si la cancelación es en término o tardía sin jerga técnica), y que un atleta con saldo pendiente (`Moroso`) + membresía vigente conserve el botón `Reservar` activo mientras ve la alerta visual no bloqueante.
-- [ ] **Experiencia Mobile-First Bento**: Selector horizontal táctil de días (`min-h-11`, zona horaria del Box), resumen superior de `Créditos disponibles` y estado de membresía en cápsulas Bento (`#111214` / `#18191C`), cards de clase con ocupación en barra `#C1F429` + rayado diagonal y botón CTA principal `#C1F429` (`#000000`).
-- [ ] **Estabilidad Sin Confirmaciones Nativas**: Cancelaciones y walk-ins sin `confirm()`/`alert()` nativos ni exposición de códigos técnicos crudos.
-- [ ] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` (`Vitest` + todas las suites `playwright-bdd`) y `/code-review`.
+- [x] **Tests en Red $\rightarrow$ Green (Reglas de Negocio + ADR 0006)**: Verificar que tarjetas de clase permitan reservar y cancelar (mostrando claramente si la cancelación es en término o tardía sin jerga técnica), y que un atleta con saldo pendiente (`Moroso`) + membresía vigente conserve el botón `Reservar` activo mientras ve la alerta visual no bloqueante.
+- [x] **Experiencia Mobile-First Bento**: Selector horizontal táctil de días (`min-h-11`, zona horaria del Box), resumen superior de `Créditos disponibles` y estado de membresía en cápsulas Bento (`#111214` / `#18191C`), cards de clase con ocupación en barra `#C1F429` + rayado diagonal y botón CTA principal `#C1F429` (`#000000`).
+- [x] **Estabilidad Sin Confirmaciones Nativas**: Cancelaciones y walk-ins sin `confirm()`/`alert()` nativos ni exposición de códigos técnicos crudos.
+- [x] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` (`Vitest` + todas las suites `playwright-bdd`) y `/code-review`.
 
 ## Comments
 
-- *Sin comentarios aún.*
+- Implementado siguiendo Dark Bento Cockpit (`reservas-estado.ts`, `tarjetas-reservas.tsx`, `drawer-reserva-mostrador.tsx`, `reservas-atleta-view.tsx`, `page.tsx`, `loading.tsx`), enriquecimiento de `saldo`/`totalPagado` en `MembresiasService`, `/code-review` (Standards + Spec) y verificación en desktop (`1440px`/`1280px`) y mobile (`375px`).
