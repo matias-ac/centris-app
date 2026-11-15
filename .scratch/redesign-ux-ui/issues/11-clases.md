@@ -1,6 +1,6 @@
 # 11 — Rediseño UX/UI de `/clases` (Calendario, Materialización y Asistencia)
 
-**Status:** ready-for-agent
+**Status:** done
 **Branch:** `feat/ui-11-clases`
 **Blocked by:** `01`
 
@@ -30,11 +30,12 @@ Migra `/clases` a **Dark Bento Cockpit** (`propuesta-clases.html`), unificando l
 
 ## Acceptance Criteria (TDD / BDD)
 
-- [ ] **Tests en Red $\rightarrow$ Green**: Cubrir materialización semanal, creación de clase puntual, cancelación/edición con `InlineConfirm`, walk-in de mostrador y toma de asistencia del `Coach` en piso (`min-h-11`, sin exponer montos/saldos a usuarios exclusivamente `Coach`).
-- [ ] **Agenda Bento y `SideDrawer` de Inscriptos**: Selector semanal claro en zona horaria del Box ([ADR 0005](../../../docs/adr/0005-calculos-de-calendario-en-zona-horaria-del-box.md)), tarjetas de clase con barra de ocupación (`#C1F429` sobre rayado diagonal), `tabular-nums` en horario y cupo (`18/20`), badges semánticos (`mint` / `amber` / `coral` / `zinc`) y `SideDrawer` limpio para gestionar la nómina de inscriptos y asistencia en 1 toque.
-- [ ] **Estabilidad Notebook y Mobile**: Grilla adaptable `minmax(min(100%, 300px), 1fr)` sin botones cortados y controles táctiles `>= 44px` en piso de entrenamiento.
-- [ ] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` (`Vitest` + todas las suites `playwright-bdd`) y `/code-review`.
+- [x] **Tests en Red $\rightarrow$ Green**: Cubrir materialización semanal, creación de clase puntual, cancelación/edición con `InlineConfirm`, walk-in de mostrador y toma de asistencia del `Coach` en piso (`min-h-11`, sin exponer montos/saldos a usuarios exclusivamente `Coach`).
+- [x] **Agenda Bento y `SideDrawer` de Inscriptos**: Selector semanal claro en zona horaria del Box ([ADR 0005](../../../docs/adr/0005-calculos-de-calendario-en-zona-horaria-del-box.md)), tarjetas de clase con barra de ocupación (`#C1F429` sobre rayado diagonal), `tabular-nums` en horario y cupo (`18/20`), badges semánticos (`mint` / `amber` / `coral` / `zinc`) y `SideDrawer` limpio para gestionar la nómina de inscriptos y asistencia en 1 toque.
+- [x] **Estabilidad Notebook y Mobile**: Grilla adaptable `minmax(min(100%, 300px), 1fr)` sin botones cortados y controles táctiles `>= 44px` en piso de entrenamiento.
+- [x] **Verificación CI / DoD**: Pasar `pnpm lint`, `pnpm typecheck`, `pnpm test` (`Vitest` + todas las suites `playwright-bdd`) y `/code-review`.
 
 ## Comments
 
-- *Sin comentarios aún.*
+- **Implementación completada**: Migrado `/clases` a Dark Bento Cockpit (`clases-estado.ts`, `clases-view.tsx`, `page.tsx`, `clases.spec.tsx`) con pestañas diarias abriendo en `Hoy` + filtros combinados (`Tipo de Clase`, `Coach`, `Ocultar finalizadas y canceladas`), barras de ocupación `#C1F429` sobre rayado diagonal, acciones en `SideDrawer` + `InlineConfirmPanel` y compatibilidad total con las suites E2E (`08`, `10`, `11`, `12`).
+- **Verificación visual y `/code-review`**: Verificado desktop `1440px`/`1280px` y mobile `375px` (`overflowX: 0`, controles `>= 44px`, inputs `>= 16px`, drawer móvil de `375px` sin desborde) junto con revisión paralela `/code-review` (estándares y spec) y corrección de jerarquía `<h1>` $\rightarrow$ `<h2>`.

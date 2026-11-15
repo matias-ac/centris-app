@@ -137,6 +137,7 @@ async function loginYVisitarClases(page: Page, email: string): Promise<void> {
   await expect(
     page.getByRole("heading", { name: /Calendario de Clases/i })
   ).toBeVisible();
+  await page.getByTestId("tab-dia-TODOS").click();
 }
 
 async function asegurarClaseProgramada(): Promise<string> {

@@ -199,6 +199,9 @@ async function loginEIrA(page: Page, email: string, ruta: string): Promise<void>
 
   await page.goto(ruta);
   await expect(page).toHaveURL(new RegExp(ruta));
+  if (ruta === "/clases") {
+    await page.getByTestId("tab-dia-TODOS").click();
+  }
 }
 
 // ---------------- ESCENARIO 1 ----------------
@@ -279,6 +282,7 @@ When(
     await expect(
       page.getByRole("heading", { name: /Calendario de Clases/i })
     ).toBeVisible();
+    await page.getByTestId("tab-dia-TODOS").click();
   }
 );
 
