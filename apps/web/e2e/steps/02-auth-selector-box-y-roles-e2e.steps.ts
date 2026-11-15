@@ -38,6 +38,15 @@ const E2E_SIN_BOX = {
   nombre: "Lucía Sin Box E2E"
 };
 
+const E2E_INICIO_MOROSO = {
+  usuarioId: "d0000000-0000-4000-8000-000000000004",
+  afiliacionId: "e0000000-0000-4000-8000-000000000004",
+  planId: "f0000000-0000-4000-8000-000000000101",
+  membresiaId: "f1000000-0000-4000-8000-000000000101",
+  email: "moroso.inicio.e2e@centris.dev",
+  nombre: "Mateo Moroso E2E"
+};
+
 async function ejecutarSqlOwner(
   query: string,
   params: unknown[] = []
@@ -51,18 +60,26 @@ async function ejecutarSqlOwner(
 }
 
 After(async () => {
+  await ejecutarSqlOwner(`DELETE FROM membresias WHERE id = $1`, [
+    E2E_INICIO_MOROSO.membresiaId
+  ]);
+  await ejecutarSqlOwner(`DELETE FROM planes WHERE id = $1`, [
+    E2E_INICIO_MOROSO.planId
+  ]);
   await ejecutarSqlOwner(
-    `DELETE FROM afiliaciones WHERE id IN ($1, $2, $3)`,
+    `DELETE FROM afiliaciones WHERE id IN ($1, $2, $3, $4)`,
     [
       E2E_MOSTRADOR.afiliacionId,
       E2E_EQUIPO.afiliacionNorteId,
-      E2E_EQUIPO.afiliacionSurId
+      E2E_EQUIPO.afiliacionSurId,
+      E2E_INICIO_MOROSO.afiliacionId
     ]
   );
-  await ejecutarSqlOwner(`DELETE FROM usuarios WHERE id IN ($1, $2, $3)`, [
+  await ejecutarSqlOwner(`DELETE FROM usuarios WHERE id IN ($1, $2, $3, $4)`, [
     E2E_MOSTRADOR.usuarioId,
     E2E_EQUIPO.usuarioId,
-    E2E_SIN_BOX.usuarioId
+    E2E_SIN_BOX.usuarioId,
+    E2E_INICIO_MOROSO.usuarioId
   ]);
   await ejecutarSqlOwner(
     `UPDATE boxes SET nombre = 'Box Centris Norte', timezone = 'America/Argentina/Buenos_Aires', moneda = 'ARS', anticipacion_reserva_dias = 7, ventana_cancelacion_minutos = 120 WHERE id = $1`,
@@ -874,3 +891,141 @@ Then(
     await verificarSinDesbordeResponsive(page, [375, 1280, 1440]);
   }
 );
+
+async function iniciarSesionEnInicio(page: Page, email: string): Promise<void> {
+  await page.context().clearCookies();
+  await page.goto("/login");
+  await page.getByLabel(/Correo electrónico/i).fill(email);
+  await page.getByLabel(/Contraseña/i).fill("Centris123!");
+  await page.getByRole("button", { name: /Iniciar sesión/i }).click();
+  await expect(page).toHaveURL(/\/inicio/);
+}
+
+When("observa el panel de inicio del Box", async ({ page }) => {
+  await expect(page).toHaveURL(/\/inicio/);
+  await expect(page.getByTestId("panel-rol-administrador")).toBeVisible();
+});
+
+Then(
+  "visualiza el tablero Bento de Administrador con gráficos recharts, accesos directos operables y sin desborde en móvil ni escritorio",
+  async ({ page }) => {
+    const panelAdmin = page.getByTestId("panel-rol-administrador");
+    await expect(panelAdmin).toBeVisible();
+
+    const graficoOcupacion = page.getByTestId("grafico-ocupacion-recharts");
+    await expect(graficoOcupacion).toBeVisible();
+    await expect(graficoOcupacion.locator("svg.recharts-surface")).toBeVisible();
+
+    const linkClases = panelAdmin.locator('a[href="/clases"]').first();
+    await expect(linkClases).toBeVisible();
+    const boxLink = await linkClases.boundingBox();
+    expect(boxLink).not.toBeNull();
+    if (boxLink) {
+      expect(boxLink.width).toBeGreaterThanOrEqual(44);
+      expect(boxLink.height).toBeGreaterThanOrEqual(44);
+    }
+
+    await expect(page.locator('main a[href="/reservas"]').first()).toBeVisible();
+    await expect(panelAdmin).toContainText(/Ocupación semanal|Cobranza/i);
+    await verificarSinDesbordeResponsive(page, [375, 1280, 1440]);
+  }
+);
+
+When(
+  'inicia sesión en {string} un Coach exclusivo del Box',
+  async ({ page }, _ruta: string) => {
+    await iniciarSesionEnInicio(page, "coach@centris.dev");
+  }
+);
+
+Then(
+  "visualiza la agenda de Coach sin cifras financieras ni accesos de caja ni desborde horizontal",
+  async ({ page }) => {
+    const panelCoach = page.getByTestId("panel-rol-coach");
+    await expect(panelCoach).toBeVisible();
+    await expect(page.getByTestId("panel-rol-administrador")).toHaveCount(0);
+    await expect(page.getByTestId("panel-rol-recepcionista")).toHaveCount(0);
+
+    const textoMain = (await page.locator("main").textContent()) ?? "";
+    expect(textoMain).not.toMatch(/Cobranza del mes|Caja del Box|Total recaudado/i);
+    await expect(page.locator('a[href="/caja"]')).toHaveCount(0);
+
+    await verificarSinDesbordeResponsive(page, [375, 1280, 1440]);
+  }
+);
+
+When(
+  'inicia sesión en {string} un Atleta Moroso del Box',
+  async ({ page }, _ruta: string) => {
+    await ejecutarSqlOwner(`DELETE FROM membresias WHERE id = $1`, [
+      E2E_INICIO_MOROSO.membresiaId
+    ]);
+    await ejecutarSqlOwner(`DELETE FROM planes WHERE id = $1`, [
+      E2E_INICIO_MOROSO.planId
+    ]);
+    await ejecutarSqlOwner(`DELETE FROM afiliaciones WHERE id = $1`, [
+      E2E_INICIO_MOROSO.afiliacionId
+    ]);
+    await ejecutarSqlOwner(
+      `DELETE FROM usuarios WHERE id = $1 OR email = $2`,
+      [E2E_INICIO_MOROSO.usuarioId, E2E_INICIO_MOROSO.email]
+    );
+    await ejecutarSqlOwner(
+      `INSERT INTO usuarios (id, email, nombre, password_hash)
+       SELECT $1, $2, $3, password_hash
+       FROM usuarios
+       WHERE email = 'atleta.moroso@centris.dev'
+       LIMIT 1`,
+      [
+        E2E_INICIO_MOROSO.usuarioId,
+        E2E_INICIO_MOROSO.email,
+        E2E_INICIO_MOROSO.nombre
+      ]
+    );
+    await ejecutarSqlOwner(
+      `INSERT INTO afiliaciones (id, box_id, usuario_id, roles, activo)
+       VALUES ($1, $2, $3, ARRAY['atleta'], true)`,
+      [
+        E2E_INICIO_MOROSO.afiliacionId,
+        SEED_BOX_IDS.boxCentrisNorte,
+        E2E_INICIO_MOROSO.usuarioId
+      ]
+    );
+    await ejecutarSqlOwner(
+      `INSERT INTO planes (id, box_id, nombre, precio_base, duracion_dias, modalidad_creditos, creditos_por_periodo, activo)
+       VALUES ($1, $2, 'Plan Inicio Moroso', 45000, 30, 'SEMANAL', 3, true)`,
+      [E2E_INICIO_MOROSO.planId, SEED_BOX_IDS.boxCentrisNorte]
+    );
+    await ejecutarSqlOwner(
+      `INSERT INTO membresias (id, box_id, afiliacion_id, plan_id, precio, modalidad_creditos, creditos_por_periodo, creditos_extra, fecha_inicio, fecha_fin)
+       VALUES ($1, $2, $3, $4, 45000, 'SEMANAL', 3, 0, (CURRENT_DATE - INTERVAL '1 day')::date, (CURRENT_DATE + INTERVAL '29 days')::date)`,
+      [
+        E2E_INICIO_MOROSO.membresiaId,
+        SEED_BOX_IDS.boxCentrisNorte,
+        E2E_INICIO_MOROSO.afiliacionId,
+        E2E_INICIO_MOROSO.planId
+      ]
+    );
+
+    await iniciarSesionEnInicio(page, E2E_INICIO_MOROSO.email);
+  }
+);
+
+Then(
+  "visualiza su membresía con aviso no bloqueante de saldo pendiente, acceso a \\/reservas y sin desborde horizontal",
+  async ({ page }) => {
+    const panelAtleta = page.getByTestId("panel-rol-atleta");
+    await expect(panelAtleta).toBeVisible();
+    await expect(panelAtleta).toContainText(/Saldo pendiente|Moroso|al día/i);
+    await expect(panelAtleta).toContainText(/podés seguir reservando/i);
+
+    const ctaReservar = panelAtleta.locator('a[href="/reservas"]').first();
+    await expect(ctaReservar).toBeVisible();
+
+    const textoMain = (await page.locator("main").textContent()) ?? "";
+    expect(textoMain).not.toMatch(/Cobranza del mes|Recaudación del mes/i);
+
+    await verificarSinDesbordeResponsive(page, [375, 1280, 1440]);
+  }
+);
+
