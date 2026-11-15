@@ -389,10 +389,11 @@ export function DrawerAsistencia({
     reservadaPorMi: false
   });
   const esCoachTitular = clase.coachAfiliacionId === afiliacionActivaId;
+  const esStaffMostrador = esAdmin || esRecep;
   const puedeEditarAsistencia =
     !estado.cancelada &&
     estado.ventanaAsistencia.estado === "PERMITIDA" &&
-    (esAdmin || esCoachTitular);
+    (esStaffMostrador || esCoachTitular);
 
   const textoBusqueda = busqueda.trim().toLowerCase();
   const reservasFiltradas = useMemo(() => {
@@ -405,7 +406,7 @@ export function DrawerAsistencia({
   const presentesCount = reservas.filter(
     (r) => r.asistenciaMarcadaEn !== null
   ).length;
-  const mostrarAvisoSoloCoach = !esAdmin && !esCoachTitular;
+  const mostrarAvisoSoloCoach = !esStaffMostrador && !esCoachTitular;
   const mostrarAvisoVentanaExpirada =
     !estado.cancelada && estado.ventanaAsistencia.estado === "VENCIDA";
 
@@ -622,7 +623,7 @@ export function DrawerMostrador({
             <option value="">No hay atletas activos disponibles</option>
           ) : (
             atletas.map((atleta) => (
-              <option key={atleta.id} value={atleta.id}>
+              <option key={atleta.afiliacionId} value={atleta.afiliacionId}>
                 {atleta.nombre} ({atleta.email})
               </option>
             ))
@@ -952,7 +953,7 @@ export function ClasesView({
 
   // Estado del Drawer de Mostrador
   const [atletaWalkinId, setAtletaWalkinId] = useState<string>(
-    atletas[0]?.id ?? ""
+    atletas[0]?.afiliacionId ?? ""
   );
   const [errorWalkin, setErrorWalkin] = useState<{
     message: string;
@@ -1052,7 +1053,7 @@ export function ClasesView({
   const abrirDrawerWalkin = (clase: Clase) => {
     setErrorGlobal(null);
     setErrorWalkin(null);
-    setAtletaWalkinId((prev) => prev || (atletas[0]?.id ?? ""));
+    setAtletaWalkinId((prev) => prev || (atletas[0]?.afiliacionId ?? ""));
     setDrawerActivo({ tipo: "mostrador", claseId: clase.id });
   };
 

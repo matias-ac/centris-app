@@ -538,8 +538,15 @@ export async function procesarCancelacionClase(
     input: CancelarClase
   ) => Promise<ResultadoAccionClases>
 ): Promise<ResultadoOperacionClases> {
+  const motivoLimpio = motivoTexto.trim();
+  if (motivoLimpio.length < 3) {
+    return {
+      ok: false,
+      error: "Ingresá un motivo de cancelación de al menos 3 caracteres."
+    };
+  }
   const validacion = CancelarClaseSchema.safeParse({
-    motivo: motivoTexto.trim()
+    motivoCancelacion: motivoLimpio
   });
   if (!validacion.success) {
     return {
@@ -571,13 +578,13 @@ export async function procesarCancelacionClase(
 export async function procesarWalkinClase(
   boxId: string,
   claseId: string,
-  atletaId: string,
+  afiliacionId: string,
   crearReservaFn: (
     boxId: string,
     input: CrearReserva
   ) => Promise<ResultadoAccionClases>
 ): Promise<ResultadoOperacionClases> {
-  const validacion = CrearReservaSchema.safeParse({ claseId, atletaId });
+  const validacion = CrearReservaSchema.safeParse({ claseId, afiliacionId });
   if (!validacion.success) {
     return {
       ok: false,
