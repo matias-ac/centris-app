@@ -290,7 +290,7 @@ Then(
       `item-historial-reserva-${E2E_CANCELACIONES.reservaId}`
     );
     await expect(itemHistorial).toBeVisible();
-    await expect(itemHistorial).toContainText(estadoTexto);
+    await expect(itemHistorial).toContainText(new RegExp(estadoTexto, "i"));
   }
 );
 
@@ -567,7 +567,7 @@ Then(
       `item-historial-reserva-${E2E_CANCELACIONES.reservaId}`
     );
     await expect(itemHistorial).toBeVisible();
-    await expect(itemHistorial).toContainText(estadoReserva);
+    await expect(itemHistorial).toContainText(new RegExp(estadoReserva, "i"));
   }
 );
 
@@ -675,7 +675,7 @@ Then(
       `item-historial-reserva-${E2E_CANCELACIONES.reservaId}`
     );
     await expect(itemHistorial).toBeVisible();
-    await expect(itemHistorial).toContainText(estadoTexto);
+    await expect(itemHistorial).toContainText(new RegExp(estadoTexto, "i"));
     await expect(
       page.getByTestId(`cupos-disponibles-clase-${E2E_CANCELACIONES.claseId}`)
     ).toContainText(cuposTexto);

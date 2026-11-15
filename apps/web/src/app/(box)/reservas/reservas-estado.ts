@@ -297,9 +297,9 @@ const ETIQUETA_CANCELADA_UI: Record<
     detalle: "Cancelada fuera de término · Crédito consumido"
   },
   CANCELADA_POR_BOX: {
-    etiqueta: "Cancelada por el box",
+    etiqueta: "Cancelada por el Box",
     variante: "coral",
-    detalle: "Clase cancelada por el box · Crédito devuelto"
+    detalle: "Clase cancelada por el Box · Crédito devuelto"
   }
 };
 

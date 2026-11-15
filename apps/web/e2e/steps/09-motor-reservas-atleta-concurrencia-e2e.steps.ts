@@ -3,6 +3,7 @@ import { createBdd } from "playwright-bdd";
 import {
   SEED_BOX_IDS,
   calcularInstantesClase,
+  diaSemanaIso,
   obtenerFechaLocal,
   sumarDiasAFecha
 } from "@centris/shared";
@@ -283,12 +284,18 @@ Given(
       duracionMinutos: 60,
       timezone: TIMEZONE_BA
     });
-    const clase2 = calcularInstantesClase({
-      fechaLocal: fechaMismaSemana,
-      horaInicio: "19:00",
-      duracionMinutos: 60,
-      timezone: TIMEZONE_BA
-    });
+    const clase2 =
+      diaSemanaIso(hoy) < 7
+        ? calcularInstantesClase({
+            fechaLocal: sumarDiasAFecha(hoy, 1),
+            horaInicio: "19:00",
+            duracionMinutos: 60,
+            timezone: TIMEZONE_BA
+          })
+        : {
+            inicio: new Date(Date.now() + 20 * 60_000),
+            fin: new Date(Date.now() + 80 * 60_000)
+          };
 
     await ejecutarSqlOwner(
       `INSERT INTO clases (id, box_id, tipo_clase_id, coach_afiliacion_id, inicio, fin, cupos)
