@@ -211,6 +211,7 @@ const RESERVAS_BASE: Reserva[] = [
 
 const ATLETAS_DEMO: Atleta[] = [
   {
+    id: AFILIACION_ATLETA_ID,
     afiliacionId: AFILIACION_ATLETA_ID,
     usuarioId: USUARIO_ATLETA_ID,
     boxId: BOX_ID,
@@ -218,7 +219,6 @@ const ATLETAS_DEMO: Atleta[] = [
     email: "atleta.moroso@centris.dev",
     roles: ["atleta"],
     activo: true,
-    pendienteActivacion: false,
     createdAt: "2026-11-01T12:00:00.000Z"
   }
 ];
@@ -361,13 +361,10 @@ describe("Vista /reservas — Dark Bento Cockpit y reglas de negocio", () => {
         claseIdsReservadas: new Set(),
         reservasActivas: [],
         disponibilidad: {
-          ilimitada: false,
-          creditosPorPeriodo: 3,
-          creditosConsumidosPeriodo: 0,
+          disponible: true,
           creditosRestantesPeriodo: 3,
-          creditosExtraTotales: 0,
           creditosExtraRestantes: 0,
-          puedeReservar: true
+          usaCreditoExtra: false
         },
         tieneMembresiaVigente: true
       });
@@ -379,13 +376,10 @@ describe("Vista /reservas — Dark Bento Cockpit y reglas de negocio", () => {
         claseIdsReservadas: new Set(),
         reservasActivas: [],
         disponibilidad: {
-          ilimitada: true,
-          creditosPorPeriodo: null,
-          creditosConsumidosPeriodo: 0,
+          disponible: true,
           creditosRestantesPeriodo: null,
-          creditosExtraTotales: 0,
           creditosExtraRestantes: 0,
-          puedeReservar: true
+          usaCreditoExtra: false
         },
         tieneMembresiaVigente: true
       });
@@ -402,13 +396,10 @@ describe("Vista /reservas — Dark Bento Cockpit y reglas de negocio", () => {
           claseIdsReservadas: new Set(),
           reservasActivas: [],
           disponibilidad: {
-            ilimitada: false,
-            creditosPorPeriodo: 3,
-            creditosConsumidosPeriodo: 3,
+            disponible: false,
             creditosRestantesPeriodo: 0,
-            creditosExtraTotales: 0,
             creditosExtraRestantes: 0,
-            puedeReservar: false
+            usaCreditoExtra: false
           },
           tieneMembresiaVigente: true
         }
@@ -601,13 +592,10 @@ describe("Vista /reservas — Dark Bento Cockpit y reglas de negocio", () => {
             claseIdsReservadas: new Set(),
             reservasActivas: [],
             disponibilidad: {
-              ilimitada: false,
-              creditosPorPeriodo: 3,
-              creditosConsumidosPeriodo: 1,
+              disponible: true,
               creditosRestantesPeriodo: 2,
-              creditosExtraTotales: 0,
               creditosExtraRestantes: 0,
-              puedeReservar: true
+              usaCreditoExtra: false
             },
             tieneMembresiaVigente: true
           }),
