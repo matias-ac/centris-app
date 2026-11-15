@@ -105,10 +105,10 @@ export function GraficoOcupacionSemanal({
 
   return (
     <div
-      className="h-[196px] w-full min-w-0 tabular-nums"
+      className="h-[196px] w-full min-w-0 overflow-hidden tabular-nums"
       data-testid="grafico-ocupacion-recharts"
     >
-      <ResponsiveContainer width="100%" height={196}>
+      <ResponsiveContainer width="100%" height={196} minWidth={0}>
         <BarChart
           data={datos}
           margin={{ top: 20, right: 6, left: 6, bottom: 0 }}
