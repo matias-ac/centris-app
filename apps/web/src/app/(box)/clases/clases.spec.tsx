@@ -34,6 +34,8 @@ import {
   construirPestanasDiasClases,
   evaluarEstadoClase,
   filtrarClases,
+  formatearEstadoAsistenciaReserva,
+  formatearFechaClaseLegible,
   formatearRangoHorarioClase,
   obtenerFechaClaseLocal,
   procesarCambioAsistencia,
@@ -425,6 +427,58 @@ describe("Rediseño Dark Bento Cockpit de /clases", () => {
       expect(htmlCardReservada).toContain("Tenés lugar");
       expect(htmlCardReservada).toContain('href="/reservas"');
       expect(htmlCardReservada).toContain("Gestionar en Mis Reservas");
+
+      const estadoLlenaReservada = evaluarEstadoClase(
+        {
+          ...CLASES_BASE[0]!,
+          inicio: "2026-11-14T22:00:00.000Z",
+          fin: "2026-11-14T23:00:00.000Z",
+          cupos: 15,
+          reservasConfirmadas: 15
+        },
+        { ahora: AHORA_REF, esAtleta: true, reservadaPorMi: true }
+      );
+      expect(estadoLlenaReservada.badge.label).toBe("Tenés lugar");
+
+      const htmlFinalizada = renderToStaticMarkup(
+        createElement(ClaseCard, {
+          clase: CLASES_BASE[0]!,
+          timezone: TIMEZONE,
+          ahora: AHORA_REF,
+          esAdmin: false,
+          esRecep: false,
+          esCoach: false,
+          esAtleta: true,
+          reservadaPorMi: false,
+          onAbrirAsistencia: vi.fn(),
+          onAbrirWalkin: vi.fn(),
+          onAbrirEdicion: vi.fn(),
+          onAbrirCancelacion: vi.fn()
+        })
+      );
+      expect(htmlFinalizada).toContain("Horario finalizado");
+      expect(htmlFinalizada).not.toContain('href="/reservas"');
+
+      expect(formatearFechaClaseLegible(CLASES_BASE[0]!.inicio, TIMEZONE)).toMatch(
+        /^[A-ZÁÉÍÓÚ]/
+      );
+      expect(
+        formatearEstadoAsistenciaReserva(
+          { ...RESERVAS_NOMINA_BASE[0]!, asistenciaMarcadaEn: "2026-11-14T11:00:00.000Z" },
+          CLASES_BASE[0]!,
+          AHORA_REF
+        ).label
+      ).toBe("Presente");
+      expect(
+        formatearEstadoAsistenciaReserva(
+          RESERVAS_NOMINA_BASE[0]!,
+          {
+            ...CLASES_BASE[0]!,
+            fin: "2026-11-10T11:00:00.000Z"
+          },
+          AHORA_REF
+        ).label
+      ).toBe("Ausencia");
     });
 
     it("renderiza SideDrawer para Asistencia, Mostrador, Edición y Cancelación con InlineConfirmPanel", () => {

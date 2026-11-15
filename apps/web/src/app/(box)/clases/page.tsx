@@ -47,7 +47,9 @@ export default async function ClasesPage() {
         ? listarAfiliacionesBoxApi(sesion.accessToken, afiliacionActiva.boxId)
         : Promise.resolve({ ok: true as const, data: [] }),
       esAdmin || esRecep
-        ? listarAtletasApi(sesion.accessToken, afiliacionActiva.boxId)
+        ? listarAtletasApi(sesion.accessToken, afiliacionActiva.boxId, {
+            soloActivos: true
+          })
         : Promise.resolve({ ok: true as const, data: [] }),
       esAtleta
         ? listarReservasApi(sesion.accessToken, afiliacionActiva.boxId, {

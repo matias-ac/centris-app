@@ -4,14 +4,16 @@ import {
   ERROR_CODES,
   EditarClaseSchema,
   RegistrarAsistenciaSchema,
+  esAusenciaConsolidada,
   evaluarVentanaCorreccionAsistencia,
   obtenerFechaLocal,
   sumarDiasAFecha,
+  type CancelarClase,
   type Clase,
   type CrearReserva,
   type EditarClase,
-  type CancelarClase,
-  type RegistrarAsistencia
+  type RegistrarAsistencia,
+  type Reserva
 } from "@centris/shared";
 
 export interface VentanaAsistenciaUI {
@@ -59,6 +61,13 @@ export interface EstadoClaseEvaluado {
   };
 }
 
+export interface EstadoAsistenciaReservaUI {
+  label: string;
+  variant: VarianteBadgeClase;
+  marcadoPresente: boolean;
+  esAusencia: boolean;
+}
+
 export interface FiltrosClases {
   fechaSeleccionada: string;
   tipoClaseSeleccionado: string;
@@ -77,6 +86,8 @@ export interface ResumenClases {
 }
 
 const MENSAJES_ERROR_CLASES: Record<string, string> = {
+  [ERROR_CODES.NO_AUTENTICADO]:
+    "Tu sesión expiró. Volvé a iniciar sesión para continuar.",
   [ERROR_CODES.CUPO_MENOR_A_RESERVAS]:
     "El nuevo cupo no puede ser menor a las reservas confirmadas actuales.",
   [ERROR_CODES.CUPO_AGOTADO]:
@@ -85,6 +96,8 @@ const MENSAJES_ERROR_CLASES: Record<string, string> = {
     "Este atleta no tiene créditos disponibles en su membresía.",
   [ERROR_CODES.MEMBRESIA_NO_VIGENTE]:
     "Este atleta no cuenta con una membresía vigente.",
+  [ERROR_CODES.SUPERPOSICION_HORARIA]:
+    "El atleta ya tiene una reserva confirmada que se superpone con este horario.",
   [ERROR_CODES.CLASE_CANCELADA]:
     "Esta clase fue cancelada y no admite nuevas acciones.",
   [ERROR_CODES.CLASE_NO_INICIADA]:
@@ -105,7 +118,10 @@ function capitalizarInicial(texto: string): string {
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
-function formatearHoraLocal(isoString: Date | string, timezone: string): string {
+function formatearHoraLocal(
+  isoString: Date | string,
+  timezone: string
+): string {
   return new Intl.DateTimeFormat("es-AR", {
     timeZone: timezone,
     hour: "2-digit",
@@ -114,7 +130,10 @@ function formatearHoraLocal(isoString: Date | string, timezone: string): string 
   }).format(new Date(isoString));
 }
 
-function formatearFechaCortaLocal(fechaLocal: string, timezone: string): string {
+function formatearFechaCortaLocal(
+  fechaLocal: string,
+  timezone: string
+): string {
   const fechaRef = new Date(`${fechaLocal}T12:00:00.000Z`);
   const texto = new Intl.DateTimeFormat("es-AR", {
     timeZone: timezone,
@@ -147,18 +166,19 @@ export function formatearRangoHorarioClase(
 }
 
 /**
- * Formatea la fecha de una clase para mostrarla de forma legible en tarjetas y drawers.
+ * Formatea la fecha de una clase en Sentence case dentro de la zona horaria del Box.
  */
 export function formatearFechaClaseLegible(
   isoString: Date | string,
   timezone: string
 ): string {
-  return new Intl.DateTimeFormat("es-AR", {
+  const texto = new Intl.DateTimeFormat("es-AR", {
     timeZone: timezone,
     weekday: "long",
     day: "numeric",
     month: "long"
   }).format(new Date(isoString));
+  return capitalizarInicial(texto);
 }
 
 /**
@@ -210,7 +230,7 @@ export function construirPestanasDiasClases(
 }
 
 /**
- * Genera opciones únicas para filtrar por disciplina / tipo de clase.
+ * Genera opciones únicas para filtrar por Tipo de Clase.
  */
 export function construirOpcionesFiltroTipos(
   clases: Clase[]
@@ -222,7 +242,7 @@ export function construirOpcionesFiltroTipos(
   const opciones = Array.from(mapa.entries())
     .map(([value, label]) => ({ value, label }))
     .sort((a, b) => a.label.localeCompare(b.label, "es"));
-  return [{ value: "TODOS", label: "Todas" }, ...opciones];
+  return [{ value: "TODOS", label: "Todos" }, ...opciones];
 }
 
 /**
@@ -266,6 +286,7 @@ export function evaluarEstadoClase(
   const llena = !cancelada && cupos > 0 && ocupadas >= cupos;
   const porcentajeOcupacion =
     cupos > 0 ? Math.min(100, Math.round((ocupadas / cupos) * 100)) : 0;
+
   const resVentana = evaluarVentanaCorreccionAsistencia({
     claseInicio: clase.inicio,
     claseFin: clase.fin,
@@ -281,8 +302,7 @@ export function evaluarEstadoClase(
     : resVentana.noIniciada
       ? {
           estado: "NO_INICIADA",
-          motivo:
-            "La asistencia se habilita cuando comienza la clase.",
+          motivo: "La asistencia se habilita cuando comienza la clase.",
           activa: false,
           limiteCorreccion: resVentana.limiteCorreccion
         }
@@ -293,6 +313,7 @@ export function evaluarEstadoClase(
           activa: false,
           limiteCorreccion: resVentana.limiteCorreccion
         };
+
   const ultimosCupos =
     !cancelada &&
     !finalizada &&
@@ -307,10 +328,10 @@ export function evaluarEstadoClase(
     badge = { label: "En curso", variant: "mint" };
   } else if (finalizada) {
     badge = { label: "Finalizada", variant: "zinc" };
-  } else if (llena) {
-    badge = { label: "Cupo agotado", variant: "coral" };
   } else if (contexto.esAtleta && contexto.reservadaPorMi) {
     badge = { label: "Tenés lugar", variant: "mint" };
+  } else if (llena) {
+    badge = { label: "Cupo agotado", variant: "coral" };
   } else if (ultimosCupos) {
     badge = { label: "Últimos cupos", variant: "amber" };
   } else {
@@ -331,7 +352,49 @@ export function evaluarEstadoClase(
 }
 
 /**
- * Filtra clases por día local, disciplina, coach, rol de coach exclusivo y visibilidad de inactivas.
+ * Determina el estado visual de asistencia o ausencia consolidada de una reserva en nómina.
+ */
+export function formatearEstadoAsistenciaReserva(
+  reserva: Reserva,
+  clase: Clase,
+  ahora: Date
+): EstadoAsistenciaReservaUI {
+  if (reserva.asistenciaMarcadaEn !== null) {
+    return {
+      label: "Presente",
+      variant: "mint",
+      marcadoPresente: true,
+      esAusencia: false
+    };
+  }
+  if (
+    Boolean(reserva.ausenciaConsolidada) ||
+    esAusenciaConsolidada(
+      {
+        estado: reserva.estado,
+        asistenciaMarcadaEn: reserva.asistenciaMarcadaEn,
+        claseFin: clase.fin
+      },
+      ahora
+    )
+  ) {
+    return {
+      label: "Ausencia",
+      variant: "coral",
+      marcadoPresente: false,
+      esAusencia: true
+    };
+  }
+  return {
+    label: "Sin marcar",
+    variant: "zinc",
+    marcadoPresente: false,
+    esAusencia: false
+  };
+}
+
+/**
+ * Filtra clases por día local, tipo de clase, coach, rol de coach exclusivo y visibilidad de inactivas.
  */
 export function filtrarClases(
   clases: Clase[],
@@ -526,7 +589,7 @@ export async function procesarEdicionClase(
 }
 
 /**
- * Valida motivo y ejecuta la cancelación de una clase puntual.
+ * Valida motivo opcional y ejecuta la cancelación de una clase puntual.
  */
 export async function procesarCancelacionClase(
   boxId: string,
@@ -539,21 +602,14 @@ export async function procesarCancelacionClase(
   ) => Promise<ResultadoAccionClases>
 ): Promise<ResultadoOperacionClases> {
   const motivoLimpio = motivoTexto.trim();
-  if (motivoLimpio.length < 3) {
-    return {
-      ok: false,
-      error: "Ingresá un motivo de cancelación de al menos 3 caracteres."
-    };
-  }
-  const validacion = CancelarClaseSchema.safeParse({
-    motivoCancelacion: motivoLimpio
-  });
+  const payload = motivoLimpio ? { motivoCancelacion: motivoLimpio } : {};
+  const validacion = CancelarClaseSchema.safeParse(payload);
   if (!validacion.success) {
     return {
       ok: false,
       error:
         validacion.error.issues[0]?.message ??
-        "Ingresá un motivo de cancelación de al menos 3 caracteres."
+        "El motivo de cancelación es inválido."
     };
   }
 
@@ -568,12 +624,12 @@ export async function procesarCancelacionClase(
 
   return {
     ok: true,
-    message: "Clase cancelada. Los atletas inscriptos recuperaron sus créditos."
+    message: "Clase cancelada. Los atletas con reserva recuperaron sus créditos."
   };
 }
 
 /**
- * Inscribe a un atleta en mostrador validando campos y conservando errorCode para guías contextuales.
+ * Reserva a un atleta en mostrador validando campos y conservando errorCode para guías contextuales.
  */
 export async function procesarWalkinClase(
   boxId: string,
@@ -590,7 +646,7 @@ export async function procesarWalkinClase(
       ok: false,
       error:
         validacion.error.issues[0]?.message ??
-        "Seleccioná un atleta válido para inscribir."
+        "Seleccioná un atleta válido para reservar."
     };
   }
 
@@ -605,12 +661,12 @@ export async function procesarWalkinClase(
 
   return {
     ok: true,
-    message: "Atleta inscripto en mostrador correctamente."
+    message: "Reserva en mostrador registrada correctamente."
   };
 }
 
 /**
- * Registra o corrige la asistencia de una reserva confirmada.
+ * Registra o desmarca la asistencia de una reserva confirmada.
  */
 export async function procesarCambioAsistencia(
   boxId: string,
@@ -641,8 +697,6 @@ export async function procesarCambioAsistencia(
 
   return {
     ok: true,
-    message: presente
-      ? "Asistencia registrada como presente."
-      : "Asistencia registrada como ausente."
+    message: presente ? "Asistencia registrada." : "Asistencia desmarcada."
   };
 }

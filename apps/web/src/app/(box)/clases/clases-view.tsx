@@ -22,11 +22,11 @@ import {
   useRef,
   useState,
   useTransition,
-  type FormEvent
+  type FormEvent,
+  type ReactNode
 } from "react";
 import {
   ERROR_CODES,
-  esAusenciaConsolidada,
   obtenerFechaLocal,
   type AfiliacionConUsuario,
   type Atleta,
@@ -35,7 +35,7 @@ import {
 } from "@centris/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonClassName } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { BENTO_TITLE_CLASSES, Card } from "@/components/ui/card";
 import { FilterChips } from "@/components/ui/filter-chips";
 import { InlineConfirmPanel } from "@/components/ui/inline-confirm";
 import { Input } from "@/components/ui/input";
@@ -58,6 +58,7 @@ import {
   construirPestanasDiasClases,
   evaluarEstadoClase,
   filtrarClases,
+  formatearEstadoAsistenciaReserva,
   formatearFechaClaseLegible,
   formatearRangoHorarioClase,
   procesarCambioAsistencia,
@@ -97,48 +98,52 @@ const TRACK_RAYADO_STYLE = {
     "repeating-linear-gradient(-45deg, rgba(255,255,255,0.06) 0px, rgba(255,255,255,0.06) 4px, rgba(24,25,28,0.92) 4px, rgba(24,25,28,0.92) 8px)"
 };
 
-function formatearEstadoAsistenciaReserva(
-  reserva: Reserva,
-  clase: Clase,
-  ahora: Date
-): {
-  label: string;
-  variant: "mint" | "amber" | "coral" | "zinc";
-  marcadoPresente: boolean;
-  esAusencia: boolean;
-} {
-  if (reserva.asistenciaMarcadaEn !== null) {
-    return {
-      label: "Presente",
-      variant: "mint",
-      marcadoPresente: true,
-      esAusencia: false
-    };
-  }
-  if (
-    Boolean(reserva.ausenciaConsolidada) ||
-    esAusenciaConsolidada(
-      {
-        estado: reserva.estado,
-        asistenciaMarcadaEn: reserva.asistenciaMarcadaEn,
-        claseFin: clase.fin
-      },
-      ahora
-    )
-  ) {
-    return {
-      label: "Ausente",
-      variant: "coral",
-      marcadoPresente: false,
-      esAusencia: true
-    };
-  }
-  return {
-    label: "Sin marcar",
-    variant: "zinc",
-    marcadoPresente: false,
-    esAusencia: false
-  };
+function ResumenClaseDrawer({
+  clase,
+  timezone,
+  children
+}: {
+  clase: Clase;
+  timezone: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div className="space-y-1.5 rounded-2xl border border-border bg-secondary p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-sm font-semibold text-foreground">
+          {clase.tipoClaseNombre ?? "Clase"} ·{" "}
+          <span className="tabular-nums">
+            {formatearRangoHorarioClase(clase.inicio, clase.fin, timezone)}
+          </span>
+        </p>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function AlertaErrorClase({
+  message,
+  testId = "alerta-error-clase",
+  children
+}: {
+  message: string;
+  testId?: string;
+  children?: ReactNode;
+}) {
+  return (
+    <div
+      role="alert"
+      data-testid={testId}
+      className="space-y-3 rounded-2xl border border-[#FF6D6D]/30 bg-[#FF6D6D]/10 px-4 py-3 text-sm text-[#FF6D6D]"
+    >
+      <p className="flex items-start gap-2">
+        <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+        <span>{message}</span>
+      </p>
+      {children}
+    </div>
+  );
 }
 
 export interface ClaseCardProps {
@@ -188,19 +193,19 @@ export function ClaseCard({
     <Card
       data-testid={`card-clase-${clase.id}`}
       className={cn(
-        "flex flex-col justify-between gap-4 transition-colors",
+        "flex flex-col justify-between gap-4 p-5 transition-colors sm:p-6",
         estado.cancelada
-          ? "border-[#FF6D6D]/25 bg-[#111214]/85"
-          : "hover:border-white/[0.16]"
+          ? "border-[#FF6D6D]/25 bg-card/85"
+          : "hover:border-[#3A3C42]"
       )}
     >
       <div className="space-y-3">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0 space-y-1">
-            <p className="text-xs font-medium capitalize text-muted-foreground">
+            <p className="text-xs font-medium text-muted-foreground">
               {fechaLegible}
             </p>
-            <p className="text-base font-bold text-foreground tabular-nums">
+            <p className="text-base font-semibold text-foreground tabular-nums">
               {rango}
             </p>
           </div>
@@ -208,7 +213,7 @@ export function ClaseCard({
         </div>
 
         <div className="space-y-1">
-          <h3 className="text-lg font-bold tracking-tight text-foreground">
+          <h3 className={BENTO_TITLE_CLASSES}>
             {clase.tipoClaseNombre ?? "Clase"}
           </h3>
           <p className="text-sm text-muted-foreground">
@@ -222,7 +227,7 @@ export function ClaseCard({
           </p>
         </div>
 
-        <div className="space-y-2.5 rounded-xl bg-[#18191C] p-3.5">
+        <div className="space-y-2.5 rounded-2xl bg-secondary p-3.5">
           <div className="flex items-center justify-between gap-2 text-xs">
             <span className="inline-flex items-center gap-1.5 font-medium text-muted-foreground">
               <Users className="size-3.5" aria-hidden="true" />
@@ -242,7 +247,7 @@ export function ClaseCard({
           </div>
 
           <div
-            className="h-2.5 w-full overflow-hidden rounded-full border border-white/[0.06]"
+            className="h-2.5 w-full overflow-hidden rounded-full border border-border"
             style={TRACK_RAYADO_STYLE}
             role="progressbar"
             aria-label={`Ocupación ${estado.ocupadas} de ${estado.cupos}`}
@@ -297,7 +302,7 @@ export function ClaseCard({
               onClick={() => onAbrirWalkin(clase)}
             >
               <UserPlus className="size-4" aria-hidden="true" />
-              Inscribir en mostrador
+              Reservar en mostrador
             </Button>
           ) : null}
 
@@ -326,20 +331,30 @@ export function ClaseCard({
           ) : null}
 
           {soloAtleta ? (
-            <Link
-              href="/reservas"
-              className={buttonClassName(
-                reservadaPorMi ? "secondary" : "primary",
-                "min-h-11 w-full justify-between"
-              )}
-            >
-              <span>
-                {reservadaPorMi
-                  ? "Gestionar en Mis Reservas"
-                  : "Reservar en Mis Reservas"}
+            estado.finalizada ? (
+              <span className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-border bg-secondary px-4 text-sm font-medium text-muted-foreground">
+                Horario finalizado
               </span>
-              <ArrowUpRight className="size-4" aria-hidden="true" />
-            </Link>
+            ) : estado.llena && !reservadaPorMi ? (
+              <span className="inline-flex min-h-11 w-full items-center justify-center rounded-full border border-border bg-secondary px-4 text-sm font-medium text-muted-foreground">
+                Sin cupos disponibles
+              </span>
+            ) : (
+              <Link
+                href="/reservas"
+                className={buttonClassName(
+                  reservadaPorMi ? "secondary" : "primary",
+                  "min-h-11 w-full justify-between"
+                )}
+              >
+                <span>
+                  {reservadaPorMi
+                    ? "Gestionar en Mis Reservas"
+                    : "Reservar en Mis Reservas"}
+                </span>
+                <ArrowUpRight className="size-4" aria-hidden="true" />
+              </Link>
+            )
           ) : null}
         </div>
       ) : null}
@@ -412,19 +427,10 @@ export function DrawerAsistencia({
 
   return (
     <div data-testid="panel-asistencia-clase" className="space-y-4">
-      <div className="rounded-2xl border border-white/[0.06] bg-[#18191C] p-4 space-y-2">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm font-semibold text-foreground">
-            {clase.tipoClaseNombre ?? "Clase"} ·{" "}
-            <span className="tabular-nums">
-              {formatearRangoHorarioClase(clase.inicio, clase.fin, timezone)}
-            </span>
-          </p>
-          <span className="text-xs font-medium text-muted-foreground tabular-nums">
-            Presentes: {presentesCount} / {reservas.length}
-          </span>
-        </div>
-
+      <ResumenClaseDrawer clase={clase} timezone={timezone}>
+        <p className="text-xs font-medium text-muted-foreground tabular-nums">
+          Presentes: {presentesCount} / {reservas.length}
+        </p>
         <p
           data-testid={
             mostrarAvisoVentanaExpirada
@@ -433,32 +439,21 @@ export function DrawerAsistencia({
                 ? "aviso-solo-coach-asignado"
                 : undefined
           }
-          className="flex items-start gap-2 text-xs text-muted-foreground"
+          className="flex items-start gap-2 pt-1 text-xs text-muted-foreground"
         >
           <Clock className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
           <span>
             {estado.ventanaAsistencia.estado === "PERMITIDA"
               ? puedeEditarAsistencia
                 ? "Ventana de corrección abierta (hasta 24 h desde el fin de la clase)."
-                : esRecep
-                  ? "Solo el coach asignado o administración pueden marcar asistencia."
-                  : "Solo el coach titular o administración pueden registrar asistencia."
+                : "Solo el coach titular, recepción o administración pueden registrar asistencia."
               : estado.ventanaAsistencia.motivo ??
                 "La ventana de asistencia no está habilitada para esta clase."}
           </span>
         </p>
-      </div>
+      </ResumenClaseDrawer>
 
-      {error ? (
-        <div
-          role="alert"
-          data-testid="alerta-error-clase"
-          className="flex items-start gap-2 rounded-2xl border border-[#FF6D6D]/30 bg-[#FF6D6D]/10 px-4 py-3 text-sm text-[#FF6D6D]"
-        >
-          <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          <span>{error}</span>
-        </div>
-      ) : null}
+      {error ? <AlertaErrorClase message={error} /> : null}
 
       <div className="space-y-1.5">
         <Label htmlFor="busqueda-nomina-atleta">Buscar atleta</Label>
@@ -479,13 +474,13 @@ export function DrawerAsistencia({
       </div>
 
       {cargando ? (
-        <div className="rounded-2xl border border-white/[0.06] bg-[#18191C] px-4 py-6 text-center text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-border bg-secondary px-4 py-6 text-center text-sm text-muted-foreground">
           Cargando nómina de atletas...
         </div>
       ) : reservasFiltradas.length === 0 ? (
-        <div className="rounded-2xl border border-white/[0.06] bg-[#18191C] px-4 py-6 text-center text-sm text-muted-foreground">
+        <div className="rounded-2xl border border-border bg-secondary px-4 py-6 text-center text-sm text-muted-foreground">
           {reservas.length === 0
-            ? "Todavía no hay atletas inscriptos en esta clase."
+            ? "Todavía no hay atletas con reserva en esta clase."
             : "Ningún atleta coincide con la búsqueda."}
         </div>
       ) : (
@@ -506,7 +501,7 @@ export function DrawerAsistencia({
               <li
                 key={reserva.id}
                 data-testid={`fila-asistencia-reserva-${reserva.id}`}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-white/[0.06] bg-[#18191C] p-3.5"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-secondary p-3.5"
               >
                 <div className="min-w-0 space-y-1">
                   <p className="truncate text-sm font-semibold text-foreground">
@@ -549,6 +544,7 @@ export function DrawerAsistencia({
           type="button"
           variant="secondary"
           className="min-h-11 w-full"
+          disabled={isPending}
           onClick={onClose}
         >
           Cerrar nómina
@@ -572,7 +568,7 @@ export interface DrawerMostradorProps {
 }
 
 /**
- * Panel lateral de inscripción en mostrador con guías contextuales ante cupo agotado o falta de créditos.
+ * Panel lateral de reserva en mostrador con guías contextuales ante cupo agotado o falta de créditos.
  */
 export function DrawerMostrador({
   clase,
@@ -592,22 +588,12 @@ export function DrawerMostrador({
     errorWalkin?.errorCode === ERROR_CODES.MEMBRESIA_NO_VIGENTE;
 
   return (
-    <form
-      data-testid="form-walkin"
-      onSubmit={onSubmit}
-      className="space-y-4"
-    >
-      <div className="rounded-2xl border border-white/[0.06] bg-[#18191C] p-4 space-y-1">
-        <p className="text-sm font-semibold text-foreground">
-          {clase.tipoClaseNombre ?? "Clase"} ·{" "}
-          <span className="tabular-nums">
-            {formatearRangoHorarioClase(clase.inicio, clase.fin, timezone)}
-          </span>
-        </p>
+    <form data-testid="form-walkin" onSubmit={onSubmit} className="space-y-4">
+      <ResumenClaseDrawer clase={clase} timezone={timezone}>
         <p className="text-xs text-muted-foreground tabular-nums">
           Ocupación actual: {clase.reservasConfirmadas ?? 0} / {clase.cupos}
         </p>
-      </div>
+      </ResumenClaseDrawer>
 
       <div className="space-y-2">
         <Label htmlFor="select-atleta-walkin">Atleta del Box</Label>
@@ -632,19 +618,10 @@ export function DrawerMostrador({
       </div>
 
       {errorWalkin ? (
-        <div
-          role="alert"
-          data-testid="alerta-error-walkin"
-          className="space-y-3 rounded-2xl border border-[#FF6D6D]/30 bg-[#FF6D6D]/10 p-4 text-sm text-[#FF6D6D]"
+        <AlertaErrorClase
+          message={errorWalkin.message}
+          testId="alerta-error-walkin"
         >
-          <p className="flex items-start gap-2">
-            <AlertCircle
-              className="mt-0.5 size-4 shrink-0"
-              aria-hidden="true"
-            />
-            <span>{errorWalkin.message}</span>
-          </p>
-
           {esCupoAgotado && onIrAEditarCupo ? (
             <Button
               type="button"
@@ -670,7 +647,7 @@ export function DrawerMostrador({
               <ArrowUpRight className="size-4" aria-hidden="true" />
             </Link>
           ) : null}
-        </div>
+        </AlertaErrorClase>
       ) : null}
 
       <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
@@ -690,7 +667,7 @@ export function DrawerMostrador({
           data-testid="btn-confirmar-walkin"
           disabled={isPending || !atletaId}
         >
-          {isPending ? "Inscribiendo..." : "Confirmar inscripción"}
+          {isPending ? "Reservando..." : "Confirmar reserva"}
         </Button>
       </div>
     </form>
@@ -731,17 +708,11 @@ export function DrawerEditarClase({
 }: DrawerEditarClaseProps) {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
-      <div className="rounded-2xl border border-white/[0.06] bg-[#18191C] p-4 space-y-1">
-        <p className="text-sm font-semibold text-foreground">
-          {clase.tipoClaseNombre ?? "Clase"} ·{" "}
-          <span className="tabular-nums">
-            {formatearRangoHorarioClase(clase.inicio, clase.fin, timezone)}
-          </span>
-        </p>
+      <ResumenClaseDrawer clase={clase} timezone={timezone}>
         <p className="text-xs text-muted-foreground tabular-nums">
           Reservas confirmadas actuales: {clase.reservasConfirmadas ?? 0}
         </p>
-      </div>
+      </ResumenClaseDrawer>
 
       {esAdmin ? (
         <div className="space-y-2">
@@ -780,16 +751,7 @@ export function DrawerEditarClase({
         </p>
       </div>
 
-      {error ? (
-        <div
-          role="alert"
-          data-testid="alerta-error-clase"
-          className="flex items-start gap-2 rounded-2xl border border-[#FF6D6D]/30 bg-[#FF6D6D]/10 px-4 py-3 text-sm text-[#FF6D6D]"
-        >
-          <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          <span>{error}</span>
-        </div>
-      ) : null}
+      {error ? <AlertaErrorClase message={error} /> : null}
 
       <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row">
         <Button
@@ -843,21 +805,15 @@ export function DrawerCancelarClase({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-2xl border border-white/[0.06] bg-[#18191C] p-4 space-y-1">
-        <p className="text-sm font-semibold text-foreground">
-          {clase.tipoClaseNombre ?? "Clase"} ·{" "}
-          <span className="tabular-nums">
-            {formatearRangoHorarioClase(clase.inicio, clase.fin, timezone)}
-          </span>
-        </p>
+      <ResumenClaseDrawer clase={clase} timezone={timezone}>
         <p className="text-xs text-muted-foreground tabular-nums">
           Atletas con reserva confirmada: {clase.reservasConfirmadas ?? 0}
         </p>
-      </div>
+      </ResumenClaseDrawer>
 
       <div className="space-y-2">
         <Label htmlFor="input-motivo-cancelacion-clase">
-          Motivo de cancelación
+          Motivo de cancelación (opcional)
         </Label>
         <Input
           id="input-motivo-cancelacion-clase"
@@ -870,16 +826,7 @@ export function DrawerCancelarClase({
         />
       </div>
 
-      {error ? (
-        <div
-          role="alert"
-          data-testid="alerta-error-clase"
-          className="flex items-start gap-2 rounded-2xl border border-[#FF6D6D]/30 bg-[#FF6D6D]/10 px-4 py-3 text-sm text-[#FF6D6D]"
-        >
-          <AlertCircle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          <span>{error}</span>
-        </div>
-      ) : null}
+      {error ? <AlertaErrorClase message={error} /> : null}
 
       <InlineConfirmPanel
         ariaLabel="Confirmar cancelación de clase"
@@ -898,7 +845,7 @@ export function DrawerCancelarClase({
 }
 
 /**
- * Vista operativa Dark Bento Cockpit de /clases con pestañas diarias, filtros por disciplina/coach y drawers contextuales.
+ * Vista operativa Dark Bento Cockpit de /clases con pestañas diarias, filtros por tipo de clase/coach y drawers contextuales.
  */
 export function ClasesView({
   boxId,
@@ -918,6 +865,7 @@ export function ClasesView({
 }: ClasesViewProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const asistenciaRequestRef = useRef(0);
 
   const [clases, setClases] = useState<Clase[]>(clasesIniciales);
   useEffect(() => {
@@ -942,16 +890,13 @@ export function ClasesView({
 
   const [exitoGlobal, setExitoGlobal] = useState<string | null>(null);
   const [errorGlobal, setErrorGlobal] = useState<string | null>(null);
-
   const [drawerActivo, setDrawerActivo] = useState<TipoDrawerActivo>(null);
 
-  // Estado del Drawer de Asistencia
   const [reservasAsistencia, setReservasAsistencia] = useState<Reserva[]>([]);
   const [cargandoAsistencia, setCargandoAsistencia] = useState(false);
   const [busquedaAsistencia, setBusquedaAsistencia] = useState("");
   const [errorAsistencia, setErrorAsistencia] = useState<string | null>(null);
 
-  // Estado del Drawer de Mostrador
   const [atletaWalkinId, setAtletaWalkinId] = useState<string>(
     atletas[0]?.afiliacionId ?? ""
   );
@@ -960,12 +905,10 @@ export function ClasesView({
     errorCode?: string;
   } | null>(null);
 
-  // Estado del Drawer de Edición
   const [coachEdicionId, setCoachEdicionId] = useState<string>("");
   const [cuposEdicion, setCuposEdicion] = useState<string>("");
   const [errorEdicion, setErrorEdicion] = useState<string | null>(null);
 
-  // Estado del Drawer de Cancelación
   const [motivoCancelacion, setMotivoCancelacion] = useState<string>("");
   const [errorCancelacion, setErrorCancelacion] = useState<string | null>(null);
 
@@ -1029,6 +972,8 @@ export function ClasesView({
   }, [clases, drawerActivo]);
 
   const cerrarDrawer = () => {
+    if (isPending) return;
+    asistenciaRequestRef.current += 1;
     setDrawerActivo(null);
   };
 
@@ -1040,7 +985,9 @@ export function ClasesView({
     setCargandoAsistencia(true);
     setDrawerActivo({ tipo: "asistencia", claseId: clase.id });
 
+    const requestId = ++asistenciaRequestRef.current;
     void listarReservasClaseAction(boxId, clase.id).then((res) => {
+      if (asistenciaRequestRef.current !== requestId) return;
       setCargandoAsistencia(false);
       if (!res.ok || !res.data) {
         setErrorAsistencia(traducirErrorClases(res.errorCode, res.message));
@@ -1053,7 +1000,11 @@ export function ClasesView({
   const abrirDrawerWalkin = (clase: Clase) => {
     setErrorGlobal(null);
     setErrorWalkin(null);
-    setAtletaWalkinId((prev) => prev || (atletas[0]?.afiliacionId ?? ""));
+    setAtletaWalkinId((prev) =>
+      atletas.some((a) => a.afiliacionId === prev)
+        ? prev
+        : (atletas[0]?.afiliacionId ?? "")
+    );
     setDrawerActivo({ tipo: "mostrador", claseId: clase.id });
   };
 
@@ -1155,7 +1106,7 @@ export function ClasesView({
             ? {
                 ...c,
                 canceladaEn: new Date().toISOString(),
-                motivoCancelacion: motivoLimpio
+                motivoCancelacion: motivoLimpio || null
               }
             : c
         )
@@ -1253,7 +1204,7 @@ export function ClasesView({
             Agenda operativa
           </p>
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+            <h1 className="text-[clamp(1.375rem,1.2rem+0.8vw,1.75rem)] font-medium leading-[1.2] tracking-[-0.02em] text-foreground">
               Calendario de clases
             </h1>
             <p className="text-sm text-muted-foreground tabular-nums">
@@ -1263,7 +1214,7 @@ export function ClasesView({
         </div>
 
         <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-          <div className="flex flex-wrap items-center gap-2 rounded-full border border-white/[0.08] bg-[#111214] px-4 py-2 text-sm tabular-nums">
+          <div className="flex flex-wrap items-center gap-2 rounded-full border border-border bg-card px-4 py-2 text-sm tabular-nums">
             <span className="font-semibold text-foreground">
               {resumen.totalClases}{" "}
               {resumen.totalClases === 1 ? "clase" : "clases"}
@@ -1271,9 +1222,9 @@ export function ClasesView({
             <span className="text-muted-foreground">·</span>
             <span className="text-muted-foreground">
               Cupos{" "}
-              <strong className="text-foreground">
+              <span className="font-semibold text-foreground">
                 {resumen.cuposOcupados} / {resumen.cuposTotales}
-              </strong>
+              </span>
             </span>
             {resumen.clasesEnCurso > 0 ? (
               <>
@@ -1388,7 +1339,7 @@ export function ClasesView({
           <div className="flex flex-wrap items-center gap-3">
             {opcionesTipos.length > 2 ? (
               <FilterChips
-                ariaLabel="Filtrar por disciplina"
+                ariaLabel="Filtrar por tipo de clase"
                 options={opcionesTipos}
                 value={tipoClaseSeleccionado}
                 onChange={setTipoClaseSeleccionado}
@@ -1432,11 +1383,11 @@ export function ClasesView({
 
       {clasesFiltradas.length === 0 ? (
         <Card className="flex flex-col items-center justify-center gap-4 px-6 py-12 text-center">
-          <div className="flex size-12 items-center justify-center rounded-2xl border border-white/[0.08] bg-[#18191C] text-muted-foreground">
+          <div className="flex size-12 items-center justify-center rounded-2xl border border-border bg-secondary text-muted-foreground">
             <Calendar className="size-6" aria-hidden="true" />
           </div>
           <div className="max-w-md space-y-1.5">
-            <h2 className="text-lg font-bold text-foreground">
+            <h2 className={BENTO_TITLE_CLASSES}>
               No hay clases para mostrar en este filtro
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -1506,7 +1457,7 @@ export function ClasesView({
           drawerActivo?.tipo === "asistencia"
             ? "Asistencia y nómina"
             : drawerActivo?.tipo === "mostrador"
-              ? "Inscribir en mostrador"
+              ? "Reservar en mostrador"
               : drawerActivo?.tipo === "edicion"
                 ? "Editar clase puntual"
                 : "Cancelar clase puntual"
