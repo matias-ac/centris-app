@@ -7,6 +7,7 @@ import { useTransition } from "react";
 import type { AfiliacionConBox } from "@centris/shared";
 import { Button } from "@/components/ui/button";
 import { BENTO_TITLE_CLASSES } from "@/components/ui/card";
+import { LogoCentris } from "@/components/ui/logo-centris";
 import { obtenerInicialesUsuario } from "@/lib/identidad-ui";
 import { cn } from "@/lib/utils";
 import { SelectorBoxCard } from "./selector-box-card";
@@ -115,15 +116,9 @@ export function SeleccionarBoxView({
       <header className="flex flex-wrap items-center justify-between gap-3.5 border-b border-border pb-[18px]">
         <Link
           href="/seleccionar-box"
-          className="inline-flex min-h-11 items-center gap-2.5 rounded-xl text-[1.0625rem] font-semibold tracking-[-0.02em] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex min-h-11 items-center rounded-xl py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <span
-            aria-hidden="true"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-[10px] bg-primary text-[1.0625rem] font-semibold text-primary-foreground"
-          >
-            C
-          </span>
-          <span>Centris</span>
+          <LogoCentris svgClassName="h-7 w-auto" />
         </Link>
 
         <div className="flex flex-wrap items-center gap-2.5">
