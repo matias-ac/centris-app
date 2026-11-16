@@ -11,6 +11,7 @@
     "db:down": "docker compose down -v",
     "db:migrate": "turbo run db:migrate",
     "db:seed": "turbo run db:seed",
+    "db:seed:demo": "pnpm --filter @centris/api db:seed:demo",
     "dev": "turbo run dev --parallel",
     "build": "turbo run build",
     "lint": "eslint .",
