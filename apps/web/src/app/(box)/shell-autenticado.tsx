@@ -19,6 +19,7 @@ import {
 import type { AfiliacionConBox } from "@centris/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { LogoCentris } from "@/components/ui/logo-centris";
 import { cn } from "@/lib/utils";
 import {
   esRutaActiva,
@@ -150,12 +151,9 @@ export function ShellAutenticado({
             <Link
               href="/inicio"
               onClick={() => setDrawerAbierto(false)}
-              className="flex items-center gap-2.5 rounded-xl text-[1.0625rem] font-semibold tracking-[-0.02em] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="inline-flex min-h-11 items-center rounded-xl py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
             >
-              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-[10px] bg-primary text-base font-semibold text-primary-foreground">
-                C
-              </span>
-              <span>Centris</span>
+              <LogoCentris svgClassName="h-[26px] w-auto" />
             </Link>
 
             <Button

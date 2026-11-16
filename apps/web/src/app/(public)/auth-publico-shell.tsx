@@ -5,6 +5,7 @@ import Link from "next/link";
 import type * as React from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LogoCentris } from "@/components/ui/logo-centris";
 
 export interface AuthPublicoShellProps {
   estadoCapsula: string;
@@ -23,15 +24,9 @@ export function AuthPublicoShell({
       <header className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/login"
-          className="inline-flex min-h-11 items-center gap-2.5 rounded-xl text-[1.0625rem] font-semibold tracking-[-0.02em] text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="inline-flex min-h-11 items-center rounded-xl py-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <span
-            aria-hidden="true"
-            className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary text-[1.0625rem] font-semibold text-primary-foreground"
-          >
-            C
-          </span>
-          <span>Centris</span>
+          <LogoCentris svgClassName="h-7 w-auto" />
         </Link>
 
         <span className="inline-flex min-h-9 items-center gap-2 rounded-full border border-border bg-card px-3.5 py-1.5 text-xs font-medium tracking-[0.02em] text-muted-foreground">
